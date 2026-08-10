@@ -81,6 +81,9 @@ yeniden tasarla.** Aşağıdaki gereksinimler bağlayıcıdır:
 - [x] Hatırlatıcı (Windows toast) + `reminder_at` migration
 - [x] Tema (açık/koyu)
 - [x] Local-first sync (Supabase, `local-user` fallback)
+- [x] C0 mini-slice: `ITodoStore` seam + sync envelope (dirty/tombstone/local_version)
+      + offline delete/create düzeltmeleri + ViewModel'lerden Supabase izolasyonu
+      (commit `ef9692f`)
 - [x] Login sayfası (kod mevcut; varsayılan akışta atlanıyor)
 
 ---
