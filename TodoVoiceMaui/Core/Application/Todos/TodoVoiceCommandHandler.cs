@@ -1,14 +1,14 @@
 using System.Threading;
 using System.Threading.Tasks;
-using TodoVoiceMaui.Core.Application.Todos;
+using TodoVoiceMaui.Core.Application.Voice;
 
-namespace TodoVoiceMaui.Core.Application.Voice;
+namespace TodoVoiceMaui.Core.Application.Todos;
 
-public sealed class VoiceCommandHandler : IVoiceCommandHandler
+public sealed class TodoVoiceCommandHandler : IVoiceCommandHandler
 {
     private readonly ITodoCommandSink _todoSink;
 
-    public VoiceCommandHandler(ITodoCommandSink todoSink)
+    public TodoVoiceCommandHandler(ITodoCommandSink todoSink)
     {
         _todoSink = todoSink;
     }
@@ -17,9 +17,9 @@ public sealed class VoiceCommandHandler : IVoiceCommandHandler
     {
         switch (command.Intent)
         {
-            case VoiceIntent.CreateTodo:
+            case VoiceIntent.Create:
                 return await CreateTodoAsync(command, ct);
-            case VoiceIntent.CompleteTodo:
+            case VoiceIntent.Complete:
                 return await CompleteTodoAsync(command, ct);
             case VoiceIntent.SetReminder:
                 return await SetReminderAsync(command, ct);

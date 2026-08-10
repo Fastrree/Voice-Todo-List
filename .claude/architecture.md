@@ -178,12 +178,21 @@ eder, kendi türetmez. Visual language (Liquid Glass + motion) bu state'in
 ### ADR-014: Todo üç şapka ayrımı
 `Todo` üç sorumluluğu tek sınıfta birleştirmemeli:
 - **Domain:** saf `Todo` (iş kuralı, JSON attribute'suz, UI property'siz)
-- **Persistence:** `LocalTodo` (SQLite eşleşmesi)
+- **Persistence:** `LocalTodo` (SQLite eşleşmesi) + **transport:** `TodoDto`
+  (Supabase wire — snake_case `[JsonProperty]`)
 - **UI sunum:** `TodoListItem` (ikon/biçimlendirme — PriorityIcon, StatusIcon,
   FormattedDuration burada)
 
-Şu an `Models/Todo.cs` üç şapkayı birden taşıyor (`[JsonProperty]` + UI
-property'leri); B-dilimi bu ayrımı uygular.
+Uygulandı (B2): `Core/Domain/Entities/Todo.cs`, `Models/TodoDto.cs`,
+`Models/TodoListItem.cs`. `Models/Todo.cs` kaldırıldı.
+
+### ADR-015: Voice Core domain-agnostik
+`Core/Application/Voice` içinde uygulama (ör. Todo) kavramı geçmez.
+`VoiceIntent` generic'tir (`Create`, `Complete`, `SetReminder`); intent→Todo
+eşlemesi Todo adaptasyon katmanında yapılır (`TodoVoiceCommandHandler`).
+Bağımlılık yönü **Todo → Voice**, asla tersi. `IApplication`/`Registry`/
+`Manifest`/generic command bus gibi gelecek-uygulama framework'leri şu an
+**yazılmaz**; ikinci gerçek uygulama geldiğinde gerçek kullanımdan genelleştirilir.
 
 ---
 

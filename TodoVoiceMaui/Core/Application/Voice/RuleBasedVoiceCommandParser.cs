@@ -23,12 +23,12 @@ public sealed class RuleBasedVoiceCommandParser : IVoiceCommandParser
         var lower = text.ToLowerInvariant();
 
         if (ContainsAny(lower, CompleteKeywords))
-            return new VoiceCommand(VoiceIntent.CompleteTodo, text);
+            return new VoiceCommand(VoiceIntent.Complete, text);
 
         if (ContainsAny(lower, RemindKeywords))
             return new VoiceCommand(VoiceIntent.SetReminder, text);
 
-        return new VoiceCommand(VoiceIntent.CreateTodo, text);
+        return new VoiceCommand(VoiceIntent.Create, text);
     }
 
     private static bool ContainsAny(string value, string[] keywords)

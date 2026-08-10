@@ -2,8 +2,8 @@ namespace TodoVoiceMaui.Core.Application.Voice;
 
 public enum VoiceIntent
 {
-    CreateTodo = 0,
-    CompleteTodo,
+    Create = 0,
+    Complete,
     SetReminder,
     UnknownIntent
 }

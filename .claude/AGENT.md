@@ -222,6 +222,10 @@ gerekir (Madde 5). Detaylar ve nedenleri `architecture.md`'de.
    doğrudan değiştirmez. Voice üretir `VoiceCommand`; Application handler
    yorumlar; Domain operation'ı çağırır. Üçlü komut katmanı yok — tek input
    contract.
+2a. **Voice Core Todo'yu bilmez.** `Core/Application/Voice` içinde Todo kavramı
+   geçmez; `VoiceIntent` generic'tir (`Create`, `Complete`, `SetReminder`).
+   Intent→Todo action eşlemesi Todo adaptasyon katmanında yapılır
+   (`TodoVoiceCommandHandler`). Bağımlılık yönü: Todo → Voice, asla tersi.
 3. **UnknownIntent birinci sınıf.** Parser ürün kararı vermez. Anlayamadığı
    giriş için `UnknownIntent` (ham transcript'i taşır) üretir; **Application
    policy** karar verir (v1: `CreateTodo(transcript)` fallback — "asla
