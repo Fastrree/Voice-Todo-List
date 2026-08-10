@@ -13,15 +13,73 @@ Todo Voice bir **.NET MAUI 8** Windows masaüstü uygulamasıdır. MVVM deseni
 kullanır. Veri **local-first** olarak SQLite'a yazılır; çevrimiçi olduğunda
 Supabase'e senkronize edilir.
 
+Mimari model: **Feature-as-an-App** (bkz. §1.1). Uygulama sekmeleri "ekran"
+değil, aynı platform üzerinde çalışan bağımsız feature'lardır. Bugün tek
+feature var (Voice Todo); yapı, ikinci bir feature'ı (ör. Translator) mevcut
+feature'lara dokunmadan eklemeye izin verir.
+
 ```
-Views (XAML) ──► ViewModels (CommunityToolkit.Mvvm) ──► Services
-                                                           │
-                        ┌──────────────────────────────────┤
-                        ▼                                  ▼
-              DatabaseService (SQLite)           SupabaseService (HTTP)
-              SyncService (orchestrator)         AudioService (ses kayıt/oynatma)
-              ReminderService (Windows toast)    SpeechToTextService (canlı transkripsiyon)
+              PLATFORM (ortak yetenekler)
+   DesignSystem · Audio · Speech · Storage · Permissions · Motion
+                         │
+        ┌────────────────┼────────────────┐
+        │                                │
+   Feature: VoiceTodo               Feature: (ileride)
+   kendi Domain/App/UI state        kendi Domain/App/UI state
 ```
+
+### 1.1 Feature-as-an-App & Platform ≠ Feature
+
+- **Platform** ortak capability sağlar (Design System, Audio, Speech, Storage,
+  Permissions, Motion, Accessibility, Common Contracts).
+- **Feature** kendi ürün davranışından sorumludur (state, workflow, UI,
+  error/recovery).
+- **Feature isolation:** Feature'lar birbirinin implementation detayına bağımlı
+  olamaz. Paylaşım yalnız shared contract / platform capability üzerinden.
+- **Sekme = feature/product surface:** kendi navigation entry'si, UI
+  composition'ı, application state'i, workflow'u olabilir.
+- Aşırı mühendislik YASAK (`IPlugin`, `IFeatureRegistry`, `IFeatureLifecycle`
+  vb. üretilmeyecek; prensip + klasör yeterli).
+
+Hedef klasör yapısı (henüz uygulanmadı — mevcut yapı §7, geçiş roadmap'te):
+
+```
+Features/
+    VoiceTodo/
+        Domain/  Application/  Infrastructure/  UI/
+    (Translator/ vb. ileride — şimdi açılmıyor)
+Platform/
+    DesignSystem/  Audio/  Speech/  Storage/  Permissions/  Accessibility/
+```
+
+Aynı platform yeteneklerini farklı workflow'larla kullanan iki örnek:
+
+```
+Voice Todo:                          Live Translation (ileride):
+  Audio → Transcribe → Command        Audio A → Transcribe → Detect Language
+       → Handler → Todo                   → Translate → TTS → Audio B
+```
+
+Her ikisi de platformun `Audio`, `Speech`, `TTS`, `DesignSystem`, `Motion`,
+`Permissions` yeteneklerini tüketir; hiçbiri diğerinin detayını bilmez.
+
+### 1.2 Application State → UI State → Visual Language
+
+State üç katmanda akar; UI state'i kendi türetmez, Application'dan alır:
+
+```
+Platform
+   ↓
+Feature (Application State)
+   ↓  VoiceFlowState (contract)
+UI State
+   ↓
+Visual Language (Liquid Glass + motion + component'ler)
+```
+
+Örnek: `VoiceFlowState` → `Listening` → cam panel + breathing ring + waveform.
+Başka bir feature kendi `TranslationFlowState`'i ile aynı Liquid Glass sistemini
+farklı bir hikâyeyle kullanabilir.
 
 ---
 
@@ -79,6 +137,53 @@ tarar ve `Windows.UI.Notifications.ToastNotificationManager` ile bildirim göste
 ### ADR-007: Mock server (server/)
 `server/` altında Node tabanlı JSON mock API (todos, users, profiles, voice)
 geliştirme dönemi için tutulur. `server/data/` dosyaları `.gitignore`'dadır.
+
+### ADR-008: Feature-as-an-App (modüler tab mimarisi)
+Her sekme "ekran" değil, platform içinde bağımsız feature'dır. Feature kendi
+state/logic/UI'sine sahiptir; ortak yetenekler platformda tek kopyadır.
+Feature'lar birbirinin implementation detayına bağımlı olamaz. Ayrıntı §1.1.
+
+### ADR-009: Voice seam — VoiceCommand → Handler → Domain operation
+Voice, domain modelini doğrudan değiştirmez. `VoiceCommand` üretir; Application
+handler yorumlar; Domain operation'ı çağırır. **UnknownIntent birinci sınıf**
+(parser ürün kararı vermez; Application policy karar verir — v1:
+`CreateTodo(transcript)` fallback). `TranscriptionResult { Text, Confidence,
+Alternates, Provider }` — provider-neutral, adapter'larla beslenir. Üçlü
+komut katmanı YOK (tek input contract).
+
+### ADR-010: Sync envelope — dirty + tombstone + local_version
+`NeedsSync` boolean'ı tek başına yetersiz (create→edit→delete sırası). Model:
+per-entity envelope `dirty, deleted/tombstone, local_version`. Entity içi
+coalescing serbest (son state önemli). Tombstone zorunlu (silme temsili).
+Event outbox / CRDT / event-sourcing YOK — gerçek ihtiyaç gelirse düşünülür.
+
+### ADR-011: local_version ≠ server_version
+`local_version` client-local revision'dır; küresel conflict çözümü değildir.
+Conflict çözümü server-side LWW (`updated_at`/`version`). Client tarafı koruma
+kuralı: **local dirty asla sessizce silinmez** — sync indirirken `NeedsSync`
+ise local korunur, önce push edilir (client protection ≠ conflict resolution).
+
+### ADR-012: Abstraction politikası
+Gerçek değişim noktası veya test ihtiyacı yoksa abstraction yok. İstisnasız
+değerli olan tekler: `ISpeechTranscriber` (Windows→Azure/Whisper),
+`IVoiceCommandParser` (rule→LLM), `ITodoStore` (SQLite→in-memory test).
+`SupabaseService`'e interface YOK — Application onu bilmez, `ITodoStore`/sync
+abstraction'ının arkasında altta kalır.
+
+### ADR-013: VoiceFlowState = Application ↔ UI sözleşmesi
+`Idle → Listening → Processing → Recognized → Failed`. UI bu state'i render
+eder, kendi türetmez. Visual language (Liquid Glass + motion) bu state'in
+üzerine kurulur. (§1.2)
+
+### ADR-014: Todo üç şapka ayrımı
+`Todo` üç sorumluluğu tek sınıfta birleştirmemeli:
+- **Domain:** saf `Todo` (iş kuralı, JSON attribute'suz, UI property'siz)
+- **Persistence:** `LocalTodo` (SQLite eşleşmesi)
+- **UI sunum:** `TodoListItem` (ikon/biçimlendirme — PriorityIcon, StatusIcon,
+  FormattedDuration burada)
+
+Şu an `Models/Todo.cs` üç şapkayı birden taşıyor (`[JsonProperty]` + UI
+property'leri); B-dilimi bu ayrımı uygular.
 
 ---
 
@@ -171,6 +276,9 @@ mevcut DB'lere eklenir (mevcut veriyi korur).
 
 Navigasyon: Shell tab + `Routing.RegisterRoute(nameof(TodoDetailPage))`.
 
+> Hedef: bu sayfalar `Features/VoiceTodo/UI` içinde feature'a bağlanacak;
+> platform ortak yetenekleri `Platform/` altında. Geçiş roadmap'te.
+
 ---
 
 ## 8. DI Kayıtları (MauiProgram.cs)
@@ -181,6 +289,9 @@ Singleton: `IAudioManager`, `SupabaseService`, `AudioService`, `DatabaseService`
 Transient: `LoginPageViewModel`, `TodoListPageViewModel`, `TodoDetailPageViewModel`,
 `SettingsPageViewModel` + ilgili sayfalar.
 `AddHttpClient()` kayıtlı.
+
+Seam abstraction'ları (B-dilimi sonrası): `ISpeechTranscriber`,
+`IVoiceCommandParser`, `ITodoStore` DI'ya bağlanır (ADR-012).
 
 ---
 

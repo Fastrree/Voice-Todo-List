@@ -23,8 +23,10 @@ Canlı metin → Görev" akışı ürünün kalbidir.
 **Teknolojiler:** C# / .NET MAUI 8 (Windows desktop), CommunityToolkit.Mvvm,
 Plugin.Maui.Audio, SQLite (sqlite-net-pcl), Supabase (Auth / Postgres / Edge
 Functions / Storage)
-**Mimari:** MVVM (CommunityToolkit.Mvvm) + Services + Supabase Edge Functions
+**Mimari:** MVVM (CommunityToolkit.Mvvm) + **Feature-as-an-App** (Platform +
+bağımsız feature'lar) + Services + Supabase Edge Functions
 **Çalıştırma platformu (şu an):** `net8.0-windows10.0.19041.0` (yalnızca Windows)
+**Mimari kararlar:** bağlayıcı 10 karar için `AGENT.md` §10.1'e bak.
 
 ---
 
@@ -133,8 +135,11 @@ Bu proje bir Windows MAUI masaüstü uygulamasıdır. Özel doğrulama noktalar�
   `SpeechToTextService` önce Dispose sonra tekrar başlatma döngüsünü kırmamalı.
 - **Sync / veri değiştiyse:** Local-first çalışma bozulmamalı; login yokken de
   uygulama çalışabilmeli (`local-user` fallback). Supabase ayakta değilken çökme
-  olmamalı.
+  olmamalı. **Local dirty veri asla sessizce silinmemeli** (Karar 4).
 - **Tema değiştiyse:** Açık + koyu tema ikisi de ayrı ayrı doğrulanmalı.
+- **Feature/sınır değiştiyse:** Feature isolation (Madde 10.1.1) korunmalı —
+  `FeatureA → FeatureB/Services` bağımlılığı, `Voice → Domain model`
+  bağımlılığı (Karar 2) eklenmemiş olmalı.
 
 Eski feature'ın bozulmadığını KANITLAMADAN görev tamamlanmış sayılmaz.
 "Kontrol et" demiyorum: kanıtla.
@@ -201,6 +206,92 @@ uygulanmamış özellik reklamı yapma (Kaynak Gerçeklik Kuralı, Madde 3).
   noktasıdır — "çalışıyor ama çirkin" kabul edilemez.
 - **Performans şart.** Cam efektleri, gölgeler ve animasyonlar ölçülü kullanılır;
   60fps'in altına düşüren görsel abartıdan kaçınılır.
+
+---
+
+## 10.1 Mimari Baseline — Bağlayıcı 10 Karar
+
+Aşağıdaki kararlar tartışmaya kapalıdır — **bağlayıcı mimari prensiplerdir.**
+Her yeni kod bu kararlara uygun yazılır; bir karar değişecekse kullanıcı onayı
+gerekir (Madde 5). Detaylar ve nedenleri `architecture.md`'de.
+
+1. **Saf Domain modeli.** `Todo` UI sunumu ve JSON/JSON'dan ayrı saf bir domain
+   modelidir. UI'a özel sunum (ikon, biçimlendirme) ayrı bir tipte yaşar
+   (ör. `TodoListItem`). `architecture.md` §Todo üç şapka.
+2. **VoiceCommand → Handler → Domain operation.** Voice asla domain modelini
+   doğrudan değiştirmez. Voice üretir `VoiceCommand`; Application handler
+   yorumlar; Domain operation'ı çağırır. Üçlü komut katmanı yok — tek input
+   contract.
+3. **UnknownIntent birinci sınıf.** Parser ürün kararı vermez. Anlayamadığı
+   giriş için `UnknownIntent` (ham transcript'i taşır) üretir; **Application
+   policy** karar verir (v1: `CreateTodo(transcript)` fallback — "asla
+   utterance kaybetme").
+4. **Local dirty asla sessizce silinmez.** Client protection ≠ Conflict
+   resolution. Sync indirirken local `NeedsSync` ise local korunur (önce push).
+5. **Sync modeli: dirty + tombstone + local_version.** Boolean flag tek başına
+   değil; per-entity envelope: `dirty, deleted/tombstone, local_version`.
+   Event outbox / CRDT / event-sourcing yok.
+6. **local_version ≠ server_version.** Client-local revision, küresel conflict
+   çözümü değildir. Conflict çözümü server-side LWW (`updated_at`/`version`).
+7. **Semantik design-token sözleşmesi.** Tasarım token'ları semantik adlar
+   taşır (`color.surface.primary`, `space.md`, `radius.card`, `motion.page`).
+   Format (JSON/XAML/CSS) ikinci tüketici gelince seçilir; sözleşme bugün
+   `design-system.md`'de yazılır.
+8. **Abstraction politikası:** gerçek değişim noktası veya test ihtiyacı yoksa
+   abstraction yok. Interface yalnızca 2+ gerçek implementasyon / test
+   edilebilirlik gerektiğinde. (İstisnasız tek değerli abstraction'lar:
+   `ISpeechTranscriber`, `IVoiceCommandParser`, `ITodoStore`.)
+9. **VoiceFlowState = Application ↔ UI sözleşmesi.** UI state'i kendi türetmez;
+   Application'dan alır ve görsel dile çevirir
+   (`Idle → Listening → Processing → Recognized → Failed` → Liquid Glass + motion).
+10. **Feature-as-an-App.** Her sekme "ekran" değil, platform içinde yaşayan
+    bağımsız bir uygulamadır. Feature kendi state/logic/UI'sine sahiptir; ortak
+    yetenekler (Design System, Audio, Speech, Storage, Permissions, Motion)
+    platform tarafından sağlanır. Feature'lar birbirinin implementation
+    detayını tüketemez.
+
+### 10.1.1 Feature-as-an-App — Modüler Tab Mimarisi
+
+Kullanıcı kararı: **her uygulama sekmesi, aynı platform üzerinde çalışan
+bağımsız bir ürün/feature olarak tasarlanabilmelidir.**
+
+```
+                    PLATFORM (ortak yetenekler)
+   Design System · Audio · Speech · Storage · Permissions · Motion
+                         │
+        ┌────────────────┼────────────────┐
+        │                │                │
+  Feature A         Feature B        Feature C
+  (VoiceTodo)      (Translator)     (gelecek)
+  kendi state       kendi state      kendi state
+  kendi workflow    kendi workflow   kendi workflow
+  kendi UI          kendi UI         kendi UI
+        │                │                │
+        └────────────────┼────────────────┘
+                  SHARED PLATFORM
+```
+
+- **Platform ≠ Feature:** Platform ortak capability sağlar; Feature kendi ürün
+  davranışından sorumludur.
+- **Feature isolation:** Feature'lar birbirinin implementation detayına bağımlı
+  olamaz. Bir feature diğerinden bir şey kullanacaksa → shared contract /
+  platform capability üzerinden. `FeatureA → FeatureB/Services` YASAK.
+- **Yeni feature eklemek mevcut feature'ları yeniden tasarlamayı
+  gerektirmemeli.** (Mimari stres testi: "Voice Todo kapatılıp yerine başka
+  feature açılsa platform omurgası çöker mi?" → çökmemeli.)
+- **Ortak capability tek kopya:** Feature'lar kendi küçük platformunu yaratmaz
+  (üç ayrı AudioService olmaz); platformdan tüketir.
+- **Sekme = feature/product surface:** kendi navigation entry'si, UI
+  composition'ı, application state'i, error/recovery davranışı olabilir.
+- **Aşırı mühendislik YASAK:** `IPlugin`, `IFeatureManifest`, `IFeatureRegistry`,
+  `IFeatureLifecycle`, `IFeatureHost` vb. üretmeyiz. Prensip + klasör yapısı
+  yeterli; abstraction ihtiyaç doğduğunda üretilir (Madde 8).
+
+### 10.1.2 Future-proof ≠ future-feature-ready
+
+Sistemi geleceğe AÇIK tasarlarız (sınır/sözleşme/seam bırakırız), ama
+"belki lazım olur" diye bugünden feature/altyapı inşa etmeyiz. Gelecekteki
+mimariler dokümana spekülatif not olarak da yazılmaz (kendi içinde borçtur).
 
 ---
 

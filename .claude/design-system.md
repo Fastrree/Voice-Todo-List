@@ -7,6 +7,12 @@ Uygulanan her sayfa bu token'lara ve ilkelere uyar.
 > `Colors.xaml` / `Styles.xaml`'a uygulanacak. Light ve Dark tema BAĞIMSIZ
 > tasarlanır (dark, light'ın koyu hali değil; ayrı bir deneyimdir).
 
+> **Liquid Glass = Platformun görsel dili.** Feature-as-an-App mimarisinde
+> (architecture.md §1.1) Liquid Glass "Voice Todo'nun tasarımı" değil,
+> **tüm feature'ların** ortak görsel dilidir. Feature'lar bu dili kullanarak
+> kendi deneyimlerini kurar. Token → Component → Pattern zinciri bu yüzden
+> platform katmanında yaşar. (AGENT.md Karar 7 + 10)
+
 ---
 
 ## 1. Tasarım Dili (Özet)
@@ -21,6 +27,43 @@ Uygulanan her sayfa bu token'lara ve ilkelere uyar.
 ---
 
 ## 2. Renk Sistemi
+
+### 2.0 Semantik Token Sözleşmesi (Kayıt)
+
+**AGENT.md Karar 7:** Tasarım token'ları semantik adlar taşır; format
+(JSON/XAML/CSS) ikinci tüketici gelince seçilir, sözleşme bugün burada yazılır.
+
+**İsimlendirme:** `kategori.öğe.nitelik` (dot-notation, küçük harf).
+Hex değerleri asla component'lerde inline olmaz — token'dan gelir.
+Dark tema ayrı kayıttır (`color.surface.primary.dark` MAUI'de ayrı anahtar).
+
+Kayıt bugün şu sözlükle başlar (eksik kategoriler eklendikçe genişler):
+
+```
+color.surface.primary      sayfa zemini
+color.surface.secondary    bölüm/alt zemin
+color.surface.glass        cam panel zemin (Liquid Glass)
+color.surface.elevated     yükseltilmiş katman
+color.text.primary         ana metin
+color.text.secondary       ikincil metin
+color.text.tertiary        silik / yer tutucu
+color.border.default       ince çizgi
+color.border.glass         cam panel kenarı
+color.accent.default       imza rengi (buton, aktif, mikrofon halkası)
+color.accent.soft          accent dolgu (chip/tag)
+color.accent.contrast      accent üzerindeki metin
+color.state.success        görev tamam, başarı
+color.state.warning        uyarı
+color.state.danger         hata
+space.xs  · space.sm  · space.md  · space.lg  · space.xl   4·8·12·16·24 (4pt)
+radius.sm · radius.md · radius.lg · radius.pill           10·16·24·999
+typography.display · title · body · caption · micro        (ölçek §3)
+motion.micro · motion.element · motion.page                (150·300·600ms, §9)
+shadow.sm · shadow.md · shadow.lg                          (§6)
+```
+
+MAUI karşılığı: `Colors.xaml` / `Styles.xaml` bu adları birebir kullanır;
+ikinci tüketici (web/CSS) gelirse aynı sözlükten üretilir.
 
 ### 2.1 Ana Palet (yeni — mevcut mavi/koyu mavi değişecek)
 
