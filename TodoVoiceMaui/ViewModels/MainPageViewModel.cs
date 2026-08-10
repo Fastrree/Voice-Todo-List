@@ -30,6 +30,15 @@ public partial class MainPageViewModel : ObservableObject
     [ObservableProperty]
     private bool isLoadingStats;
 
+    [ObservableProperty]
+    private double progressRatio;
+
+    [ObservableProperty]
+    private string progressLabel = "Henüz görev yok";
+
+    [ObservableProperty]
+    private string todayLabel = DateTime.Now.ToString("dd MMMM yyyy", new System.Globalization.CultureInfo("tr-TR"));
+
     public MainPageViewModel(SyncService syncService, ITodoStore todoStore)
     {
         _syncService = syncService;
@@ -79,6 +88,11 @@ public partial class MainPageViewModel : ObservableObject
             CompletedTodos = todos.Count(t => t.Completed);
             PendingTodos = todos.Count(t => !t.Completed);
             VoiceTodos = todosWithVoice.Count;
+
+            ProgressRatio = TotalTodos > 0 ? (double)CompletedTodos / TotalTodos : 0;
+            ProgressLabel = TotalTodos > 0
+                ? $"{CompletedTodos}/{TotalTodos} tamamlandı"
+                : "Henüz görev yok";
         }
         finally
         {

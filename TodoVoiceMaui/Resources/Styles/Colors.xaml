@@ -66,6 +66,17 @@
     <Color x:Key="PriorityLow">#10B981</Color>
 
     <!-- ============================================================
+         AURORA ATMOSFER — MainPage zemin katmanı (design-system §2.0/§6)
+         Light = White/Pearl/Mist: beyaz→inci→sis, cyan/indigo/violet glow
+         ============================================================ -->
+    <Color x:Key="AuroraTop">#FFFFFF</Color>
+    <Color x:Key="AuroraMid">#F3F7FE</Color>
+    <Color x:Key="AuroraBottom">#E7EEFB</Color>
+    <Color x:Key="AuroraGlowCyan">#9FD9F5</Color>
+    <Color x:Key="AuroraGlowIndigo">#B9C6FA</Color>
+    <Color x:Key="AuroraGlowViolet">#D4C7F7</Color>
+
+    <!-- ============================================================
          DARK THEME (AYRI DENEYİM — koyu grafit/indigo zemin, glow accent)
          ============================================================ -->
 
@@ -106,5 +117,18 @@
     <!-- VOICE — Dark -->
     <Color x:Key="DarkRecordingSoft">#3A1216</Color>
     <Color x:Key="DarkVoiceReadySoft">#0E2A20</Color>
+
+    <!-- AURORA ATMOSFER — Dark = Black/Graphite/Smoked:
+         grafit→duman, derin teal/indigo/violet glow (tam siyah DEĞİL) -->
+    <Color x:Key="DarkAuroraTop">#090F1E</Color>
+    <Color x:Key="DarkAuroraMid">#0D1427</Color>
+    <Color x:Key="DarkAuroraBottom">#131B32</Color>
+    <Color x:Key="DarkAuroraGlowTeal">#123A4A</Color>
+    <Color x:Key="DarkAuroraGlowIndigo">#1C2A5C</Color>
+    <Color x:Key="DarkAuroraGlowViolet">#2B2350</Color>
+
+    <!-- TEMA-FARKINDA STATE — Dark'ta parlaklaşır (dark glass üzerinde okunur) -->
+    <Color x:Key="DarkSuccess">#34D399</Color>
+    <Color x:Key="DarkWarning">#FBBF24</Color>
 
 </ResourceDictionary>
