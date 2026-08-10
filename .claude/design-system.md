@@ -98,6 +98,11 @@ Success / Warning / Danger  # durum renkleri (görev tamam, uyarı, hata)
 - Renk daima token olarak (AppThemeBinding Light/Dark ayrı); **asla** ham hex inline.
 - `Dark*` anahtarları ayrı tanımlanır (MAUI 8 `OnTheme` kısıtı, ADR-005).
 - Gradients: yalnız accent + secondary arası (Soft/contrast hedefli).
+- **Vurgu ekonomisi (kilit karar):** turkuaz (`secondary`) **vurgu olmaktan
+  çıkmamalı** — yalnız interaction/state/motion'da kullanılır:
+  `voice/listening/active/success`, cam içi ışık ve hareket, mikrofon halkası.
+  Butonlar, başlıklar, aktif nav, ana CTA'lar **mürekkep mavisi (accent)** taşır.
+  Turkuaz her yere girerse vurgu olmaktan çıkar. (Kullanıcı onayı, 2026-08.)
 
 ---
 

@@ -19,6 +19,10 @@ public static class MauiProgram
 			.UseMauiCommunityToolkit()
 			.ConfigureFonts(fonts =>
 			{
+				fonts.AddFont("Sora-Regular.ttf", "Sora");
+				fonts.AddFont("Sora-Medium.ttf", "SoraMedium");
+				fonts.AddFont("Sora-SemiBold.ttf", "SoraSemiBold");
+				fonts.AddFont("Sora-Bold.ttf", "SoraBold");
 			});
 
 		// Register services

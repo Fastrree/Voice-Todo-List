@@ -3,101 +3,153 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
 
-    <!-- Material Design 3 Color Palette -->
-    <Color x:Key="Primary">#6366f1</Color>
-    <Color x:Key="PrimaryDark">#4f46e5</Color>
-    <Color x:Key="PrimaryLight">#a5b4fc</Color>
+    <!-- ============================================================
+         TOKEN SÖZLÜĞÜ — design-system.md §2
+         İsimlendirme: kategori.öğe.nitelik; hex asla inline olmaz.
+         Light ve Dark AYRI kayıttır (MAUI 8 OnTheme kısıtı, ADR-005).
+         LIGHT: mürekkep mavisi accent + turkuaz secondary (vurgu ekonomisi)
+         ============================================================ -->
 
-    <Color x:Key="Secondary">#10b981</Color>
-    <Color x:Key="SecondaryDark">#059669</Color>
-    <Color x:Key="SecondaryLight">#6ee7b7</Color>
+    <!-- ACCENT: Mürekkep mavisi (ana karakter — buton, başlık, aktif, CTA) -->
+    <Color x:Key="Accent">#2563EB</Color>
+    <Color x:Key="AccentDark">#1D4ED8</Color>
+    <Color x:Key="AccentSoft">#E7EEFC</Color>
+    <Color x:Key="AccentContrast">#FFFFFF</Color>
 
-    <Color x:Key="Tertiary">#f59e0b</Color>
-    <Color x:Key="TertiaryDark">#d97706</Color>
-    <Color x:Key="TertiaryLight">#fcd34d</Color>
+    <!-- SECONDARY: Turkuaz (YALNIZ vurgu/state/motion: voice, listening, success, cam ışığı) -->
+    <Color x:Key="Secondary">#14B8A6</Color>
+    <Color x:Key="SecondaryDark">#0D9488</Color>
+    <Color x:Key="SecondarySoft">#E2F7F4</Color>
 
-    <!-- Semantic Colors -->
-    <Color x:Key="Success">#10b981</Color>
-    <Color x:Key="Warning">#f59e0b</Color>
-    <Color x:Key="Danger">#ef4444</Color>
-    <Color x:Key="Info">#3b82f6</Color>
+    <!-- SURFACE — Light: çok açık soğuk nötr (saf beyaz değil) -->
+    <Color x:Key="Background">#F6F8FC</Color>
+    <Color x:Key="Surface">#FFFFFF</Color>
+    <Color x:Key="SurfaceElevated">#FFFFFF</Color>
+    <Color x:Key="SurfaceMuted">#EEF2F8</Color>
 
-    <!-- Neutral Colors -->
-    <Color x:Key="White">#ffffff</Color>
-    <Color x:Key="Black">#000000</Color>
-    
-    <Color x:Key="Gray50">#f9fafb</Color>
-    <Color x:Key="Gray100">#f3f4f6</Color>
-    <Color x:Key="Gray200">#e5e7eb</Color>
-    <Color x:Key="Gray300">#d1d5db</Color>
-    <Color x:Key="Gray400">#9ca3af</Color>
-    <Color x:Key="Gray500">#6b7280</Color>
-    <Color x:Key="Gray600">#4b5563</Color>
-    <Color x:Key="Gray700">#374151</Color>
-    <Color x:Key="Gray800">#1f2937</Color>
-    <Color x:Key="Gray900">#111827</Color>
+    <!-- TEXT — Light: koyu "mürekkep" tonu -->
+    <Color x:Key="TextPrimary">#0F1B2E</Color>
+    <Color x:Key="TextSecondary">#51607A</Color>
+    <Color x:Key="TextTertiary">#8A94A8</Color>
 
-    <!-- Background Colors -->
-    <Color x:Key="BackgroundPrimary">#ffffff</Color>
-    <Color x:Key="BackgroundSecondary">#f9fafb</Color>
-    <Color x:Key="BackgroundTertiary">#f3f4f6</Color>
+    <!-- BORDER — Light -->
+    <Color x:Key="BorderDefault">#DDE3EC</Color>
+    <Color x:Key="BorderStrong">#C3CCDA</Color>
 
-    <!-- Surface Colors -->
-    <Color x:Key="SurfacePrimary">#ffffff</Color>
-    <Color x:Key="SurfaceSecondary">#f8fafc</Color>
-    <Color x:Key="SurfaceTertiary">#f1f5f9</Color>
+    <!-- CAM (Liquid Glass) — Light: beyaz-%60 + ince beyaz kenar -->
+    <Color x:Key="GlassBackground">#99FFFFFF</Color>
+    <Color x:Key="GlassBorder">#B3FFFFFF</Color>
+    <Color x:Key="GlassHighlight">#FFFFFF</Color>
 
-    <!-- Text Colors -->
-    <Color x:Key="TextPrimary">#111827</Color>
-    <Color x:Key="TextSecondary">#6b7280</Color>
-    <Color x:Key="TextTertiary">#9ca3af</Color>
-    <Color x:Key="TextOnPrimary">#ffffff</Color>
+    <!-- GÖLGE (ambient + key) -->
+    <Color x:Key="ShadowSm">#140F1B2E</Color>
+    <Color x:Key="ShadowMd">#1F0F1B2E</Color>
+    <Color x:Key="ShadowLg">#290F1B2E</Color>
 
-    <!-- Border Colors -->
-    <Color x:Key="BorderPrimary">#e5e7eb</Color>
-    <Color x:Key="BorderSecondary">#d1d5db</Color>
-    <Color x:Key="BorderFocus">#6366f1</Color>
+    <!-- STATE -->
+    <Color x:Key="Success">#10B981</Color>
+    <Color x:Key="Warning">#F59E0B</Color>
+    <Color x:Key="Danger">#EF4444</Color>
+    <Color x:Key="Info">#3B82F6</Color>
 
-    <!-- Glassmorphism Colors -->
-    <Color x:Key="GlassBackground">#80ffffff</Color>
-    <Color x:Key="GlassBorder">#40ffffff</Color>
-    <Color x:Key="GlassShadow">#20000000</Color>
+    <!-- VOICE / RECORDING -->
+    <Color x:Key="Recording">#EF4444</Color>
+    <Color x:Key="RecordingSoft">#FDEFF0</Color>
+    <Color x:Key="VoiceReady">#10B981</Color>
+    <Color x:Key="VoiceReadySoft">#E9F9F1</Color>
 
-    <!-- Voice Recording Colors -->
-    <Color x:Key="Recording">#ef4444</Color>
-    <Color x:Key="RecordingBackground">#fef2f2</Color>
-    <Color x:Key="VoiceReady">#10b981</Color>
-    <Color x:Key="VoiceReadyBackground">#f0fdf4</Color>
-
-    <!-- Priority Colors -->
-    <Color x:Key="PriorityHigh">#ef4444</Color>
-    <Color x:Key="PriorityMedium">#f59e0b</Color>
-    <Color x:Key="PriorityLow">#10b981</Color>
+    <!-- PRIORITY -->
+    <Color x:Key="PriorityHigh">#EF4444</Color>
+    <Color x:Key="PriorityMedium">#F59E0B</Color>
+    <Color x:Key="PriorityLow">#10B981</Color>
 
     <!-- ============================================================
-         DARK THEME COLORS (used with AppThemeBinding)
+         DARK THEME (AYRI DENEYİM — koyu grafit/indigo zemin, glow accent)
          ============================================================ -->
-    <Color x:Key="DarkBackgroundPrimary">#0f172a</Color>
-    <Color x:Key="DarkBackgroundSecondary">#1e293b</Color>
-    <Color x:Key="DarkBackgroundTertiary">#334155</Color>
 
-    <Color x:Key="DarkSurfacePrimary">#1e293b</Color>
-    <Color x:Key="DarkSurfaceSecondary">#334155</Color>
-    <Color x:Key="DarkSurfaceTertiary">#475569</Color>
+    <!-- ACCENT — Dark: parlaklaşır + ışık saçar (glow) -->
+    <Color x:Key="DarkAccent">#5B8CFF</Color>
+    <Color x:Key="DarkAccentSoft">#1A2A52</Color>
+    <Color x:Key="DarkAccentContrast">#FFFFFF</Color>
 
-    <Color x:Key="DarkTextPrimary">#f1f5f9</Color>
-    <Color x:Key="DarkTextSecondary">#94a3b8</Color>
-    <Color x:Key="DarkTextTertiary">#64748b</Color>
-    <Color x:Key="DarkTextOnPrimary">#ffffff</Color>
+    <!-- SECONDARY — Dark -->
+    <Color x:Key="DarkSecondary">#2DD4BF</Color>
+    <Color x:Key="DarkSecondarySoft">#0F2E2B</Color>
 
-    <Color x:Key="DarkBorderPrimary">#475569</Color>
-    <Color x:Key="DarkBorderSecondary">#64748b</Color>
-    <Color x:Key="DarkBorderFocus">#818cf8</Color>
+    <!-- SURFACE — Dark: koyu grafit/indigo (tam siyah değil) -->
+    <Color x:Key="DarkBackground">#0B1220</Color>
+    <Color x:Key="DarkSurface">#111A2C</Color>
+    <Color x:Key="DarkSurfaceElevated">#1A2540</Color>
+    <Color x:Key="DarkSurfaceMuted">#1E2A42</Color>
 
-    <Color x:Key="DarkGlassBackground">#401e293b</Color>
-    <Color x:Key="DarkGlassBorder">#40ffffff</Color>
+    <!-- TEXT — Dark: buz beyazı -->
+    <Color x:Key="DarkTextPrimary">#E9EEF8</Color>
+    <Color x:Key="DarkTextSecondary">#A7B3C9</Color>
+    <Color x:Key="DarkTextTertiary">#6B7A96</Color>
 
-    <Color x:Key="DarkRecordingBackground">#450a0a</Color>
-    <Color x:Key="DarkVoiceReadyBackground">#022c22</Color>
+    <!-- BORDER — Dark -->
+    <Color x:Key="DarkBorderDefault">#263452</Color>
+    <Color x:Key="DarkBorderStrong">#33456B</Color>
+
+    <!-- CAM — Dark: beyaz-%6 + ince açık gri kenar -->
+    <Color x:Key="DarkGlassBackground">#0FFFFFFF</Color>
+    <Color x:Key="DarkGlassBorder">#14FFFFFF</Color>
+    <Color x:Key="DarkGlassHighlight">#26FFFFFF</Color>
+
+    <!-- GÖLGE — Dark (siyah tabanlı) -->
+    <Color x:Key="DarkShadowSm">#33000000</Color>
+    <Color x:Key="DarkShadowMd">#40000000</Color>
+    <Color x:Key="DarkShadowLg">#52000000</Color>
+
+    <!-- VOICE — Dark -->
+    <Color x:Key="DarkRecordingSoft">#3A1216</Color>
+    <Color x:Key="DarkVoiceReadySoft">#0E2A20</Color>
+
+    <!-- Legacy alias'lar (mevcut XAML'i kırmadan, yeni token değerlerini taşır) -->
+    <Color x:Key="Primary">#2563EB</Color>
+    <Color x:Key="PrimaryDark">#1D4ED8</Color>
+    <Color x:Key="PrimaryLight">#E7EEFC</Color>
+    <Color x:Key="Tertiary">#F59E0B</Color>
+    <Color x:Key="TertiaryDark">#F59E0B</Color>
+    <Color x:Key="TertiaryLight">#F59E0B</Color>
+    <Color x:Key="White">#FFFFFF</Color>
+    <Color x:Key="Black">#000000</Color>
+
+    <!-- Legacy surface/background adları -->
+    <Color x:Key="BackgroundPrimary">#F6F8FC</Color>
+    <Color x:Key="BackgroundSecondary">#EEF2F8</Color>
+    <Color x:Key="BackgroundTertiary">#EEF2F8</Color>
+    <Color x:Key="SurfacePrimary">#FFFFFF</Color>
+    <Color x:Key="SurfaceSecondary">#EEF2F8</Color>
+    <Color x:Key="SurfaceTertiary">#EEF2F8</Color>
+    <Color x:Key="TextOnPrimary">#FFFFFF</Color>
+    <Color x:Key="BorderPrimary">#DDE3EC</Color>
+    <Color x:Key="BorderSecondary">#C3CCDA</Color>
+    <Color x:Key="BorderFocus">#2563EB</Color>
+    <Color x:Key="GlassShadow">#140F1B2E</Color>
+
+    <!-- Legacy dark adları -->
+    <Color x:Key="DarkBackgroundPrimary">#0B1220</Color>
+    <Color x:Key="DarkBackgroundSecondary">#1E2A42</Color>
+    <Color x:Key="DarkBackgroundTertiary">#1E2A42</Color>
+    <Color x:Key="DarkSurfacePrimary">#111A2C</Color>
+    <Color x:Key="DarkSurfaceSecondary">#1E2A42</Color>
+    <Color x:Key="DarkSurfaceTertiary">#1A2540</Color>
+    <Color x:Key="DarkTextOnPrimary">#FFFFFF</Color>
+    <Color x:Key="DarkBorderPrimary">#263452</Color>
+    <Color x:Key="DarkBorderSecondary">#33456B</Color>
+    <Color x:Key="DarkBorderFocus">#5B8CFF</Color>
+
+    <!-- Legacy gray ölçeği (disabled/slider vb.) -->
+    <Color x:Key="Gray50">#F6F8FC</Color>
+    <Color x:Key="Gray100">#EEF2F8</Color>
+    <Color x:Key="Gray200">#DDE3EC</Color>
+    <Color x:Key="Gray300">#C3CCDA</Color>
+    <Color x:Key="Gray400">#8A94A8</Color>
+    <Color x:Key="Gray500">#51607A</Color>
+    <Color x:Key="Gray600">#33415C</Color>
+    <Color x:Key="Gray700">#1E2A42</Color>
+    <Color x:Key="Gray800">#111A2C</Color>
+    <Color x:Key="Gray900">#0B1220</Color>
 
 </ResourceDictionary>
