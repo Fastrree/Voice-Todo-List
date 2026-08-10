@@ -1,0 +1,416 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:TodoVoiceMaui.ViewModels"
+             xmlns:models="clr-namespace:TodoVoiceMaui.Models"
+             xmlns:converters="clr-namespace:TodoVoiceMaui.Converters"
+             x:Class="TodoVoiceMaui.Views.TodoListPage"
+             x:DataType="viewmodels:TodoListPageViewModel"
+             Title="Görevler">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <converters:BoolToRecordingColorConverter x:Key="BoolToRecordingColorConverter" />
+            <converters:InverseBoolConverter x:Key="InverseBoolConverter" />
+            <converters:IsNotNullOrEmptyConverter x:Key="IsNotNullOrEmptyConverter" />
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="Auto,Auto,*,Auto">
+
+        <!-- Sync Status -->
+        <Frame Grid.Row="0" 
+               BackgroundColor="{StaticResource Secondary}"
+               Padding="10"
+               CornerRadius="0"
+               HasShadow="False"
+               IsVisible="{Binding IsSyncing}">
+            <StackLayout Orientation="Horizontal" 
+                        HorizontalOptions="Center">
+                <ActivityIndicator IsRunning="{Binding IsSyncing}" 
+                                 Color="White" />
+                <Label Text="{Binding SyncStatus}"
+                       TextColor="White"
+                       FontSize="14"
+                       VerticalOptions="Center"
+                       Margin="10,0,0,0" />
+            </StackLayout>
+        </Frame>
+
+        <!-- Search and Filters -->
+        <StackLayout Grid.Row="1" 
+                    Padding="15"
+                    Spacing="10">
+            
+            <!-- Search Bar -->
+            <Frame BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSecondary}, Dark={StaticResource DarkSurfaceSecondary}}"
+                   Padding="0"
+                   CornerRadius="20"
+                   HasShadow="False">
+                <Entry Text="{Binding SearchText}"
+                       Placeholder="Görevlerde ara..."
+                       FontSize="16"
+                       Margin="15,0" />
+            </Frame>
+
+            <!-- Filter Buttons -->
+            <ScrollView Orientation="Horizontal" 
+                       HorizontalScrollBarVisibility="Never">
+                <StackLayout Orientation="Horizontal" 
+                            Spacing="10">
+                    
+                    <Button Text="Tümü"
+                            Command="{Binding ChangeFilterCommand}"
+                            CommandParameter="all"
+                            Style="{StaticResource SecondaryButton}"
+                            FontSize="12"
+                            Padding="15,8" />
+                    
+                    <Button Text="Bekleyen"
+                            Command="{Binding ChangeFilterCommand}"
+                            CommandParameter="pending"
+                            Style="{StaticResource SecondaryButton}"
+                            FontSize="12"
+                            Padding="15,8" />
+                    
+                    <Button Text="Tamamlanan"
+                            Command="{Binding ChangeFilterCommand}"
+                            CommandParameter="completed"
+                            Style="{StaticResource SecondaryButton}"
+                            FontSize="12"
+                            Padding="15,8" />
+                    
+                    <Button Text="Sesli"
+                            Command="{Binding ChangeFilterCommand}"
+                            CommandParameter="with_voice"
+                            Style="{StaticResource SecondaryButton}"
+                            FontSize="12"
+                            Padding="15,8" />
+                    
+                </StackLayout>
+            </ScrollView>
+
+            <!-- Sort & Priority Controls -->
+            <Grid ColumnDefinitions="*,*"
+                  ColumnSpacing="10">
+                <Picker Title="Öncelik"
+                        ItemsSource="{Binding PriorityFilterOptions}"
+                        ItemDisplayBinding="{Binding Value}"
+                        IsVisible="False" />
+                <Frame Grid.Column="0"
+                       BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSecondary}, Dark={StaticResource DarkSurfaceSecondary}}"
+                       Padding="0"
+                       CornerRadius="12"
+                       HasShadow="False">
+                    <Grid ColumnDefinitions="Auto,*">
+                        <Label Text="⚡"
+                               FontSize="14"
+                               VerticalOptions="Center"
+                               Margin="12,0,8,0" />
+                        <Picker Grid.Column="1"
+                                Title="Tüm Öncelikler"
+                                ItemsSource="{Binding PriorityFilterOptions}"
+                                ItemDisplayBinding="{Binding Value}"
+                                SelectedIndex="0"
+                                SelectedIndexChanged="OnPriorityPickerChanged"
+                                FontSize="13"
+                                BackgroundColor="Transparent" />
+                    </Grid>
+                </Frame>
+                <Frame Grid.Column="1"
+                       BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceSecondary}, Dark={StaticResource DarkSurfaceSecondary}}"
+                       Padding="0"
+                       CornerRadius="12"
+                       HasShadow="False">
+                    <Grid ColumnDefinitions="Auto,*">
+                        <Label Text="⇅"
+                               FontSize="14"
+                               VerticalOptions="Center"
+                               Margin="12,0,8,0" />
+                        <Picker Grid.Column="1"
+                                Title="Sırala"
+                                ItemsSource="{Binding SortOptions}"
+                                ItemDisplayBinding="{Binding Value}"
+                                SelectedIndex="0"
+                                SelectedIndexChanged="OnSortPickerChanged"
+                                FontSize="13"
+                                BackgroundColor="Transparent" />
+                    </Grid>
+                </Frame>
+            </Grid>
+
+        </StackLayout>
+
+        <!-- Todos List -->
+        <RefreshView Grid.Row="2"
+                    Command="{Binding RefreshCommand}"
+                    IsRefreshing="{Binding IsLoading}">
+            
+            <CollectionView x:Name="TodosCollection"
+                           ItemsSource="{Binding FilteredTodos}"
+                           BackgroundColor="Transparent">
+                <CollectionView.EmptyView>
+                    <StackLayout Padding="40"
+                                 Spacing="10"
+                                 VerticalOptions="Center"
+                                 HorizontalOptions="Center">
+                        <Label Text="🗒️"
+                               FontSize="48"
+                               HorizontalOptions="Center" />
+                        <Label Text="Görev bulunamadı"
+                               Style="{StaticResource HeadlineSmall}"
+                               HorizontalOptions="Center" />
+                        <Label Text="Yeni bir görev ekleyin veya filtreleri sıfırlayın"
+                               Style="{StaticResource BodyMedium}"
+                               TextColor="{StaticResource TextSecondary}"
+                               HorizontalTextAlignment="Center" />
+                    </StackLayout>
+                </CollectionView.EmptyView>
+                
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:Todo">
+                        <Grid RowDefinitions="Auto" 
+                              Padding="15,5">
+                            
+                            <Frame Style="{StaticResource CardFrame}"
+                                   Margin="0,5">
+                                <Frame.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding Source={x:Reference TodosCollection}, Path=BindingContext.OpenTodoDetailCommand}"
+                                                        CommandParameter="{Binding .}" />
+                                </Frame.GestureRecognizers>
+                                
+                                <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                                    
+                                    <!-- Completion Checkbox -->
+                                    <CheckBox Grid.Column="0"
+                                             IsChecked="{Binding Completed}"
+                                             VerticalOptions="Start"
+                                             Margin="0,5,15,0">
+                                        <CheckBox.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding Source={x:Reference TodosCollection}, Path=BindingContext.ToggleTodoCommand}"
+                                                                CommandParameter="{Binding .}" />
+                                        </CheckBox.GestureRecognizers>
+                                    </CheckBox>
+
+                                    <!-- Todo Content -->
+                                    <StackLayout Grid.Column="1"
+                                                Spacing="5">
+                                        
+                                        <Label Text="{Binding Title}"
+                                               Style="{StaticResource TitleMedium}">
+                                            <Label.Triggers>
+                                                <DataTrigger TargetType="Label" 
+                                                           Binding="{Binding Completed}" 
+                                                           Value="True">
+                                                    <Setter Property="TextDecorations" Value="Strikethrough" />
+                                                    <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}" />
+                                                </DataTrigger>
+                                            </Label.Triggers>
+                                        </Label>
+
+                                        <Label Text="{Binding Description}"
+                                               Style="{StaticResource BodySmall}"
+                                               IsVisible="{Binding Description, Converter={StaticResource IsNotNullOrEmptyConverter}}"
+                                               LineBreakMode="TailTruncation"
+                                               MaxLines="2" />
+
+                                        <StackLayout Orientation="Horizontal" 
+                                                    Spacing="10">
+                                            
+                                            <Label Text="{Binding PriorityIcon}"
+                                                   FontSize="12"
+                                                   VerticalOptions="Center" />
+                                            
+                                            <Label Text="{Binding Priority, StringFormat='Öncelik: {0}'}"
+                                                   Style="{StaticResource LabelSmall}" />
+                                            
+                                            <Label Text="🎤"
+                                                   FontSize="12"
+                                                   IsVisible="{Binding HasVoiceRecording}"
+                                                   VerticalOptions="Center" />
+                                            
+                                            <Label Text="{Binding FormattedDuration}"
+                                                   Style="{StaticResource LabelSmall}"
+                                                   IsVisible="{Binding HasVoiceRecording}" />
+                                            
+                                        </StackLayout>
+
+                                        <Label Text="{Binding CreatedAt, StringFormat='Oluşturulma: {0:dd.MM.yyyy HH:mm}'}"
+                                               Style="{StaticResource LabelSmall}" />
+
+                                    </StackLayout>
+
+                                    <!-- Status Icon -->
+                                    <Label Grid.Column="2"
+                                           Text="{Binding StatusIcon}"
+                                           FontSize="16"
+                                           VerticalOptions="Start"
+                                           Margin="10,5,10,0" />
+
+                                    <!-- Delete Button -->
+                                    <Button Grid.Column="3"
+                                            Text="🗑️"
+                                            Command="{Binding Source={x:Reference TodosCollection}, Path=BindingContext.DeleteTodoCommand}"
+                                            CommandParameter="{Binding .}"
+                                            Style="{StaticResource IconButton}"
+                                            BackgroundColor="{StaticResource Danger}"
+                                            TextColor="White"
+                                            WidthRequest="40"
+                                            HeightRequest="40"
+                                            CornerRadius="20"
+                                            FontSize="16"
+                                            VerticalOptions="Start" />
+
+                                </Grid>
+                            </Frame>
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+            
+        </RefreshView>
+
+        <!-- Add Todo Section -->
+        <Frame Grid.Row="3" 
+               BackgroundColor="{AppThemeBinding Light={StaticResource SurfacePrimary}, Dark={StaticResource DarkSurfacePrimary}}"
+               Padding="15"
+               CornerRadius="0"
+               HasShadow="True">
+            
+            <StackLayout Spacing="10">
+                
+                <!-- Speech Recognition Status -->
+                <Frame IsVisible="{Binding IsSpeechListening}"
+                       BackgroundColor="{StaticResource RecordingBackground}"
+                       Padding="10"
+                       CornerRadius="10"
+                       HasShadow="False">
+                    <StackLayout Spacing="8">
+                        <StackLayout Orientation="Horizontal"
+                                    HorizontalOptions="Center">
+                            <ActivityIndicator IsRunning="{Binding IsSpeechListening}"
+                                               Color="{StaticResource Recording}" />
+                            <Label Text="{Binding SpeechStatus}"
+                                   TextColor="{StaticResource Recording}"
+                                   FontSize="14"
+                                   FontAttributes="Bold"
+                                   VerticalOptions="Center"
+                                   Margin="10,0,0,0" />
+                        </StackLayout>
+                        <Label Text="{Binding LiveTranscript}"
+                               Style="{StaticResource BodyMedium}"
+                               TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource DarkTextPrimary}}"
+                               HorizontalTextAlignment="Center"
+                               FontAttributes="Italic"
+                               IsVisible="{Binding LiveTranscript, Converter={StaticResource IsNotNullOrEmptyConverter}}" />
+                        <Button Text="⏹️ Bitir"
+                                Command="{Binding StopSpeechToTextCommand}"
+                                BackgroundColor="{StaticResource Recording}"
+                                TextColor="White"
+                                FontSize="14"
+                                HeightRequest="40"
+                                CornerRadius="20"
+                                HorizontalOptions="Center" />
+                    </StackLayout>
+                </Frame>
+
+                <!-- Voice Recording Status -->
+                <Frame IsVisible="{Binding HasRecording}"
+                       BackgroundColor="{StaticResource VoiceReadyBackground}"
+                       Padding="10"
+                       CornerRadius="10"
+                       HasShadow="False">
+                    <StackLayout Orientation="Horizontal"
+                                HorizontalOptions="Center">
+                        <Label Text="🎤" 
+                               FontSize="16"
+                               VerticalOptions="Center" />
+                        <Label Text="Ses kaydı hazır!"
+                               TextColor="{StaticResource VoiceReady}"
+                               FontSize="14"
+                               FontAttributes="Bold"
+                               VerticalOptions="Center"
+                               Margin="5,0,0,0" />
+                        <Label Text="{Binding RecordingDuration}"
+                               TextColor="{StaticResource VoiceReady}"
+                               FontSize="12"
+                               VerticalOptions="Center"
+                               Margin="10,0,0,0" />
+                        <Button Text="❌"
+                                Command="{Binding ClearRecordingCommand}"
+                                BackgroundColor="Transparent"
+                                TextColor="{StaticResource Danger}"
+                                FontSize="16"
+                                WidthRequest="30"
+                                HeightRequest="30"
+                                CornerRadius="15"
+                                Padding="0" />
+                    </StackLayout>
+                </Frame>
+
+                <!-- Input Area -->
+                <Grid ColumnDefinitions="*,Auto,Auto">
+                    
+                    <!-- Todo Title Input -->
+                    <Frame Grid.Column="0"
+                           BackgroundColor="White"
+                           Padding="0"
+                           CornerRadius="20"
+                           HasShadow="False">
+                        <Entry Text="{Binding NewTodoTitle}"
+                               Placeholder="Yeni görev ekle..."
+                               FontSize="16"
+                               Margin="15,0"
+                               ReturnType="Done" />
+                    </Frame>
+
+                    <!-- Voice Recording Button -->
+                    <Button Grid.Column="1"
+                            Text="🎤"
+                            Command="{Binding StartSpeechToTextCommand}"
+                            BackgroundColor="{StaticResource Primary}"
+                            TextColor="White"
+                            FontSize="20"
+                            WidthRequest="50"
+                            HeightRequest="50"
+                            CornerRadius="25"
+                            Margin="5,0,0,0">
+                        
+                        <Button.Triggers>
+                            <DataTrigger TargetType="Button" 
+                                       Binding="{Binding IsSpeechListening}" 
+                                       Value="True">
+                                <Setter Property="BackgroundColor" Value="{StaticResource Recording}" />
+                                <Setter Property="Text" Value="⏹️" />
+                            </DataTrigger>
+                        </Button.Triggers>
+                    </Button>
+
+                    <!-- Add Todo Button -->
+                    <Button Grid.Column="2"
+                            Text="➕"
+                            Command="{Binding AddTodoCommand}"
+                            BackgroundColor="{StaticResource Secondary}"
+                            TextColor="White"
+                            FontSize="20"
+                            WidthRequest="50"
+                            HeightRequest="50"
+                            CornerRadius="25"
+                            Margin="5,0,0,0"
+                            IsEnabled="{Binding IsLoading, Converter={StaticResource InverseBoolConverter}}" />
+
+                </Grid>
+
+                <!-- Recording Duration (while recording) -->
+                <Label Text="{Binding RecordingDuration, StringFormat='Kayıt süresi: {0}'}"
+                       Style="{StaticResource BodySmall}"
+                       HorizontalOptions="Center"
+                       IsVisible="{Binding IsRecording}" />
+
+            </StackLayout>
+            
+        </Frame>
+
+    </Grid>
+
+</ContentPage>

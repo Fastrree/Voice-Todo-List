@@ -1,0 +1,10 @@
+{
+  "name": "todovoice-server",
+  "version": "1.0.0",
+  "description": "Local API server for TodoVoiceMaui app",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {}
+}

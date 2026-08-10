@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:TodoVoiceMaui.ViewModels"
+             x:Class="TodoVoiceMaui.Views.MainPage"
+             x:DataType="viewmodels:MainPageViewModel"
+             Title="Ana Sayfa"
+             BackgroundColor="{AppThemeBinding Light={StaticResource BackgroundPrimary}, Dark={StaticResource DarkBackgroundPrimary}}">
+
+    <ScrollView>
+        <Grid RowDefinitions="Auto,*,Auto" 
+              Padding="20">
+
+            <!-- Header -->
+            <StackLayout Grid.Row="0" 
+                        Spacing="10"
+                        Margin="0,20,0,25">
+                
+                <Label Text="🎤" 
+                       FontSize="44"
+                       HorizontalOptions="Center" />
+                
+                <Label Text="{Binding WelcomeMessage}"
+                       Style="{StaticResource HeadlineMedium}"
+                       HorizontalOptions="Center" />
+                
+                <Label Text="Sesli görev yönetimi uygulamanız"
+                       Style="{StaticResource BodyMedium}"
+                       TextColor="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}"
+                       HorizontalOptions="Center" />
+                
+            </StackLayout>
+
+            <!-- Stats Dashboard -->
+            <Grid Grid.Row="1"
+                  RowDefinitions="Auto,Auto"
+                  RowSpacing="15">
+
+                <StackLayout Grid.Row="0"
+                            Spacing="12">
+
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Text="Genel Bakış"
+                               Style="{StaticResource TitleMedium}"
+                               VerticalOptions="Center" />
+                        <ActivityIndicator Grid.Column="1"
+                                           IsRunning="{Binding IsLoadingStats}"
+                                           IsVisible="{Binding IsLoadingStats}"
+                                           Color="{StaticResource Primary}"
+                                           VerticalOptions="Center" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,*"
+                          ColumnSpacing="12"
+                          RowDefinitions="Auto,Auto"
+                          RowSpacing="12">
+
+                        <Border Grid.Row="0" Grid.Column="0"
+                                Style="{StaticResource StatsCard}">
+                            <StackLayout Spacing="4" Padding="14">
+                                <Label Text="Toplam Görev"
+                                       Style="{StaticResource BodySmall}"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}" />
+                                <Label Text="{Binding TotalTodos}"
+                                       Style="{StaticResource HeadlineMedium}"
+                                       TextColor="{StaticResource Primary}" />
+                            </StackLayout>
+                        </Border>
+
+                        <Border Grid.Row="0" Grid.Column="1"
+                                Style="{StaticResource StatsCard}">
+                            <StackLayout Spacing="4" Padding="14">
+                                <Label Text="Tamamlanan"
+                                       Style="{StaticResource BodySmall}"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}" />
+                                <Label Text="{Binding CompletedTodos}"
+                                       Style="{StaticResource HeadlineMedium}"
+                                       TextColor="{StaticResource VoiceReady}" />
+                            </StackLayout>
+                        </Border>
+
+                        <Border Grid.Row="1" Grid.Column="0"
+                                Style="{StaticResource StatsCard}">
+                            <StackLayout Spacing="4" Padding="14">
+                                <Label Text="Bekleyen"
+                                       Style="{StaticResource BodySmall}"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}" />
+                                <Label Text="{Binding PendingTodos}"
+                                       Style="{StaticResource HeadlineMedium}"
+                                       TextColor="{StaticResource PriorityMedium}" />
+                            </StackLayout>
+                        </Border>
+
+                        <Border Grid.Row="1" Grid.Column="1"
+                                Style="{StaticResource StatsCard}">
+                            <StackLayout Spacing="4" Padding="14">
+                                <Label Text="Sesli Not"
+                                       Style="{StaticResource BodySmall}"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}" />
+                                <Label Text="{Binding VoiceTodos}"
+                                       Style="{StaticResource HeadlineMedium}"
+                                       TextColor="{StaticResource PriorityHigh}" />
+                            </StackLayout>
+                        </Border>
+
+                    </Grid>
+
+                </StackLayout>
+
+                <!-- Quick Actions -->
+                <Grid Grid.Row="1" 
+                      ColumnDefinitions="*,*"
+                      ColumnSpacing="15">
+
+                    <Border Style="{StaticResource StatsCard}">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding NavigateToTodosCommand}" />
+                        </Border.GestureRecognizers>
+                        <StackLayout Spacing="10" Padding="16" HorizontalOptions="Center">
+                            <Label Text="📝" 
+                                   FontSize="30"
+                                   HorizontalOptions="Center" />
+                            <Label Text="Görevler"
+                                   Style="{StaticResource TitleMedium}"
+                                   HorizontalOptions="Center" />
+                            <Label Text="Görevlerinizi görüntüleyin ve yönetin"
+                                   Style="{StaticResource BodySmall}"
+                                   TextColor="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}"
+                                   HorizontalTextAlignment="Center" />
+                        </StackLayout>
+                    </Border>
+
+                    <Border Grid.Column="1" Style="{StaticResource StatsCard}">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding NavigateToSettingsCommand}" />
+                        </Border.GestureRecognizers>
+                        <StackLayout Spacing="10" Padding="16" HorizontalOptions="Center">
+                            <Label Text="⚙️" 
+                                   FontSize="30"
+                                   HorizontalOptions="Center" />
+                            <Label Text="Ayarlar"
+                                   Style="{StaticResource TitleMedium}"
+                                   HorizontalOptions="Center" />
+                            <Label Text="Uygulama ayarlarını düzenleyin"
+                                   Style="{StaticResource BodySmall}"
+                                   TextColor="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}"
+                                   HorizontalTextAlignment="Center" />
+                        </StackLayout>
+                    </Border>
+
+                </Grid>
+
+            </Grid>
+
+            <!-- Footer -->
+            <StackLayout Grid.Row="2" 
+                        Margin="0,20,0,10"
+                        Spacing="10">
+                
+                <Button Text="Yenile"
+                        Command="{Binding RefreshCommand}"
+                        Style="{StaticResource SecondaryButton}"
+                        HorizontalOptions="Center" />
+                
+                <Label Text="Todo Voice v1.0"
+                       Style="{StaticResource BodySmall}"
+                       TextColor="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}"
+                       HorizontalOptions="Center" />
+                
+            </StackLayout>
+
+        </Grid>
+    </ScrollView>
+
+</ContentPage>

@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:TodoVoiceMaui.ViewModels"
+             xmlns:converters="clr-namespace:TodoVoiceMaui.Converters"
+             x:Class="TodoVoiceMaui.Views.SettingsPage"
+             x:DataType="viewmodels:SettingsPageViewModel"
+             Title="Ayarlar">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <converters:IsNotNullConverter x:Key="IsNotNullConverter" />
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <ScrollView>
+        <StackLayout Padding="20" Spacing="20">
+            
+            <!-- User Profile -->
+            <Frame Style="{StaticResource CardFrame}">
+                <StackLayout Spacing="15">
+                    
+                    <Label Text="Kullanıcı Profili"
+                           Style="{StaticResource TitleLarge}" />
+                    
+                    <Entry Text="{Binding FullName}"
+                           Placeholder="Ad Soyad" />
+                    
+                    <Label Text="{Binding Email}"
+                           Style="{StaticResource BodyMedium}"
+                           TextColor="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}" />
+                    
+                    <Button Text="Profili Güncelle"
+                            Command="{Binding SaveProfileCommand}" />
+                    
+                </StackLayout>
+            </Frame>
+
+            <!-- Preferences -->
+            <Frame Style="{StaticResource CardFrame}">
+                <StackLayout Spacing="15">
+                    
+                    <Label Text="Tercihler"
+                           Style="{StaticResource TitleLarge}" />
+                    
+                    <StackLayout Orientation="Horizontal">
+                        <Label Text="Bildirimler"
+                               Style="{StaticResource BodyMedium}"
+                               VerticalOptions="Center"
+                               HorizontalOptions="StartAndExpand" />
+                        <Switch IsToggled="{Binding EnableNotifications}" />
+                    </StackLayout>
+                    
+                    <StackLayout Orientation="Horizontal">
+                        <Label Text="Ses Kayıt"
+                               Style="{StaticResource BodyMedium}"
+                               VerticalOptions="Center"
+                               HorizontalOptions="StartAndExpand" />
+                        <Switch IsToggled="{Binding EnableVoiceRecording}" />
+                    </StackLayout>
+                    
+                    <StackLayout Orientation="Horizontal">
+                        <Label Text="Otomatik Senkronizasyon"
+                               Style="{StaticResource BodyMedium}"
+                               VerticalOptions="Center"
+                               HorizontalOptions="StartAndExpand" />
+                        <Switch IsToggled="{Binding AutoSync}" />
+                    </StackLayout>
+                    
+                    <Button Text="Tercihleri Kaydet"
+                            Command="{Binding SavePreferencesCommand}" />
+                    
+                </StackLayout>
+            </Frame>
+
+            <!-- Sync Status -->
+            <Frame Style="{StaticResource CardFrame}">
+                <StackLayout Spacing="15">
+                    
+                    <Label Text="Senkronizasyon"
+                           Style="{StaticResource TitleLarge}" />
+                    
+                    <Label Text="{Binding SyncStatusText}"
+                           Style="{StaticResource BodyMedium}" />
+                    
+                    <Label Text="{Binding LastSyncText}"
+                           Style="{StaticResource BodySmall}" />
+                    
+                    <Button Text="Şimdi Senkronize Et"
+                            Command="{Binding SyncNowCommand}" />
+                    
+                </StackLayout>
+            </Frame>
+
+            <!-- User Stats -->
+            <Frame Style="{StaticResource CardFrame}"
+                   IsVisible="{Binding UserStats, Converter={StaticResource IsNotNullConverter}}">
+                <StackLayout Spacing="15">
+                    
+                    <Label Text="İstatistikler"
+                           Style="{StaticResource TitleLarge}" />
+                    
+                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
+                        
+                        <StackLayout Grid.Column="0" Grid.Row="0">
+                            <Label Text="{Binding UserStats.TotalTodos}"
+                                   Style="{StaticResource HeadlineSmall}"
+                                   HorizontalOptions="Center" />
+                            <Label Text="Toplam Görev"
+                                   Style="{StaticResource BodySmall}"
+                                   HorizontalOptions="Center" />
+                        </StackLayout>
+                        
+                        <StackLayout Grid.Column="1" Grid.Row="0">
+                            <Label Text="{Binding UserStats.CompletedTodos}"
+                                   Style="{StaticResource HeadlineSmall}"
+                                   HorizontalOptions="Center" />
+                            <Label Text="Tamamlanan"
+                                   Style="{StaticResource BodySmall}"
+                                   HorizontalOptions="Center" />
+                        </StackLayout>
+                        
+                        <StackLayout Grid.Column="0" Grid.Row="1">
+                            <Label Text="{Binding UserStats.TodosWithVoice}"
+                                   Style="{StaticResource HeadlineSmall}"
+                                   HorizontalOptions="Center" />
+                            <Label Text="Sesli Görev"
+                                   Style="{StaticResource BodySmall}"
+                                   HorizontalOptions="Center" />
+                        </StackLayout>
+                        
+                        <StackLayout Grid.Column="1" Grid.Row="1">
+                            <Label Text="{Binding UserStats.CompletionRate, StringFormat='{0}%'}"
+                                   Style="{StaticResource HeadlineSmall}"
+                                   HorizontalOptions="Center" />
+                            <Label Text="Tamamlama Oranı"
+                                   Style="{StaticResource BodySmall}"
+                                   HorizontalOptions="Center" />
+                        </StackLayout>
+                        
+                    </Grid>
+                    
+                </StackLayout>
+            </Frame>
+
+            <!-- Actions -->
+            <Frame Style="{StaticResource CardFrame}">
+                <StackLayout Spacing="15">
+                    
+                    <Label Text="İşlemler"
+                           Style="{StaticResource TitleLarge}" />
+                    
+                    <Button Text="Yerel Verileri Temizle"
+                            Command="{Binding ClearLocalDataCommand}"
+                            Style="{StaticResource SecondaryButton}" />
+                    
+                    <Button Text="Hakkında"
+                            Command="{Binding ShowAboutCommand}"
+                            Style="{StaticResource SecondaryButton}" />
+                    
+                    <Button Text="Çıkış Yap"
+                            Command="{Binding SignOutCommand}"
+                            BackgroundColor="{StaticResource Danger}" />
+                    
+                </StackLayout>
+            </Frame>
+
+        </StackLayout>
+    </ScrollView>
+
+</ContentPage>

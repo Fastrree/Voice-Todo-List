@@ -1,0 +1,45 @@
+## .NET / MAUI
+bin/
+obj/
+*.user
+*.suo
+.vs/
+artifacts/
+*.nupkg
+*.snupkg
+*.csproj.user
+
+## Rider / JetBrains
+.idea/
+
+## VS Code
+.vscode/
+*.code-workspace
+
+## Windows
+Thumbs.db
+Desktop.ini
+*.app.log
+app.log
+
+## Node (server/)
+node_modules/
+server/data/
+server/uploads/
+npm-debug.log*
+
+## Environment / Secrets
+*.env
+.env.*
+!*.env.example
+*.pfx
+*.key
+secrets.json
+
+## Supabase / Docker
+supabase/.temp/
+docker-data/
+*.container.log
+
+## Test credentials
+*.creds.txt

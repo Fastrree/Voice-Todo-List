@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<?xaml-comp compile="true" ?>
+<ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+
+    <!-- Material Design 3 Color Palette -->
+    <Color x:Key="Primary">#6366f1</Color>
+    <Color x:Key="PrimaryDark">#4f46e5</Color>
+    <Color x:Key="PrimaryLight">#a5b4fc</Color>
+
+    <Color x:Key="Secondary">#10b981</Color>
+    <Color x:Key="SecondaryDark">#059669</Color>
+    <Color x:Key="SecondaryLight">#6ee7b7</Color>
+
+    <Color x:Key="Tertiary">#f59e0b</Color>
+    <Color x:Key="TertiaryDark">#d97706</Color>
+    <Color x:Key="TertiaryLight">#fcd34d</Color>
+
+    <!-- Semantic Colors -->
+    <Color x:Key="Success">#10b981</Color>
+    <Color x:Key="Warning">#f59e0b</Color>
+    <Color x:Key="Danger">#ef4444</Color>
+    <Color x:Key="Info">#3b82f6</Color>
+
+    <!-- Neutral Colors -->
+    <Color x:Key="White">#ffffff</Color>
+    <Color x:Key="Black">#000000</Color>
+    
+    <Color x:Key="Gray50">#f9fafb</Color>
+    <Color x:Key="Gray100">#f3f4f6</Color>
+    <Color x:Key="Gray200">#e5e7eb</Color>
+    <Color x:Key="Gray300">#d1d5db</Color>
+    <Color x:Key="Gray400">#9ca3af</Color>
+    <Color x:Key="Gray500">#6b7280</Color>
+    <Color x:Key="Gray600">#4b5563</Color>
+    <Color x:Key="Gray700">#374151</Color>
+    <Color x:Key="Gray800">#1f2937</Color>
+    <Color x:Key="Gray900">#111827</Color>
+
+    <!-- Background Colors -->
+    <Color x:Key="BackgroundPrimary">#ffffff</Color>
+    <Color x:Key="BackgroundSecondary">#f9fafb</Color>
+    <Color x:Key="BackgroundTertiary">#f3f4f6</Color>
+
+    <!-- Surface Colors -->
+    <Color x:Key="SurfacePrimary">#ffffff</Color>
+    <Color x:Key="SurfaceSecondary">#f8fafc</Color>
+    <Color x:Key="SurfaceTertiary">#f1f5f9</Color>
+
+    <!-- Text Colors -->
+    <Color x:Key="TextPrimary">#111827</Color>
+    <Color x:Key="TextSecondary">#6b7280</Color>
+    <Color x:Key="TextTertiary">#9ca3af</Color>
+    <Color x:Key="TextOnPrimary">#ffffff</Color>
+
+    <!-- Border Colors -->
+    <Color x:Key="BorderPrimary">#e5e7eb</Color>
+    <Color x:Key="BorderSecondary">#d1d5db</Color>
+    <Color x:Key="BorderFocus">#6366f1</Color>
+
+    <!-- Glassmorphism Colors -->
+    <Color x:Key="GlassBackground">#80ffffff</Color>
+    <Color x:Key="GlassBorder">#40ffffff</Color>
+    <Color x:Key="GlassShadow">#20000000</Color>
+
+    <!-- Voice Recording Colors -->
+    <Color x:Key="Recording">#ef4444</Color>
+    <Color x:Key="RecordingBackground">#fef2f2</Color>
+    <Color x:Key="VoiceReady">#10b981</Color>
+    <Color x:Key="VoiceReadyBackground">#f0fdf4</Color>
+
+    <!-- Priority Colors -->
+    <Color x:Key="PriorityHigh">#ef4444</Color>
+    <Color x:Key="PriorityMedium">#f59e0b</Color>
+    <Color x:Key="PriorityLow">#10b981</Color>
+
+    <!-- ============================================================
+         DARK THEME COLORS (used with AppThemeBinding)
+         ============================================================ -->
+    <Color x:Key="DarkBackgroundPrimary">#0f172a</Color>
+    <Color x:Key="DarkBackgroundSecondary">#1e293b</Color>
+    <Color x:Key="DarkBackgroundTertiary">#334155</Color>
+
+    <Color x:Key="DarkSurfacePrimary">#1e293b</Color>
+    <Color x:Key="DarkSurfaceSecondary">#334155</Color>
+    <Color x:Key="DarkSurfaceTertiary">#475569</Color>
+
+    <Color x:Key="DarkTextPrimary">#f1f5f9</Color>
+    <Color x:Key="DarkTextSecondary">#94a3b8</Color>
+    <Color x:Key="DarkTextTertiary">#64748b</Color>
+    <Color x:Key="DarkTextOnPrimary">#ffffff</Color>
+
+    <Color x:Key="DarkBorderPrimary">#475569</Color>
+    <Color x:Key="DarkBorderSecondary">#64748b</Color>
+    <Color x:Key="DarkBorderFocus">#818cf8</Color>
+
+    <Color x:Key="DarkGlassBackground">#401e293b</Color>
+    <Color x:Key="DarkGlassBorder">#40ffffff</Color>
+
+    <Color x:Key="DarkRecordingBackground">#450a0a</Color>
+    <Color x:Key="DarkVoiceReadyBackground">#022c22</Color>
+
+</ResourceDictionary>

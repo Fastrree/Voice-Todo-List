@@ -1,0 +1,558 @@
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using System.Collections.ObjectModel;
+using TodoVoiceMaui.Models;
+using TodoVoiceMaui.Services;
+using TodoVoiceMaui.Views;
+
+namespace TodoVoiceMaui.ViewModels;
+
+public partial class TodoListPageViewModel : ObservableObject
+{
+    private readonly SyncService _syncService;
+    private readonly AudioService _audioService;
+    private readonly SupabaseService _supabaseService;
+    private readonly SpeechToTextService _speechToTextService;
+
+    [ObservableProperty]
+    private ObservableCollection<Todo> todos = new();
+
+    [ObservableProperty]
+    private ObservableCollection<Todo> filteredTodos = new();
+
+    [ObservableProperty]
+    private string newTodoTitle = string.Empty;
+
+    [ObservableProperty]
+    private bool isLoading = false;
+
+    [ObservableProperty]
+    private bool isSyncing = false;
+
+    [ObservableProperty]
+    private bool isRecording = false;
+
+    [ObservableProperty]
+    private bool hasRecording = false;
+
+    [ObservableProperty]
+    private string recordingDuration = "00:00";
+
+    [ObservableProperty]
+    private string selectedFilter = "all";
+
+    [ObservableProperty]
+    private string selectedPriority = "all";
+
+    [ObservableProperty]
+    private string selectedSort = "created_desc";
+
+    [ObservableProperty]
+    private string searchText = string.Empty;
+
+    [ObservableProperty]
+    private bool isOnline = true;
+
+    [ObservableProperty]
+    private DateTime lastSyncTime = DateTime.MinValue;
+
+    [ObservableProperty]
+    private string syncStatus = "Senkronize edildi";
+
+    [ObservableProperty]
+    private bool isSpeechListening = false;
+
+    [ObservableProperty]
+    private string speechStatus = string.Empty;
+
+    [ObservableProperty]
+    private string liveTranscript = string.Empty;
+
+    private string? _pendingVoiceFilePath;
+
+    public TodoListPageViewModel(SyncService syncService, AudioService audioService, SupabaseService supabaseService, SpeechToTextService speechToTextService)
+    {
+        _syncService = syncService;
+        _audioService = audioService;
+        _supabaseService = supabaseService;
+        _speechToTextService = speechToTextService;
+
+        // Subscribe to service events
+        _syncService.PropertyChanged += OnSyncServicePropertyChanged;
+        _syncService.SyncProgress += OnSyncProgress;
+        _syncService.SyncCompleted += OnSyncCompleted;
+
+        _audioService.PropertyChanged += OnAudioServicePropertyChanged;
+        _audioService.RecordingCompleted += OnRecordingCompleted;
+        _audioService.RecordingError += OnRecordingError;
+
+        _speechToTextService.TranscriptionCompleted += OnTranscriptionCompleted;
+        _speechToTextService.SpeechError += OnSpeechError;
+        _speechToTextService.PropertyChanged += OnSpeechToTextPropertyChanged;
+    }
+
+    public async Task InitializeAsync()
+    {
+        await LoadTodosAsync();
+    }
+
+    [RelayCommand]
+    private async Task LoadTodosAsync()
+    {
+        if (IsLoading) return;
+
+        try
+        {
+            IsLoading = true;
+            var todoList = await _syncService.GetTodosAsync();
+            
+            Todos.Clear();
+            foreach (var todo in todoList.OrderByDescending(t => t.CreatedAt))
+            {
+                Todos.Add(todo);
+            }
+
+            ApplyFilter();
+        }
+        catch (Exception ex)
+        {
+            await Shell.Current.DisplayAlert("Hata", $"Görevler yüklenemedi: {ex.Message}", "Tamam");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task RefreshAsync()
+    {
+        try
+        {
+            await _syncService.SyncAllAsync();
+            await LoadTodosAsync();
+        }
+        catch (Exception ex)
+        {
+            await Shell.Current.DisplayAlert("Hata", $"Yenileme başarısız: {ex.Message}", "Tamam");
+        }
+    }
+
+    [RelayCommand]
+    private async Task AddTodoAsync()
+    {
+        if (string.IsNullOrWhiteSpace(NewTodoTitle))
+        {
+            await Shell.Current.DisplayAlert("Uyarı", "Görev başlığı boş olamaz.", "Tamam");
+            return;
+        }
+
+        try
+        {
+            IsLoading = true;
+
+            // Handle voice recording if exists
+            string? voiceUrl = null;
+            int? voiceDuration = null;
+
+            if (HasRecording && !string.IsNullOrEmpty(_pendingVoiceFilePath))
+            {
+                try
+                {
+                    var audioData = await _audioService.GetRecordingDataAsync(_pendingVoiceFilePath);
+                    if (audioData != null)
+                    {
+                        var base64Data = _audioService.ConvertToBase64(audioData);
+                        var fileName = $"todo_voice_{DateTime.Now:yyyyMMdd_HHmmss}.wav";
+                        
+                        var uploadedRecording = await _supabaseService.UploadVoiceRecordingAsync(base64Data, fileName, duration: (int)_audioService.RecordingDuration.TotalSeconds);
+                        
+                        if (uploadedRecording != null)
+                        {
+                            voiceUrl = uploadedRecording.FileUrl;
+                            voiceDuration = uploadedRecording.Duration;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Voice upload failed: {ex.Message}");
+                    // Continue with todo creation without voice
+                }
+                finally
+                {
+                    ClearRecording();
+                }
+            }
+
+            var success = await _syncService.CreateTodoAsync(NewTodoTitle.Trim());
+
+            if (success)
+            {
+                NewTodoTitle = string.Empty;
+                await LoadTodosAsync();
+            }
+            else
+            {
+                await Shell.Current.DisplayAlert("Hata", "Görev eklenemedi. Lütfen tekrar deneyin.", "Tamam");
+            }
+        }
+        catch (Exception ex)
+        {
+            await Shell.Current.DisplayAlert("Hata", $"Görev eklenemedi: {ex.Message}", "Tamam");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ToggleTodoAsync(Todo todo)
+    {
+        try
+        {
+            await _syncService.UpdateTodoAsync(todo.Id, new { completed = !todo.Completed });
+            todo.Completed = !todo.Completed;
+            
+            ApplyFilter();
+        }
+        catch (Exception ex)
+        {
+            await Shell.Current.DisplayAlert("Hata", $"Görev güncellenemedi: {ex.Message}", "Tamam");
+        }
+    }
+
+    [RelayCommand]
+    private async Task DeleteTodoAsync(Todo todo)
+    {
+        var result = await Shell.Current.DisplayAlert("Onay", $"'{todo.Title}' görevi silinsin mi?", "Evet", "Hayır");
+        
+        if (result)
+        {
+            try
+            {
+                await _syncService.DeleteTodoAsync(todo.Id);
+                Todos.Remove(todo);
+                ApplyFilter();
+            }
+            catch (Exception ex)
+            {
+                await Shell.Current.DisplayAlert("Hata", $"Görev silinemedi: {ex.Message}", "Tamam");
+            }
+        }
+    }
+
+    [RelayCommand]
+    private async Task OpenTodoDetailAsync(Todo todo)
+    {
+        var parameters = new Dictionary<string, object>
+        {
+            { "Todo", todo }
+        };
+        
+        await Shell.Current.GoToAsync($"{nameof(TodoDetailPage)}", parameters);
+    }
+
+    [RelayCommand]
+    private async Task StartSpeechToTextAsync()
+    {
+        if (IsSpeechListening)
+        {
+            await StopSpeechToTextAsync();
+            return;
+        }
+
+        if (!_speechToTextService.IsAvailable)
+        {
+            await Shell.Current.DisplayAlert("Hata", "Ses tanıma bu cihazda kullanılamıyor.", "Tamam");
+            return;
+        }
+
+        try
+        {
+            IsSpeechListening = true;
+            SpeechStatus = "Dinliyor... konuşun";
+            LiveTranscript = string.Empty;
+
+            var started = await _speechToTextService.StartListeningAsync();
+            if (!started)
+            {
+                IsSpeechListening = false;
+                SpeechStatus = string.Empty;
+            }
+        }
+        catch (Exception ex)
+        {
+            IsSpeechListening = false;
+            SpeechStatus = string.Empty;
+            await Shell.Current.DisplayAlert("Hata", $"Ses tanıma hatası: {ex.Message}", "Tamam");
+        }
+    }
+
+    [RelayCommand]
+    private async Task StopSpeechToTextAsync()
+    {
+        await _speechToTextService.StopListeningAsync();
+        IsSpeechListening = false;
+        SpeechStatus = string.Empty;
+        LiveTranscript = string.Empty;
+    }
+
+    [RelayCommand]
+    private async Task StartRecordingAsync()
+    {
+        try
+        {
+            if (IsRecording)
+            {
+                var filePath = await _audioService.StopRecordingAsync();
+                _pendingVoiceFilePath = filePath;
+            }
+            else
+            {
+                var started = await _audioService.StartRecordingAsync();
+                if (!started)
+                {
+                    await Shell.Current.DisplayAlert("Hata", "Ses kaydı başlatılamadı. Mikrofon iznini kontrol edin.", "Tamam");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await Shell.Current.DisplayAlert("Hata", $"Ses kaydı hatası: {ex.Message}", "Tamam");
+        }
+    }
+
+    [RelayCommand]
+    private void ClearRecording()
+    {
+        if (!string.IsNullOrEmpty(_pendingVoiceFilePath))
+        {
+            _audioService.DeleteRecording(_pendingVoiceFilePath);
+            _pendingVoiceFilePath = null;
+        }
+        
+        HasRecording = false;
+        RecordingDuration = "00:00";
+    }
+
+    [RelayCommand]
+    private void ChangeFilter(string filter)
+    {
+        SelectedFilter = filter;
+        ApplyFilter();
+    }
+
+    [RelayCommand]
+    private void ChangePriority(string priority)
+    {
+        SelectedPriority = priority;
+        ApplyFilter();
+    }
+
+    [RelayCommand]
+    private void ChangeSort(string sort)
+    {
+        SelectedSort = sort;
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        FilteredTodos.Clear();
+
+        var filtered = SelectedFilter switch
+        {
+            "completed" => Todos.Where(t => t.Completed),
+            "pending" => Todos.Where(t => !t.Completed),
+            "with_voice" => Todos.Where(t => t.HasVoiceRecording),
+            _ => Todos
+        };
+
+        if (SelectedPriority != "all")
+        {
+            filtered = filtered.Where(t => t.Priority == SelectedPriority);
+        }
+
+        if (!string.IsNullOrWhiteSpace(SearchText))
+        {
+            var search = SearchText.ToLowerInvariant();
+            filtered = filtered.Where(t => 
+                t.Title.ToLowerInvariant().Contains(search) || 
+                (t.Description?.ToLowerInvariant().Contains(search) ?? false));
+        }
+
+        var ordered = SelectedSort switch
+        {
+            "created_asc" => filtered.OrderBy(t => t.CreatedAt),
+            "due_date" => filtered.OrderBy(t => t.DueDate ?? DateTime.MaxValue),
+            "priority" => filtered.OrderBy(t => PriorityRank(t.Priority)).ThenBy(t => t.CreatedAt),
+            _ => filtered.OrderByDescending(t => t.CreatedAt)
+        };
+
+        foreach (var todo in ordered)
+        {
+            FilteredTodos.Add(todo);
+        }
+    }
+
+    private static int PriorityRank(string priority) => priority switch
+    {
+        "high" => 0,
+        "medium" => 1,
+        "low" => 2,
+        _ => 3
+    };
+
+    partial void OnSearchTextChanged(string value)
+    {
+        ApplyFilter();
+    }
+
+    partial void OnSelectedFilterChanged(string value) => ApplyFilter();
+    partial void OnSelectedPriorityChanged(string value) => ApplyFilter();
+    partial void OnSelectedSortChanged(string value) => ApplyFilter();
+
+    public List<KeyValuePair<string, string>> FilterOptions { get; } = new()
+    {
+        new("all", "Tümü"),
+        new("pending", "Bekleyen"),
+        new("completed", "Tamamlanan"),
+        new("with_voice", "Sesli")
+    };
+
+    public List<KeyValuePair<string, string>> PriorityFilterOptions { get; } = new()
+    {
+        new("all", "Tüm Öncelikler"),
+        new("high", "Yüksek"),
+        new("medium", "Orta"),
+        new("low", "Düşük")
+    };
+
+    public List<KeyValuePair<string, string>> SortOptions { get; } = new()
+    {
+        new("created_desc", "En Yeni"),
+        new("created_asc", "En Eski"),
+        new("due_date", "Teslim Tarihi"),
+        new("priority", "Öncelik")
+    };
+
+    private void OnSyncServicePropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(SyncService.IsSyncing))
+        {
+            IsSyncing = _syncService.IsSyncing;
+        }
+        else if (e.PropertyName == nameof(SyncService.IsOnline))
+        {
+            IsOnline = _syncService.IsOnline;
+            SyncStatus = IsOnline ? "Çevrimiçi" : "Çevrimdışı";
+        }
+        else if (e.PropertyName == nameof(SyncService.LastSyncTime))
+        {
+            LastSyncTime = _syncService.LastSyncTime;
+            if (LastSyncTime > DateTime.MinValue)
+            {
+                SyncStatus = $"Son senkron: {LastSyncTime:HH:mm}";
+            }
+        }
+    }
+
+    private void OnSyncProgress(object? sender, SyncProgressEventArgs e)
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            SyncStatus = e.Message;
+        });
+    }
+
+    private void OnSyncCompleted(object? sender, SyncCompletedEventArgs e)
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            SyncStatus = e.Success ? "Senkronize edildi" : "Senkron hatası";
+            if (e.Success)
+            {
+                _ = LoadTodosAsync();
+            }
+        });
+    }
+
+    private void OnAudioServicePropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(AudioService.IsRecording))
+        {
+            IsRecording = _audioService.IsRecording;
+        }
+        else if (e.PropertyName == nameof(AudioService.RecordingDuration))
+        {
+            RecordingDuration = _audioService.RecordingDuration.ToString(@"mm\:ss");
+        }
+        else if (e.PropertyName == nameof(AudioService.HasRecording))
+        {
+            HasRecording = _audioService.HasRecording;
+        }
+    }
+
+    private void OnRecordingCompleted(object? sender, string filePath)
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            _pendingVoiceFilePath = filePath;
+            HasRecording = true;
+        });
+    }
+
+    private void OnRecordingError(object? sender, Exception error)
+    {
+        MainThread.BeginInvokeOnMainThread(async () =>
+        {
+            await Shell.Current.DisplayAlert("Ses Kayıt Hatası", error.Message, "Tamam");
+        });
+    }
+
+    private void OnSpeechToTextPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(SpeechToTextService.LiveTranscript))
+        {
+            LiveTranscript = _speechToTextService.LiveTranscript;
+        }
+    }
+
+    private void OnTranscriptionCompleted(object? sender, string text)
+    {
+        MainThread.BeginInvokeOnMainThread(async () =>
+        {
+            if (string.IsNullOrWhiteSpace(text)) return;
+
+            LiveTranscript = string.Empty;
+            SpeechStatus = "✓ Tanındı: \"" + text + "\"";
+
+            NewTodoTitle = text;
+
+            // Auto-add the todo
+            await AddTodoAsync();
+            SpeechStatus = string.Empty;
+        });
+    }
+
+    private void OnSpeechError(object? sender, Exception error)
+    {
+        MainThread.BeginInvokeOnMainThread(async () =>
+        {
+            IsSpeechListening = false;
+            SpeechStatus = string.Empty;
+            LiveTranscript = string.Empty;
+            await Shell.Current.DisplayAlert("Ses Tanıma", error.Message, "Tamam");
+        });
+    }
+
+    // Computed properties
+    public string RecordingButtonText => IsRecording ? "Dur" : "Kaydet";
+    public string RecordingButtonIcon => IsRecording ? "⏹️" : "🎤";
+    public int TotalTodosCount => Todos.Count;
+    public int CompletedTodosCount => Todos.Count(t => t.Completed);
+    public int PendingTodosCount => Todos.Count(t => !t.Completed);
+    public int VoiceTodosCount => Todos.Count(t => t.HasVoiceRecording);
+}
