@@ -3,25 +3,26 @@
 **Sesli görev yönetimi — konuş, uygulama senin için görevi yazsın.**
 
 Todo Voice, voice-first bir todo listesi uygulamasıdır. Mikrofona bas, konuş;
-uygulama söylediklerini **gerçek zamanlı transkripsiyon** ile metne çevirir ve
-görev olarak oluşturur. Modern AI sesli asistanlarının konuşma modu deneyimi,
-görev yönetimine uyarlanmıştır.
+uygulama söylediklerini **çevrimdışı Whisper (whisper.cpp)** ile metne çevirir ve
+görev olarak oluşturur. Tamamen yerel ve ücretsiz çalışır — internet veya bulut
+API ücreti gerekmez.
 
 ---
 
 ## ✨ Ürün Akışı
 
 ```
-🎤 Mikrofona bas  →  🗣️ Konuş  →  📝 Canlı transkripsiyon  →  ✅ Görev oluştu
+🎤 Mikrofona bas  →  🗣️ Konuş  →  📝 Çevrimdışı Whisper transkripsiyon  →  ✅ Görev oluştu
 ```
 
 Bu akış ürünün kalbidir. Ses kaydı aynı zamanda göreve eklenir ve daha sonra
-oynatılabilir.
+oynatılabilir. İlk kullanımda ses tanıma modeli (~142 MB) bir kez indirilir,
+sonra çevrimdışı çalışır.
 
 ## 🚀 Özellikler
 
 - 🎤 **Voice-first görev oluşturma** — konuş, görev olarak kaydedilsin
-- 🔴 **Gerçek zamanlı transkripsiyon** — konuşurken metin anlık görünür
+- 🧠 **Çevrimdışı transkripsiyon** — Whisper (whisper.cpp), Türkçe destekli, ücretsiz
 - 🔁 **Ses kaydı + oynatma** — göreve ses notu ekle, sonra dinle
 - 📊 **İstatistik dashboard** — toplam / tamamlanan / bekleyen / sesli görev
 - 🔍 **Filtre & sıralama** — durum, öncelik, teslim tarihi, sesli görev
@@ -36,7 +37,7 @@ oynatılabilir.
 |--------|-----------|
 | UI | .NET MAUI 8 (C# / XAML) — şu an Windows desktop |
 | Mimari | MVVM (CommunityToolkit.Mvvm) |
-| Ses | Plugin.Maui.Audio, Windows SpeechRecognizer (canlı transkripsiyon) |
+| Ses | Plugin.Maui.Audio (kayıt), Whisper.net / whisper.cpp (çevrimdışı transkripsiyon) |
 | Local veri | SQLite (sqlite-net-pcl) |
 | Backend | Supabase (Auth, Postgres, Storage, Edge Functions) |
 | Sync | Local-first SyncService (online olduğunda otomatik senkron) |

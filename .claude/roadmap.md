@@ -80,6 +80,9 @@ yeniden tasarla.** Aşağıdaki gereksinimler bağlayıcıdır:
 ## 2. Tamamlanan Özellikler (geçmiş, özet)
 
 - [x] Sesli görev oluşturma akışı (canlı transkripsiyon, toggle, otomatik ekleme)
+- [x] **Çevrimdışı Whisper ses tanıma** (ADR-016) — Windows SpeechRecognizer unpackaged'ta
+      çalışmıyordu (0x800455A0); Whisper.net (whisper.cpp, MIT) ile değiştirildi.
+      ggml-base modeli ilk kullanımda indirilir, sonra önbellekte. Kaydet → çevir → görev.
 - [x] Ses kaydı + oynatma (WAV, progress, silme)
 - [x] İstatistik dashboard
 - [x] Filtre & sıralama
@@ -99,6 +102,9 @@ yeniden tasarla.** Aşağıdaki gereksinimler bağlayıcıdır:
 - [ ] Sürekli dinleme modu (wake word / "push to talk" yerine)
 - [ ] Voice profile / biyometrik ses tanıma
 - [ ] Sistem geneli kısayol (global hotkey)
+- [ ] Chunked Whisper ile "konuşurken canlı metin" (streaming transkripsiyon)
+- [ ] Düşük güven eşiği politikası (konuşmasız girdide yanlış metin önleme)
+- [ ] Model seçenekleri (tiny/base/small) — Ayarlar'dan değiştirilebilir
 - [ ] Doğal dil ile görev ayrıştırma (tarih, öncelik, etiket çıkarma)
 - [ ] Windows App SDK upgrade (WinAppSDK 1.7+, WASDK tooling)
 - [ ] CI/CD (GitHub Actions build + publish)

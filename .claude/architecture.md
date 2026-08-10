@@ -92,7 +92,7 @@ farklı bir hikâyeyle kullanabilir.
 | MVVM | CommunityToolkit.Mvvm 8.3.2 (`[ObservableProperty]`, `[RelayCommand]`) | Az boilerplate, source generator |
 | UI toolkit | CommunityToolkit.Maui 9.1.0 | Hazır konvertör / behavior desteği |
 | Ses | Plugin.Maui.Audio 3.0.1 | Kayıt + oynatma, `IAudioPlayer.Duration/CurrentPosition` `double?` (saniye) |
-| Transkripsiyon | Windows `SpeechRecognizer` (WASDK) | `ContinuousRecognitionSession` ile canlı (ara) sonuçlar |
+| Transkripsiyon | **Whisper.net** (whisper.cpp, çevrimdışı, MIT) | ggml-base modeli (~142 MB, 96 dil — Türkçe dahil); kayıt → çevir akışı. Windows `SpeechRecognizer` unpackaged'ta çalışmaz (ADR-016) |
 | Local DB | sqlite-net-pcl 1.9.172 | Basit, thread-safe, offline |
 | Backend | Supabase (Auth, Postgres, Storage, Edge Functions) | Hosted + RLS + storage |
 | HTTP | `System.Net.Http.HttpClient` | **Supabase SDK iki kere URL prefix'liyor (bug); doğrudan HttpClient kullanıyoruz** |
@@ -190,6 +190,15 @@ eder, kendi türetmez. Visual language (Liquid Glass + motion) bu state'in
 Uygulandı (B2): `Core/Domain/Entities/Todo.cs`, `Models/TodoDto.cs`,
 `Models/TodoListItem.cs`. `Models/Todo.cs` kaldırıldı.
 
+### ADR-016: Unpackaged'ta Windows SpeechRecognizer YASAK → çevrimdışı Whisper
+`Windows.Media.SpeechRecognition.SpeechRecognizer` WinRT paket kimliği gerektirir.
+Uygulama unpackaged WinUI 3 (`WindowsPackageType=None`) olduğundan, SpeechRecognizer
+her koşulda `0x800455A0 Internal Speech Error` ile başarısız olur (app.log'da kanıtlandı;
+dil seçimi ve mikrofon izni bu hatayı çözmez). Çözüm: **Whisper.net** (whisper.cpp
+bindings, MIT, ücretsiz, çevrimdışı, paket kimliği gerektirmez) + ggml-base modeli.
+Türkçe doğruluğu Windows yerel tanımayı aşar; ilk kullanımda ~142 MB model indirilir,
+sonra önbellekte. Bulut STT (OpenAI/Google/Azure) ücretsiz olmadığı için elendi.
+
 ### ADR-015: Voice Core domain-agnostik
 `Core/Application/Voice` içinde uygulama (ör. Todo) kavramı geçmez.
 `VoiceIntent` generic'tir (`Create`, `Complete`, `SetReminder`); intent→Todo
@@ -276,13 +285,18 @@ Migration: `MigrateAsync` PRAGMA + `ALTER TABLE` ile `reminder_at`, `is_deleted`
 - `PlaybackPosition` / `PlaybackDuration` (`double?` saniye, `TimeSpan` çevrimi)
 - `PlaybackPositionUpdated` event'i ile canlı progress
 
-### SpeechToTextService (canlı transkripsiyon)
-- `IsAvailable` — Windows'ta SpeechRecognizer oluşturulabilir mi?
-- `StartListeningAsync` — `ContinuousRecognitionSession.StartAsync`
-- `LiveTranscript` — `ResultGenerated` ara sonuçlar (PropertyChanged)
-- `TranscriptionCompleted` — `Completed` event'inde final metin
-- `StopListeningAsync` / `StopListening` — durdur + `CleanupRecognizer`
-- Constructor'da `#if WINDOWS` guard'ı; Windows dışı build'de false döner
+### SpeechToTextService (çevrimdışı Whisper — kaydet → çevir)
+- `IsAvailable` — Windows'ta her zaman true (whisper.cpp native pakette gelir)
+- `EnsureModelAsync` — ggml-base modelini (yoksa) HuggingFace'ten indirir, uygulama
+  veri klasöründe önbelleğe alır; arka planda önceden indirilir (App.InitializeAsync)
+- `TranscribeFileAsync(wavPath)` — WAV → 16kHz mono float (`WavAudioReader`) →
+  Whisper (`WithLanguage("tr")`, segment event handler) → metin
+- `IsModelReady` / `IsDownloading` / `ModelDownloadProgress` — model durumu
+- Akış (TodoListPageViewModel): `StartSpeechToTextAsync` → `AudioService` ile kayıt →
+  `StopSpeechToTextAsync` → `TranscribeFileAsync` → `VoiceCommandParser` → görev
+- Klasik "konuşurken canlı metin" (ContinuousRecognitionSession) bu kurulumda yok;
+  segment tabanlı anlık akış ileride chunked whisper ile eklenebilir (roadmap)
+- `#if WINDOWS` guard'ı korunur; Windows dışı build'de false döner
 
 ---
 

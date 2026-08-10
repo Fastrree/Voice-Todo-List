@@ -12,11 +12,16 @@ git'te kalır). Geçmiş TUTMAZ — sadece bugünü anlatır.
 
 ### 🎤 Voice-first görev oluşturma (ÜRÜNÜN KALBİ)
 - TodoListPage alt barında mikrofon butonu: `StartSpeechToTextCommand`
-- Bas → dinle → konuş → canlı transkripsiyon → final metin otomatik görev olarak oluşur
-- Buton toggle'dır: dinlerken tekrar bas → durdur (`StopSpeechToTextCommand`)
-- `SpeechToTextService`: `ContinuousRecognitionSession` ile canlı `LiveTranscript`
-- Dinlerken canlı metin ve "⏹️ Bitir" butonu görünür
-- Güven: `MEDIUM` — runtime'da elle test edilmedi (son build hatasız, uygulama açıldı)
+- Bas → dinle → konuş → bitir → **çevrimdışı Whisper** transkripsiyon → görev oluşur
+- Buton toggle'dır: dinlerken tekrar bas → durdur ve transkript et
+- `SpeechToTextService`: Whisper.net (whisper.cpp) — `TranscribeFileAsync` ile
+  WAV → 16kHz mono → metin (ADR-016: unpackaged'ta Windows SpeechRecognizer çalışmaz)
+- **İlk kullanım:** ggml-base modeli (~142 MB) arka planda indirilir (App başlangıcı);
+  sonra önbellekte (`%LOCALAPPDATA%\TodoVoiceMaui\TodoVoiceMaui\Data\models\ggml-base.bin`)
+- Dinlerken `VoiceFlowState=Listening`; işlenirken "Ses tanınıyor..." gösterilir
+- Güven: `MEDIUM` — native pipeline konsol testiyle doğrulandı (model yükleme 1.7s,
+  WAV 44.1kHz stereo → 16kHz mono dönüşüm, segment event); canlı mikrofon akışı
+  kullanıcı tarafından test edilecek
 
 ### 🔁 Ses kaydı + oynatma (göreve not)
 - `AudioService` WAV kaydı (16-bit 44.1kHz), durdur, base64 upload
@@ -68,11 +73,12 @@ git'te kalır). Geçmiş TUTMAZ — sadece bugünü anlatır.
 
 ## 2. Çalışmayan / Ertelenen / Bilinen Sorunlar
 
-- **Ara sıra çökme:** "Çöküyor hala arada bir" — kök neden tespit edilemedi;
-  son iki başlatmada çökme yok, `app.log` boş. Şüpheli: SpeechRecognizer yaşam
-  döngüsü veya SyncService HTTP zaman aşımı. `MEDIUM`/`LOW`
-- **Sesli görevlerin transkripsiyonu**: eski ses kaydı akışı sesi sadece .wav
-  yüklüyordu, metne çevirmiyordu; şimdi canlı transkripsiyon ekleniyor.
+- **Konuşurken canlı metin (streaming) yok:** Whisper tek atış (kaydet → çevir)
+  çalışır; "konuşurken anlık metin" deneyimi için chunked whisper gerekir (roadmap).
+- **İlk kullanım model indirmesi:** ggml-base ~142 MB; çevrimdışıyken indirilemez,
+  hata mesajı gösterilir, uygulama çökmez.
+- **Konuşmasız girdide** Whisper yanlış metin üretebilir (ör. "[...müzik çalıyor...]");
+  düşük güven eşiği politikası roadmap'te.
 - **Android / iOS / macOS hedefleri**: csproj'da yalnız Windows TFM aktif.
 - **Supabase ayakta değilse**: veri local'de çalışır, sync sessizce düşer (çökme yok).
 

@@ -72,6 +72,8 @@
 		<PackageReference Include="Plugin.Maui.Audio" Version="3.0.1" />
 		<PackageReference Include="sqlite-net-pcl" Version="1.9.172" />
 		<PackageReference Include="SQLitePCLRaw.bundle_green" Version="2.1.8" />
+		<PackageReference Include="Whisper.net" Version="1.9.1" />
+		<PackageReference Include="Whisper.net.Runtime" Version="1.9.1" />
 	</ItemGroup>
 
 	<ItemGroup>

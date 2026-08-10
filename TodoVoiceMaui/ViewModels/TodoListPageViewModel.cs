@@ -85,10 +85,6 @@ public partial class TodoListPageViewModel : ObservableObject
         _audioService.PropertyChanged += OnAudioServicePropertyChanged;
         _audioService.RecordingCompleted += OnRecordingCompleted;
         _audioService.RecordingError += OnRecordingError;
-
-        _speechToTextService.TranscriptionCompleted += OnTranscriptionCompleted;
-        _speechToTextService.SpeechError += OnSpeechError;
-        _speechToTextService.PropertyChanged += OnSpeechToTextPropertyChanged;
     }
 
     public async Task InitializeAsync()
@@ -263,6 +259,9 @@ public partial class TodoListPageViewModel : ObservableObject
             return;
         }
 
+        if (VoiceFlowState == VoiceFlowState.Processing || VoiceFlowState == VoiceFlowState.Recognized)
+            return;
+
         if (!_speechToTextService.IsAvailable)
         {
             await Shell.Current.DisplayAlert("Hata", "Ses tanıma bu cihazda kullanılamıyor.", "Tamam");
@@ -272,27 +271,162 @@ public partial class TodoListPageViewModel : ObservableObject
         try
         {
             VoiceFlowState = VoiceFlowState.Listening;
-            LiveTranscript = string.Empty;
+            LiveTranscript = "Dinliyor...";
 
-            var started = await _speechToTextService.StartListeningAsync();
+            // Kayıt (AudioService) → durdurulunca Whisper ile metne çevrilecek
+            var started = await _audioService.StartRecordingAsync();
             if (!started)
             {
                 VoiceFlowState = VoiceFlowState.Failed;
+                LiveTranscript = string.Empty;
+                // Mikrofon izni / kayıt hatası RecordingError event'i ile gösterilir
             }
         }
         catch (Exception ex)
         {
             VoiceFlowState = VoiceFlowState.Failed;
-            await Shell.Current.DisplayAlert("Hata", $"Ses tanıma hatası: {ex.Message}", "Tamam");
+            LiveTranscript = string.Empty;
+            await Shell.Current.DisplayAlert("Hata", $"Ses kaydı hatası: {ex.Message}", "Tamam");
+            VoiceFlowState = VoiceFlowState.Idle;
         }
     }
 
     [RelayCommand]
     private async Task StopSpeechToTextAsync()
     {
-        await _speechToTextService.StopListeningAsync();
-        VoiceFlowState = VoiceFlowState.Processing;
-        LiveTranscript = string.Empty;
+        if (VoiceFlowState != VoiceFlowState.Listening)
+            return;
+
+        try
+        {
+            var filePath = await _audioService.StopRecordingAsync();
+            if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
+            {
+                VoiceFlowState = VoiceFlowState.Idle;
+                LiveTranscript = string.Empty;
+                return;
+            }
+
+            VoiceFlowState = VoiceFlowState.Processing;
+            LiveTranscript = "Ses tanınıyor...";
+
+            // İlk kullanım: Whisper modeli indirilir (yaklaşık 142 MB, sonra önbellekte).
+            // Arka planda indirme devam ediyorsa bekle (yanlış "indirilemedi" hatası verme).
+            if (!_speechToTextService.IsModelReady)
+            {
+                LiveTranscript = "Ses tanıma modeli hazırlanıyor...";
+                if (!await WaitForModelAsync())
+                {
+                    VoiceFlowState = VoiceFlowState.Failed;
+                    await Shell.Current.DisplayAlert("Ses Tanıma",
+                        "Ses tanıma modeli indirilemedi. İnternet bağlantınızı kontrol edip tekrar deneyin.", "Tamam");
+                    VoiceFlowState = VoiceFlowState.Idle;
+                    DeleteTempRecording(filePath);
+                    ResetPendingVoiceNote();
+                    return;
+                }
+            }
+
+            var text = await _speechToTextService.TranscribeFileAsync(filePath);
+            DeleteTempRecording(filePath);
+            ResetPendingVoiceNote();
+
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                VoiceFlowState = VoiceFlowState.Failed;
+                LiveTranscript = string.Empty;
+                await Shell.Current.DisplayAlert("Ses Tanıma", "Konuşmanız anlaşılamadı. Lütfen tekrar deneyin.", "Tamam");
+                VoiceFlowState = VoiceFlowState.Idle;
+                return;
+            }
+
+            await HandleTranscriptionAsync(text);
+        }
+        catch (Exception ex)
+        {
+            VoiceFlowState = VoiceFlowState.Failed;
+            LiveTranscript = string.Empty;
+            System.Diagnostics.Debug.WriteLine($"Voice transcription failed: {ex.Message}");
+            await Shell.Current.DisplayAlert("Ses Tanıma", $"Ses tanıma hatası: {ex.Message}", "Tamam");
+            VoiceFlowState = VoiceFlowState.Idle;
+        }
+    }
+
+    private static void DeleteTempRecording(string filePath)
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath))
+                File.Delete(filePath);
+        }
+        catch
+        {
+            // best-effort temizlik
+        }
+    }
+
+    // STT akışındaki geçici kaydın, "göreve ses notu ekle" akışının alanlarını kirletmesini önler
+    private void ResetPendingVoiceNote()
+    {
+        _pendingVoiceFilePath = null;
+        HasRecording = false;
+        RecordingDuration = "00:00";
+    }
+
+    // Model hazır değilse: arka plandaki indirme sürüyorsa tamamlanmasını bekle (en fazla 5 dk),
+    // yoksa indirmeyi burada başlat.
+    private async Task<bool> WaitForModelAsync()
+    {
+        if (_speechToTextService.IsDownloading)
+        {
+            var deadline = DateTime.UtcNow.AddMinutes(5);
+            while (DateTime.UtcNow < deadline)
+            {
+                await Task.Delay(500);
+                if (_speechToTextService.IsModelReady)
+                    return true;
+            }
+            return false;
+        }
+
+        return await _speechToTextService.EnsureModelAsync();
+    }
+
+    private async Task HandleTranscriptionAsync(string text)
+    {
+        try
+        {
+            var transcription = new TranscriptionResult(
+                text,
+                TranscriptionConfidence.Medium,
+                provider: "whisper-offline");
+
+            var command = _voiceCommandParser.Parse(transcription);
+            var result = await _voiceCommandHandler.HandleAsync(command);
+
+            if (result.Success)
+            {
+                VoiceFlowState = VoiceFlowState.Recognized;
+                NewTodoTitle = string.Empty;
+                LiveTranscript = text;
+                await LoadTodosAsync();
+            }
+            else
+            {
+                VoiceFlowState = VoiceFlowState.Failed;
+                await Shell.Current.DisplayAlert("Ses Komutu", result.Message ?? "Komut işlenemedi.", "Tamam");
+            }
+        }
+        catch (Exception ex)
+        {
+            VoiceFlowState = VoiceFlowState.Failed;
+            System.Diagnostics.Debug.WriteLine($"Voice command failed: {ex.Message}");
+            await Shell.Current.DisplayAlert("Hata", $"Komut işlenirken hata oluştu: {ex.Message}", "Tamam");
+        }
+        finally
+        {
+            VoiceFlowState = VoiceFlowState.Idle;
+        }
     }
 
     [RelayCommand]
@@ -508,69 +642,6 @@ public partial class TodoListPageViewModel : ObservableObject
         });
     }
 
-    private void OnSpeechToTextPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(SpeechToTextService.LiveTranscript))
-        {
-            LiveTranscript = _speechToTextService.LiveTranscript;
-        }
-    }
-
-    private void OnTranscriptionCompleted(object? sender, string text)
-    {
-        MainThread.BeginInvokeOnMainThread(async () =>
-        {
-            if (string.IsNullOrWhiteSpace(text)) return;
-
-            VoiceFlowState = VoiceFlowState.Processing;
-            LiveTranscript = string.Empty;
-
-            try
-            {
-                var transcription = new TranscriptionResult(
-                    text,
-                    TranscriptionConfidence.Medium,
-                    provider: "windows-speech");
-
-                var command = _voiceCommandParser.Parse(transcription);
-                var result = await _voiceCommandHandler.HandleAsync(command);
-
-                if (result.Success)
-                {
-                    VoiceFlowState = VoiceFlowState.Recognized;
-                    NewTodoTitle = string.Empty;
-                    await LoadTodosAsync();
-                }
-                else
-                {
-                    VoiceFlowState = VoiceFlowState.Failed;
-                    await Shell.Current.DisplayAlert("Ses Komutu", result.Message ?? "Komut işlenemedi.", "Tamam");
-                }
-            }
-            catch (Exception ex)
-            {
-                VoiceFlowState = VoiceFlowState.Failed;
-                System.Diagnostics.Debug.WriteLine($"Voice command failed: {ex.Message}");
-                await Shell.Current.DisplayAlert("Hata", $"Komut işlenirken hata oluştu: {ex.Message}", "Tamam");
-            }
-            finally
-            {
-                VoiceFlowState = VoiceFlowState.Idle;
-            }
-        });
-    }
-
-    private void OnSpeechError(object? sender, Exception error)
-    {
-        MainThread.BeginInvokeOnMainThread(async () =>
-        {
-            VoiceFlowState = VoiceFlowState.Failed;
-            LiveTranscript = string.Empty;
-            await Shell.Current.DisplayAlert("Ses Tanıma", error.Message, "Tamam");
-            VoiceFlowState = VoiceFlowState.Idle;
-        });
-    }
-
     // Computed properties
     public string RecordingButtonText => IsRecording ? "Dur" : "Kaydet";
     public string RecordingButtonIcon => IsRecording ? "⏹️" : "🎤";
@@ -582,10 +653,12 @@ public partial class TodoListPageViewModel : ObservableObject
     // Voice flow — UI state derived from the single Core source of truth
     public bool IsSpeechListening => VoiceFlowState == VoiceFlowState.Listening;
 
+    public bool IsVoiceFlowActive => VoiceFlowState != VoiceFlowState.Idle;
+
     public string SpeechStatus => VoiceFlowState switch
     {
         VoiceFlowState.Listening => "Dinliyor... konuşun",
-        VoiceFlowState.Processing => "İşleniyor...",
+        VoiceFlowState.Processing => "Ses tanınıyor...",
         VoiceFlowState.Recognized => "✓ Tanındı",
         VoiceFlowState.Failed => "Anlaşılamadı",
         _ => string.Empty
@@ -594,6 +667,7 @@ public partial class TodoListPageViewModel : ObservableObject
     partial void OnVoiceFlowStateChanged(VoiceFlowState value)
     {
         OnPropertyChanged(nameof(IsSpeechListening));
+        OnPropertyChanged(nameof(IsVoiceFlowActive));
         OnPropertyChanged(nameof(SpeechStatus));
     }
 }

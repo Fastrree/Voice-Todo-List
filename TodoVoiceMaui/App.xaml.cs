@@ -14,7 +14,19 @@ public partial class App : Application
 		InitializeComponent();
 		_syncService = syncService;
 		_reminderService = reminderService;
-		ThemeService.ApplySavedTheme();
+
+		// Dev aracı: `--theme=dark|light|system` ile tema zorlanabilir (tema doğrulaması için).
+		// Argüman yoksa kayıtlı tercih uygulanır.
+		var args = Environment.GetCommandLineArgs();
+		var themeArg = args.FirstOrDefault(a => a.StartsWith("--theme=", StringComparison.OrdinalIgnoreCase));
+		if (themeArg != null)
+		{
+			ThemeService.ApplyTheme(themeArg.Substring("--theme=".Length));
+		}
+		else
+		{
+			ThemeService.ApplySavedTheme();
+		}
 	}
 
 	protected override Window CreateWindow(IActivationState? activationState)
@@ -46,13 +58,14 @@ public partial class App : Application
 		_ = InitializeAsync(window);
 
 		return window;
-	}
+	}    private async Task InitializeAsync(Window window)
+    {
+        try
+        {			await _syncService.InitializeAsync();
 
-	private async Task InitializeAsync(Window window)
-	{
-		try
-		{
-			await _syncService.InitializeAsync();
+            // Çevrimdışı Whisper ses tanıma modelini arka planda önceden indir
+            // (ilk kullanımda mikrofon akışı beklemesin; yoksa tek seferlik indirme).
+            _ = PreloadSpeechModelAsync();
 
 			// Prototype flow: no login required, go straight to the todo list.
 			var isLoggedIn = await _syncService.IsUserLoggedInAsync();
@@ -77,6 +90,29 @@ public partial class App : Application
 			};
 		}
 	}
+
+    private async Task PreloadSpeechModelAsync()
+    {
+        try
+        {
+            var stt = IPlatformApplication.Current?.Services.GetService<Services.SpeechToTextService>();
+            if (stt == null)
+                return;
+
+            if (stt.IsModelReady)
+            {
+                Log("STT: whisper model hazır (önbellek)");
+                return;
+            }
+
+            var ok = await stt.EnsureModelAsync();
+            Log(ok ? "STT: whisper model indirildi" : "STT: model indirilemedi (çevrimdışı olabilir)");
+        }
+        catch (Exception ex)
+        {
+            Log("STT preload error: " + ex.ToString());
+        }
+    }
 
 	private void Log(string message)
 	{
