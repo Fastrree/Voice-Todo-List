@@ -5,7 +5,7 @@
              x:Class="TodoVoiceMaui.Views.LoginPage"
              x:DataType="viewmodels:LoginPageViewModel"
              Shell.NavBarIsVisible="False"
-             BackgroundColor="{StaticResource Primary}">
+             BackgroundColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}">
 
     <ScrollView>
         <Grid RowDefinitions="*, Auto, *" 
@@ -96,7 +96,7 @@
                 <Button x:Name="PrimaryButton"
                         Text="{Binding PrimaryButtonText}"
                         BackgroundColor="White"
-                        TextColor="{StaticResource Primary}"
+                        TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}"
                         FontSize="18"
                         FontAttributes="Bold"
                         CornerRadius="25"
