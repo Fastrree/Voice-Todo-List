@@ -2,33 +2,39 @@
 <Shell xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
        xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
        xmlns:views="clr-namespace:TodoVoiceMaui.Views"
-       x:Class="TodoVoiceMaui.AppShell">
+       x:Class="TodoVoiceMaui.AppShell"
+       Shell.NavBarIsVisible="False"
+       Shell.BackgroundColor="{AppThemeBinding Light={StaticResource Background}, Dark={StaticResource DarkBackground}}"
+       Shell.ForegroundColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource DarkTextPrimary}}"
+       Shell.TitleColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource DarkTextPrimary}}"
+       Shell.DisabledColor="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}"
+       Shell.UnselectedColor="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}"
+       Shell.TabBarBackgroundColor="{AppThemeBinding Light={StaticResource GlassBackground}, Dark={StaticResource DarkSurfaceElevated}}"
+       Shell.TabBarForegroundColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}"
+       Shell.TabBarTitleColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}"
+       Shell.TabBarUnselectedColor="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}"
+       Shell.TabBarDisabledColor="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}">
 
     <Shell.Resources>
         <ResourceDictionary>
-            <Style x:Key="BaseStyle" TargetType="Element">
-                <Setter Property="Shell.BackgroundColor" Value="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
-                <Setter Property="Shell.ForegroundColor" Value="{StaticResource AccentContrast}" />
-                <Setter Property="Shell.TitleColor" Value="{StaticResource AccentContrast}" />
-                <Setter Property="Shell.DisabledColor" Value="#B4FFFFFF" />
-                <Setter Property="Shell.UnselectedColor" Value="#95FFFFFF" />
-                <Setter Property="Shell.TabBarBackgroundColor" Value="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
-                <Setter Property="Shell.TabBarForegroundColor" Value="{StaticResource AccentContrast}" />
-                <Setter Property="Shell.TabBarUnselectedColor" Value="#95FFFFFF" />
-                <Setter Property="Shell.TabBarTitleColor" Value="{StaticResource AccentContrast}" />
+            <!-- Tab bar: ince, glass, seçili sekme accent -->
+            <Style TargetType="TabBar">
+                <Setter Property="Shell.TabBarBackgroundColor" Value="{AppThemeBinding Light={StaticResource GlassBackground}, Dark={StaticResource DarkSurfaceElevated}}" />
+                <Setter Property="Shell.TabBarForegroundColor" Value="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
+                <Setter Property="Shell.TabBarUnselectedColor" Value="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}" />
+                <Setter Property="Shell.TabBarTitleColor" Value="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
             </Style>
-            <Style TargetType="TabBar" BasedOn="{StaticResource BaseStyle}" />
-            <Style TargetType="FlyoutItem" BasedOn="{StaticResource BaseStyle}" />
         </ResourceDictionary>
     </Shell.Resources>
 
-    <!-- Main Tabbed Navigation -->
+    <!-- Main Tabbed Navigation — Windows'ta sekme çubuğu üstte çizilir -->
     <TabBar>
         <!-- Home Tab -->
         <ShellContent x:Name="MainTab"
                       Title="Ana Sayfa"
                       Icon="home.png"
                       Route="main"
+                      Shell.NavBarIsVisible="False"
                       ContentTemplate="{DataTemplate views:MainPage}" />
 
         <!-- Todos Tab -->
@@ -36,6 +42,7 @@
                       Title="Görevler"
                       Icon="todo.png"
                       Route="todos"
+                      Shell.NavBarIsVisible="False"
                       ContentTemplate="{DataTemplate views:TodoListPage}" />
 
         <!-- Settings Tab -->
@@ -43,6 +50,7 @@
                       Title="Ayarlar"
                       Icon="settings.png"
                       Route="settings"
+                      Shell.NavBarIsVisible="False"
                       ContentTemplate="{DataTemplate views:SettingsPage}" />
     </TabBar>
 

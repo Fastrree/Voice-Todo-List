@@ -4,131 +4,157 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
 
     <!-- ============================================================
-         TOKEN SÖZLÜĞÜ — design-system.md §2
-         İsimlendirme: kategori.öğe.nitelik; hex asla inline olmaz.
-         Light ve Dark AYRI kayıttır (MAUI 8 OnTheme kısıtı, ADR-005).
-         LIGHT: mürekkep mavisi accent + turkuaz secondary (vurgu ekonomisi)
+         TOKEN SÖZLÜĞÜ — Voice-First Multimodal
+         LIGHT · "WHITE FROST"  — saf beyaz, ferah, temiz
+             beyaz zemin, pastel şeftali-lavanta-gökyüzü aurora,
+             mürekkep indigo aksan
+         DARK  · "OBSIDIAN AURORA" — derin, kromatik, sinematik
+             obsidyen zemin, görünür indigo-turkuaz-mor ambient,
+             lüminesan indigo aksan
+         İlke: cam, arkasındaki renkli ışıkla görünür.
+         NOT: gradient fade'lerde ASLA #00000000 (Transparent) kullanma —
+         siyah smear üretir. Rengin %0 alfalı (Clear) hâlini kullan.
          ============================================================ -->
 
-    <!-- ACCENT: Mürekkep mavisi (ana karakter — buton, başlık, aktif, CTA) -->
-    <Color x:Key="Accent">#2563EB</Color>
-    <Color x:Key="AccentDark">#1D4ED8</Color>
-    <Color x:Key="AccentSoft">#E7EEFC</Color>
+    <!-- ============ LIGHT THEME ============ -->
+
+    <!-- ACCENT: mürekkep indigo (ana karakter) -->
+    <Color x:Key="Accent">#4F46E5</Color>
+    <Color x:Key="AccentDark">#4338CA</Color>
+    <Color x:Key="AccentSoft">#ECEAFE</Color>
     <Color x:Key="AccentContrast">#FFFFFF</Color>
 
-    <!-- SECONDARY: Turkuaz (YALNIZ vurgu/state/motion: voice, listening, success, cam ışığı) -->
-    <Color x:Key="Secondary">#14B8A6</Color>
-    <Color x:Key="SecondaryDark">#0D9488</Color>
-    <Color x:Key="SecondarySoft">#E2F7F4</Color>
+    <!-- SECONDARY: premium turkuaz (voice, listening, success) -->
+    <Color x:Key="Secondary">#0D9488</Color>
+    <Color x:Key="SecondaryDark">#0F766E</Color>
+    <Color x:Key="SecondarySoft">#E0F4F1</Color>
 
-    <!-- SURFACE — Light: çok açık soğuk nötr (saf beyaz değil) -->
-    <Color x:Key="Background">#F6F8FC</Color>
+    <!-- SURFACE — açık gri zemin (beyaz değil, kullanıcı tercihi) -->
+    <Color x:Key="Background">#F4F5F8</Color>
     <Color x:Key="Surface">#FFFFFF</Color>
     <Color x:Key="SurfaceElevated">#FFFFFF</Color>
-    <Color x:Key="SurfaceMuted">#EEF2F8</Color>
+    <Color x:Key="SurfaceMuted">#E9EBF0</Color>
 
-    <!-- TEXT — Light: koyu "mürekkep" tonu -->
-    <Color x:Key="TextPrimary">#0F1B2E</Color>
-    <Color x:Key="TextSecondary">#51607A</Color>
-    <Color x:Key="TextTertiary">#8A94A8</Color>
+    <!-- TEXT — soğuk mürekkep -->
+    <Color x:Key="TextPrimary">#111827</Color>
+    <Color x:Key="TextSecondary">#4B5563</Color>
+    <Color x:Key="TextTertiary">#9CA3AF</Color>
 
-    <!-- BORDER — Light -->
-    <Color x:Key="BorderDefault">#DDE3EC</Color>
-    <Color x:Key="BorderStrong">#C3CCDA</Color>
+    <!-- BORDER — soğuk hairlines -->
+    <Color x:Key="BorderDefault">#E5E7EB</Color>
+    <Color x:Key="BorderStrong">#D1D5DB</Color>
 
-    <!-- CAM (Liquid Glass) — Light: beyaz-%60 + ince beyaz kenar -->
-    <Color x:Key="GlassBackground">#99FFFFFF</Color>
-    <Color x:Key="GlassBorder">#B3FFFFFF</Color>
+    <!-- CAM (Liquid Glass) — beyaz, görünür -->
+    <Color x:Key="GlassBackground">#E6FFFFFF</Color>
+    <Color x:Key="GlassBorder">#C9FFFFFF</Color>
     <Color x:Key="GlassHighlight">#FFFFFF</Color>
 
-    <!-- GÖLGE (ambient + key) -->
-    <Color x:Key="ShadowSm">#140F1B2E</Color>
-    <Color x:Key="ShadowMd">#1F0F1B2E</Color>
-    <Color x:Key="ShadowLg">#290F1B2E</Color>
+    <!-- GÖLGE — soğuk koyu mavi-kurşun tonu -->
+    <Color x:Key="ShadowSm">#14111827</Color>
+    <Color x:Key="ShadowMd">#1F111827</Color>
+    <Color x:Key="ShadowLg">#2B111827</Color>
 
     <!-- STATE -->
-    <Color x:Key="Success">#10B981</Color>
-    <Color x:Key="Warning">#F59E0B</Color>
-    <Color x:Key="Danger">#EF4444</Color>
-    <Color x:Key="Info">#3B82F6</Color>
+    <Color x:Key="Success">#059669</Color>
+    <Color x:Key="Warning">#D97706</Color>
+    <Color x:Key="Danger">#DC2626</Color>
+    <Color x:Key="Info">#2563EB</Color>
 
-    <!-- Voice recording (eski adlar, yeni Soft token'larına işaret eder) -->
-    <Color x:Key="Recording">#EF4444</Color>
-    <Color x:Key="RecordingSoft">#FDEFF0</Color>
-    <Color x:Key="RecordingBackground">#FDEFF0</Color>
-    <Color x:Key="VoiceReady">#10B981</Color>
-    <Color x:Key="VoiceReadySoft">#E9F9F1</Color>
-    <Color x:Key="VoiceReadyBackground">#E9F9F1</Color>
+    <!-- Voice recording -->
+    <Color x:Key="Recording">#DC2626</Color>
+    <Color x:Key="RecordingSoft">#FDEBE9</Color>
+    <Color x:Key="RecordingBackground">#FDEBE9</Color>
+    <Color x:Key="VoiceReady">#059669</Color>
+    <Color x:Key="VoiceReadySoft">#E2F4EC</Color>
+    <Color x:Key="VoiceReadyBackground">#E2F4EC</Color>
 
     <!-- PRIORITY -->
-    <Color x:Key="PriorityHigh">#EF4444</Color>
-    <Color x:Key="PriorityMedium">#F59E0B</Color>
-    <Color x:Key="PriorityLow">#10B981</Color>
+    <Color x:Key="PriorityHigh">#DC2626</Color>
+    <Color x:Key="PriorityMedium">#D97706</Color>
+    <Color x:Key="PriorityLow">#059669</Color>
 
-    <!-- ============================================================
-         AURORA ATMOSFER — MainPage zemin katmanı (design-system §2.0/§6)
-         Light = White/Pearl/Mist: beyaz→inci→sis, cyan/indigo/violet glow
-         ============================================================ -->
-    <Color x:Key="AuroraTop">#FFFFFF</Color>
-    <Color x:Key="AuroraMid">#F3F7FE</Color>
-    <Color x:Key="AuroraBottom">#E7EEFB</Color>
-    <Color x:Key="AuroraGlowCyan">#9FD9F5</Color>
-    <Color x:Key="AuroraGlowIndigo">#B9C6FA</Color>
-    <Color x:Key="AuroraGlowViolet">#D4C7F7</Color>
+    <!-- AURORA — Light: açık gri üstüne görünür pastel aurora
+         (dark'taki kompozisyonun light'a uyarlanmış hâli — silme, uyarla) -->
+    <Color x:Key="AuroraTop">#F8F9FB</Color>
+    <Color x:Key="AuroraMid">#F1F2F7</Color>
+    <Color x:Key="AuroraBottom">#E4E8F2</Color>
+    <Color x:Key="AuroraGlowPeach">#FFC9A3</Color>
+    <Color x:Key="AuroraGlowLavender">#C9B8FF</Color>
+    <Color x:Key="AuroraGlowSky">#A8D8FF</Color>
+    <Color x:Key="AuroraGlowMint">#A8E8D8</Color>
 
-    <!-- ============================================================
-         DARK THEME (AYRI DENEYİM — koyu grafit/indigo zemin, glow accent)
-         ============================================================ -->
+    <!-- AURORA fade — renklerin %0 alfalı hâli (siyah smear önler) -->
+    <Color x:Key="AuroraGlowPeachClear">#00FFC9A3</Color>
+    <Color x:Key="AuroraGlowLavenderClear">#00C9B8FF</Color>
+    <Color x:Key="AuroraGlowSkyClear">#00A8D8FF</Color>
+    <Color x:Key="AuroraGlowMintClear">#00A8E8D8</Color>
 
-    <!-- ACCENT — Dark: parlaklaşır + ışık saçar (glow) -->
-    <Color x:Key="DarkAccent">#5B8CFF</Color>
-    <Color x:Key="DarkAccentSoft">#1A2A52</Color>
+    <!-- Aksan glow (MIC halkası vb.) -->
+    <Color x:Key="AccentGlow">#3D4F46E5</Color>
+    <Color x:Key="AccentGlowSoft">#264F46E5</Color>
+
+    <!-- ============ DARK THEME · "OBSIDIAN AURORA" ============ -->
+
+    <!-- ACCENT — Dark: lüminesan indigo -->
+    <Color x:Key="DarkAccent">#8B93FF</Color>
+    <Color x:Key="DarkAccentSoft">#232047</Color>
     <Color x:Key="DarkAccentContrast">#FFFFFF</Color>
 
-    <!-- SECONDARY — Dark -->
+    <!-- SECONDARY — Dark: parlak turkuaz -->
     <Color x:Key="DarkSecondary">#2DD4BF</Color>
-    <Color x:Key="DarkSecondarySoft">#0F2E2B</Color>
+    <Color x:Key="DarkSecondarySoft">#0A2E2B</Color>
 
-    <!-- SURFACE — Dark: koyu grafit/indigo (tam siyah değil) -->
-    <Color x:Key="DarkBackground">#0B1220</Color>
-    <Color x:Key="DarkSurface">#111A2C</Color>
-    <Color x:Key="DarkSurfaceElevated">#1A2540</Color>
-    <Color x:Key="DarkSurfaceMuted">#1E2A42</Color>
+    <!-- SURFACE — Dark: derin obsidyen (asla saf siyah değil) -->
+    <Color x:Key="DarkBackground">#0B0A12</Color>
+    <Color x:Key="DarkSurface">#14121E</Color>
+    <Color x:Key="DarkSurfaceElevated">#1C1929</Color>
+    <Color x:Key="DarkSurfaceMuted">#242031</Color>
 
-    <!-- TEXT — Dark: buz beyazı -->
-    <Color x:Key="DarkTextPrimary">#E9EEF8</Color>
-    <Color x:Key="DarkTextSecondary">#A7B3C9</Color>
-    <Color x:Key="DarkTextTertiary">#6B7A96</Color>
+    <!-- TEXT — Dark: sıcak beyaz, menekşe tonu -->
+    <Color x:Key="DarkTextPrimary">#F0EDF6</Color>
+    <Color x:Key="DarkTextSecondary">#A39BB3</Color>
+    <Color x:Key="DarkTextTertiary">#6E6580</Color>
 
-    <!-- BORDER — Dark -->
-    <Color x:Key="DarkBorderDefault">#263452</Color>
-    <Color x:Key="DarkBorderStrong">#33456B</Color>
+    <!-- BORDER — Dark: görünür glass hairline -->
+    <Color x:Key="DarkBorderDefault">#262233</Color>
+    <Color x:Key="DarkBorderStrong">#322C45</Color>
 
-    <!-- CAM — Dark: beyaz-%6 + ince açık gri kenar -->
-    <Color x:Key="DarkGlassBackground">#0FFFFFFF</Color>
-    <Color x:Key="DarkGlassBorder">#14FFFFFF</Color>
-    <Color x:Key="DarkGlassHighlight">#26FFFFFF</Color>
+    <!-- CAM — Dark: görünür, hafif indigo tonlu beyaz -->
+    <Color x:Key="DarkGlassBackground">#30FFFFFF</Color>
+    <Color x:Key="DarkGlassBorder">#4AFFFFFF</Color>
+    <Color x:Key="DarkGlassHighlight">#70FFFFFF</Color>
 
-    <!-- GÖLGE — Dark (siyah tabanlı) -->
-    <Color x:Key="DarkShadowSm">#33000000</Color>
-    <Color x:Key="DarkShadowMd">#40000000</Color>
-    <Color x:Key="DarkShadowLg">#52000000</Color>
+    <!-- GÖLGE — Dark -->
+    <Color x:Key="DarkShadowSm">#40000000</Color>
+    <Color x:Key="DarkShadowMd">#52000000</Color>
+    <Color x:Key="DarkShadowLg">#66000000</Color>
 
     <!-- VOICE — Dark -->
-    <Color x:Key="DarkRecordingSoft">#3A1216</Color>
-    <Color x:Key="DarkVoiceReadySoft">#0E2A20</Color>
+    <Color x:Key="DarkRecordingSoft">#2D1B1E</Color>
+    <Color x:Key="DarkVoiceReadySoft">#0C2920</Color>
 
-    <!-- AURORA ATMOSFER — Dark = Black/Graphite/Smoked:
-         grafit→duman, derin teal/indigo/violet glow (tam siyah DEĞİL) -->
-    <Color x:Key="DarkAuroraTop">#090F1E</Color>
-    <Color x:Key="DarkAuroraMid">#0D1427</Color>
-    <Color x:Key="DarkAuroraBottom">#131B32</Color>
-    <Color x:Key="DarkAuroraGlowTeal">#123A4A</Color>
-    <Color x:Key="DarkAuroraGlowIndigo">#1C2A5C</Color>
-    <Color x:Key="DarkAuroraGlowViolet">#2B2350</Color>
+    <!-- AURORA — Dark: güçlü, kromatik ambient (camın arkasındaki ışık) -->
+    <Color x:Key="DarkAuroraTop">#0B0A12</Color>
+    <Color x:Key="DarkAuroraMid">#100F1A</Color>
+    <Color x:Key="DarkAuroraBottom">#161427</Color>
+    <Color x:Key="DarkAuroraGlowIndigo">#332E7A</Color>
+    <Color x:Key="DarkAuroraGlowTeal">#0F4A4E</Color>
+    <Color x:Key="DarkAuroraGlowViolet">#4A2A7A</Color>
+    <Color x:Key="DarkAuroraGlowAmethyst">#57286E</Color>
 
-    <!-- TEMA-FARKINDA STATE — Dark'ta parlaklaşır (dark glass üzerinde okunur) -->
+    <!-- AURORA fade — Dark renklerin %0 alfalı hâli -->
+    <Color x:Key="DarkAuroraGlowIndigoClear">#00332E7A</Color>
+    <Color x:Key="DarkAuroraGlowTealClear">#000F4A4E</Color>
+    <Color x:Key="DarkAuroraGlowVioletClear">#004A2A7A</Color>
+    <Color x:Key="DarkAuroraGlowAmethystClear">#0057286E</Color>
+
+    <!-- Aksan glow — Dark (MIC halkası vb.) -->
+    <Color x:Key="DarkAccentGlow">#3D8B93FF</Color>
+    <Color x:Key="DarkAccentGlowSoft">#268B93FF</Color>
+
+    <!-- STATE — Dark -->
     <Color x:Key="DarkSuccess">#34D399</Color>
     <Color x:Key="DarkWarning">#FBBF24</Color>
+    <Color x:Key="DarkDanger">#F87171</Color>
 
 </ResourceDictionary>

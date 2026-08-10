@@ -1,352 +1,301 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:controls="clr-namespace:TodoVoiceMaui.Controls"
              xmlns:viewmodels="clr-namespace:TodoVoiceMaui.ViewModels"
              x:Class="TodoVoiceMaui.Views.MainPage"
              x:DataType="viewmodels:MainPageViewModel"
              Title="Ana Sayfa"
-             BackgroundColor="{AppThemeBinding Light={StaticResource AuroraTop}, Dark={StaticResource DarkAuroraTop}}">
+             Shell.NavBarIsVisible="False"
+             BackgroundColor="{AppThemeBinding Light={StaticResource Background}, Dark={StaticResource DarkBackground}}">
 
-    <Grid>
+    <Grid IsClippedToBounds="True">
 
-        <!-- ============================================================
-             KATMAN 1 · AURORA ATMOSFER (design-system §6 / transition §2.3)
-             Zemin = gradient + 3 ışık havuzu (cam içine giren ışık).
-             Light: White/Pearl/Mist · Dark: Black/Graphite/Smoked.
-             ============================================================ -->
-        <Grid InputTransparent="True"
-              IsClippedToBounds="True">
-
-            <!-- Base zemin: dikey atmosfer gradienti -->
-            <BoxView>
-                <BoxView.Background>
-                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                        <GradientStop Offset="0.0"
-                                      Color="{AppThemeBinding Light={StaticResource AuroraTop}, Dark={StaticResource DarkAuroraTop}}" />
-                        <GradientStop Offset="0.55"
-                                      Color="{AppThemeBinding Light={StaticResource AuroraMid}, Dark={StaticResource DarkAuroraMid}}" />
-                        <GradientStop Offset="1.0"
-                                      Color="{AppThemeBinding Light={StaticResource AuroraBottom}, Dark={StaticResource DarkAuroraBottom}}" />
-                    </LinearGradientBrush>
-                </BoxView.Background>
-            </BoxView>
-
-            <!-- Işık havuzu 1 · cyan/teal (sol üst) -->
-            <BoxView WidthRequest="560"
-                     HeightRequest="560"
-                     CornerRadius="280"
-                     Opacity="0.5"
-                     HorizontalOptions="Start"
-                     VerticalOptions="Start"
-                     TranslationX="-180"
-                     TranslationY="-160">
-                <BoxView.Background>
-                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                        <GradientStop Offset="0.0"
-                                      Color="{AppThemeBinding Light={StaticResource AuroraGlowCyan}, Dark={StaticResource DarkAuroraGlowTeal}}" />
-                        <GradientStop Offset="0.7" Color="Transparent" />
-                    </LinearGradientBrush>
-                </BoxView.Background>
-            </BoxView>
-
-            <!-- Işık havuzu 2 · indigo (sağ üst) -->
-            <BoxView WidthRequest="500"
-                     HeightRequest="500"
-                     CornerRadius="250"
-                     Opacity="0.45"
-                     HorizontalOptions="End"
-                     VerticalOptions="Start"
-                     TranslationX="160"
-                     TranslationY="-120">
-                <BoxView.Background>
-                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                        <GradientStop Offset="0.0"
-                                      Color="{AppThemeBinding Light={StaticResource AuroraGlowIndigo}, Dark={StaticResource DarkAuroraGlowIndigo}}" />
-                        <GradientStop Offset="0.7" Color="Transparent" />
-                    </LinearGradientBrush>
-                </BoxView.Background>
-            </BoxView>
-
-            <!-- Işık havuzu 3 · violet (sağ alt) -->
-            <BoxView WidthRequest="640"
-                     HeightRequest="640"
-                     CornerRadius="320"
-                     Opacity="0.4"
-                     HorizontalOptions="End"
-                     VerticalOptions="End"
-                     TranslationX="140"
-                     TranslationY="220">
-                <BoxView.Background>
-                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                        <GradientStop Offset="0.0"
-                                      Color="{AppThemeBinding Light={StaticResource AuroraGlowViolet}, Dark={StaticResource DarkAuroraGlowViolet}}" />
-                        <GradientStop Offset="0.7" Color="Transparent" />
-                    </LinearGradientBrush>
-                </BoxView.Background>
-            </BoxView>
-
+        <!-- KATMAN 0 · AURORA ATMOSFER (renkli zemin = camın görünme koşulu)
+             GradientStop içinde AppThemeBinding render edilmediği için
+             hazır brush çiftlerine bağlanır (AuroraBackgroundLight/Dark). -->
+        <Grid InputTransparent="True">
+            <Grid.Background>
+                <AppThemeBinding Light="{StaticResource AuroraBackgroundLight}" Dark="{StaticResource AuroraBackgroundDark}" />
+            </Grid.Background>
         </Grid>
 
-        <!-- ============================================================
-             KATMAN 2 · İÇERİK (Bento kompozisyon)
-             ============================================================ -->
-        <ScrollView>
-            <VerticalStackLayout Spacing="16"
-                                 Padding="20,12,20,28">
+        <!-- ambient glow · şeftali/indigo (üst sol) — hero'nun arkası
+             Light: görünür pastel süzülme (beyaz zemine uyarlanmış aurora)
+             Dark: güçlü kromatik ambient -->
+        <BoxView WidthRequest="460" HeightRequest="460" CornerRadius="230"
+                 HorizontalOptions="Start" VerticalOptions="Start"
+                 TranslationX="-140" TranslationY="-170"
+                 Opacity="{AppThemeBinding Light=0.4, Dark=0.55}"
+                 Color="Transparent"
+                 InputTransparent="True">
+            <BoxView.Background>
+                <AppThemeBinding Light="{StaticResource GlowPeachLight}" Dark="{StaticResource GlowIndigoDark}" />
+            </BoxView.Background>
+        </BoxView>
 
-                <!-- Editorial başlık -->
-                <Grid ColumnDefinitions="*,Auto"
-                      ColumnSpacing="12"
-                      Margin="4,4,0,4">
+        <!-- ambient glow · lavanta/mor (üst sağ) -->
+        <BoxView WidthRequest="400" HeightRequest="400" CornerRadius="200"
+                 HorizontalOptions="End" VerticalOptions="Start"
+                 TranslationX="150" TranslationY="-120"
+                 Opacity="{AppThemeBinding Light=0.36, Dark=0.5}"
+                 Color="Transparent"
+                 InputTransparent="True">
+            <BoxView.Background>
+                <AppThemeBinding Light="{StaticResource GlowLavenderLight}" Dark="{StaticResource GlowAmethystDark}" />
+            </BoxView.Background>
+        </BoxView>
 
-                    <VerticalStackLayout Spacing="2">
-                        <Label Text="GENEL BAKIŞ"
-                               Style="{StaticResource MicroLabel}"
-                               TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
-                        <Label Text="{Binding WelcomeMessage}"
-                               Style="{StaticResource DisplayMedium}" />
-                        <Label Text="{Binding TodayLabel}"
-                               Style="{StaticResource CaptionText}" />
-                    </VerticalStackLayout>
+        <!-- ambient glow · gökyüzü/turkuaz (alt sağ) — istatistik kartlarının arkası -->
+        <BoxView WidthRequest="520" HeightRequest="520" CornerRadius="260"
+                 HorizontalOptions="End" VerticalOptions="End"
+                 TranslationX="180" TranslationY="230"
+                 Opacity="{AppThemeBinding Light=0.42, Dark=0.6}"
+                 Color="Transparent"
+                 InputTransparent="True">
+            <BoxView.Background>
+                <AppThemeBinding Light="{StaticResource GlowSkyLight}" Dark="{StaticResource GlowTealDark}" />
+            </BoxView.Background>
+        </BoxView>
 
-                    <Button Grid.Column="1"
-                            Text="&#xE72C;"
-                            FontFamily="Segoe Fluent Icons"
-                            Command="{Binding RefreshCommand}"
-                            Style="{StaticResource IconButton}"
-                            VerticalOptions="Start" />
-                </Grid>
+        <!-- ambient glow · nane/mor (alt sol) -->
+        <BoxView WidthRequest="380" HeightRequest="380" CornerRadius="190"
+                 HorizontalOptions="Start" VerticalOptions="End"
+                 TranslationX="-150" TranslationY="180"
+                 Opacity="{AppThemeBinding Light=0.34, Dark=0.45}"
+                 Color="Transparent"
+                 InputTransparent="True">
+            <BoxView.Background>
+                <AppThemeBinding Light="{StaticResource GlowMintLight}" Dark="{StaticResource GlowVioletDark}" />
+            </BoxView.Background>
+        </BoxView>
 
-                <!-- HERO · Toplam Görev + ilerleme -->
-                <controls:GlassPanel>
-                    <VerticalStackLayout Spacing="10"
-                                         Padding="4,2">
-                        <Grid ColumnDefinitions="*,Auto">
-                            <Label Text="Toplam Görev"
-                                   Style="{StaticResource SubtitleMedium}" />
-                            <ActivityIndicator Grid.Column="1"
-                                               IsRunning="{Binding IsLoadingStats}"
-                                               IsVisible="{Binding IsLoadingStats}"
-                                               VerticalOptions="Center" />
-                        </Grid>
+        <!-- KATMAN 1 · İÇERİK
+             Deterministik kompozisyon:
+             Row0 üst kimlik / Row1 üst boşluk / Row2 hero / Row3 alt boşluk / Row4 aksiyon.
+             Star satırlar kalan yüksekliği eşit paylaşır → hero her koşulda ortada kalır,
+             asla alta düşmez. -->
+        <Grid Padding="24,14,24,14"
+              RowDefinitions="Auto,*,Auto,*,Auto">
 
-                        <Label Text="{Binding TotalTodos}"
-                               FontFamily="SoraBold"
-                               FontSize="44"
-                               LineHeight="50"
-                               TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
+            <!-- ÜST BAR · kimlik -->
+            <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <VerticalStackLayout Spacing="1">
+                    <Label Text="{Binding TodayLabel}"
+                           Style="{StaticResource MicroLabel}"
+                           TextColor="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}" />
+                    <Label Text="{Binding UserDisplayName}"
+                           Style="{StaticResource SubtitleMedium}" />
+                </VerticalStackLayout>
 
-                        <ProgressBar Progress="{Binding ProgressRatio}"
-                                     ProgressColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}"
-                                     HeightRequest="6"
-                                     MinimumHeightRequest="6" />
+                <!-- ayarlar chip'i (tıklanabilir) -->
+                <Border Grid.Column="1"
+                        Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}"
+                        StrokeThickness="1"
+                        StrokeShape="RoundRectangle 999"
+                        Padding="12,7"
+                        VerticalOptions="Center">
+                    <Border.Background>
+                        <AppThemeBinding Light="{StaticResource GlassSurfaceLight}" Dark="{StaticResource GlassSurfaceDark}" />
+                    </Border.Background>
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Command="{Binding NavigateToSettingsCommand}" />
+                    </Border.GestureRecognizers>
+                    <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="6">
+                        <Label Text="&#xE713;"
+                               FontFamily="Segoe Fluent Icons"
+                               FontSize="13"
+                               TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}"
+                               VerticalOptions="Center" />
+                        <Label Text="Ayarlar"
+                               FontSize="12"
+                               FontFamily="SoraSemiBold"
+                               TextColor="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}"
+                               VerticalOptions="Center" />
+                    </Grid>
+                </Border>
+            </Grid>
 
-                        <Label Text="{Binding ProgressLabel}"
-                               Style="{StaticResource MicroLabel}" />
-                    </VerticalStackLayout>
-                </controls:GlassPanel>
+            <!-- üst boşluk satırı -->
+            <BoxView Grid.Row="1" Color="Transparent" />
 
-                <!-- İki istatistik · Tamamlanan / Bekleyen -->
-                <Grid ColumnDefinitions="*,*"
-                      ColumnSpacing="16">
+            <!-- HERO · voice-first kimlik kompozisyonu -->
+            <VerticalStackLayout Grid.Row="2"
+                                 Spacing="0"
+                                 HorizontalOptions="Center">
 
-                    <controls:GlassPanel>
-                        <VerticalStackLayout Spacing="8"
-                                             Padding="2,2">
-                            <HorizontalStackLayout Spacing="7"
-                                                   VerticalOptions="Center">
-                                <BoxView WidthRequest="8"
-                                         HeightRequest="8"
-                                         CornerRadius="4"
-                                         VerticalOptions="Center"
-                                         Color="{AppThemeBinding Light={StaticResource Success}, Dark={StaticResource DarkSuccess}}" />
-                                <Label Text="TAMAMLANAN"
-                                       Style="{StaticResource MicroLabel}"
-                                       VerticalOptions="Center" />
-                            </HorizontalStackLayout>
-                            <Label Text="{Binding CompletedTodos}"
-                                   FontFamily="SoraBold"
-                                   FontSize="32"
-                                   LineHeight="40"
-                                   TextColor="{AppThemeBinding Light={StaticResource Success}, Dark={StaticResource DarkSuccess}}" />
-                        </VerticalStackLayout>
-                    </controls:GlassPanel>
+                <Label Text="KONUŞ"
+                       Style="{StaticResource MicroLabel}"
+                       TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}"
+                       HorizontalOptions="Center" />
 
-                    <controls:GlassPanel Grid.Column="1">
-                        <VerticalStackLayout Spacing="8"
-                                             Padding="2,2">
-                            <HorizontalStackLayout Spacing="7"
-                                                   VerticalOptions="Center">
-                                <BoxView WidthRequest="8"
-                                         HeightRequest="8"
-                                         CornerRadius="4"
-                                         VerticalOptions="Center"
-                                         Color="{AppThemeBinding Light={StaticResource Warning}, Dark={StaticResource DarkWarning}}" />
-                                <Label Text="BEKLEYEN"
-                                       Style="{StaticResource MicroLabel}"
-                                       VerticalOptions="Center" />
-                            </HorizontalStackLayout>
-                            <Label Text="{Binding PendingTodos}"
-                                   FontFamily="SoraBold"
-                                   FontSize="32"
-                                   LineHeight="40"
-                                   TextColor="{AppThemeBinding Light={StaticResource Warning}, Dark={StaticResource DarkWarning}}" />
-                        </VerticalStackLayout>
-                    </controls:GlassPanel>
+                <Label Text="Konuş."
+                       Style="{StaticResource DisplayLarge}"
+                       FontSize="32"
+                       LineHeight="1.2"
+                       HorizontalOptions="Center"
+                       Margin="0,4,0,0" />
 
-                </Grid>
+                <!-- MIC · tek bold element -->
+                <Grid WidthRequest="72" HeightRequest="72"
+                      Margin="0,18,0,0"
+                      HorizontalOptions="Center">
 
-                <!-- SES · organik kimlik öğesi -->
-                <controls:GlassPanel>
-                    <VerticalStackLayout Spacing="14"
-                                         Padding="4,2">
-                        <Grid ColumnDefinitions="Auto,*,Auto"
-                              ColumnSpacing="14">
+                    <!-- glow ring 1 · Light'ta zarif, Dark'ta belirgin -->
+                    <BoxView Background="{AppThemeBinding Light={StaticResource AccentGlow}, Dark={StaticResource DarkAccentGlow}}"
+                             CornerRadius="36"
+                             Scale="1.35"
+                             Opacity="{AppThemeBinding Light=0.6, Dark=1.0}"
+                             InputTransparent="True" />
+                    <!-- glow ring 2 -->
+                    <BoxView Background="{AppThemeBinding Light={StaticResource AccentGlowSoft}, Dark={StaticResource DarkAccentGlowSoft}}"
+                             CornerRadius="36"
+                             Scale="1.7"
+                             Opacity="{AppThemeBinding Light=0.55, Dark=1.0}"
+                             InputTransparent="True" />
 
-                            <!-- Mikrofon çipi: gradyan cam halka -->
-                            <Grid WidthRequest="52"
-                                  HeightRequest="52">
-                                <BoxView CornerRadius="26">
-                                    <BoxView.Background>
-                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                            <GradientStop Offset="0.0"
-                                                          Color="{AppThemeBinding Light={StaticResource SecondarySoft}, Dark={StaticResource DarkSecondarySoft}}" />
-                                            <GradientStop Offset="1.0"
-                                                          Color="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource DarkSecondary}}" />
-                                        </LinearGradientBrush>
-                                    </BoxView.Background>
-                                </BoxView>
-                                <Label Text="&#xE91F;"
-                                       FontFamily="Segoe Fluent Icons"
-                                       FontSize="20"
-                                       HorizontalOptions="Center"
-                                       VerticalOptions="Center"
-                                       TextColor="{AppThemeBinding Light={StaticResource SecondaryDark}, Dark={StaticResource DarkSecondary}}" />
-                            </Grid>
-
-                            <VerticalStackLayout Grid.Column="1"
-                                                 Spacing="2"
-                                                 VerticalOptions="Center">
-                                <Label Text="Sesli Not"
-                                       Style="{StaticResource SubtitleMedium}" />
-                                <Label Text="Sesle kaydedilen görevler"
-                                       Style="{StaticResource CaptionText}" />
-                            </VerticalStackLayout>
-
-                            <Label Grid.Column="2"
-                                   Text="{Binding VoiceTodos}"
-                                   FontFamily="SoraBold"
-                                   FontSize="34"
-                                   LineHeight="40"
-                                   VerticalOptions="Center"
-                                   TextColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource DarkSecondary}}" />
-                        </Grid>
-
-                        <!-- Organik dalga: ses anının fluityal imzası -->
-                        <HorizontalStackLayout Spacing="4"
-                                               HorizontalOptions="End"
-                                               HeightRequest="22">
-                            <BoxView WidthRequest="3" HeightRequest="8"  CornerRadius="1.5" VerticalOptions="End"
-                                     Color="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource DarkSecondary}}" />
-                            <BoxView WidthRequest="3" HeightRequest="14" CornerRadius="1.5" VerticalOptions="End"
-                                     Color="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource DarkSecondary}}" />
-                            <BoxView WidthRequest="3" HeightRequest="10" CornerRadius="1.5" VerticalOptions="End"
-                                     Color="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource DarkSecondary}}" />
-                            <BoxView WidthRequest="3" HeightRequest="20" CornerRadius="1.5" VerticalOptions="End"
-                                     Color="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource DarkSecondary}}" />
-                            <BoxView WidthRequest="3" HeightRequest="12" CornerRadius="1.5" VerticalOptions="End"
-                                     Color="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource DarkSecondary}}" />
-                            <BoxView WidthRequest="3" HeightRequest="16" CornerRadius="1.5" VerticalOptions="End"
-                                     Color="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource DarkSecondary}}" />
-                            <BoxView WidthRequest="3" HeightRequest="9"  CornerRadius="1.5" VerticalOptions="End"
-                                     Color="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource DarkSecondary}}" />
-                        </HorizontalStackLayout>
-                    </VerticalStackLayout>
-                </controls:GlassPanel>
-
-                <!-- Hızlı aksiyonlar · Görevler / Ayarlar -->
-                <Grid ColumnDefinitions="*,*"
-                      ColumnSpacing="16">
-
-                    <controls:GlassPanel>
-                        <controls:GlassPanel.GestureRecognizers>
+                    <!-- MIC circle -->
+                    <Border Stroke="{AppThemeBinding Light={StaticResource GlassHighlight}, Dark={StaticResource DarkGlassHighlight}}"
+                            StrokeThickness="1.5"
+                            StrokeShape="RoundRectangle 999">
+                        <Border.Background>
+                            <AppThemeBinding Light="{StaticResource GlassSurfaceLight}" Dark="{StaticResource GlassSurfaceDark}" />
+                        </Border.Background>
+                        <Border.GestureRecognizers>
                             <TapGestureRecognizer Command="{Binding NavigateToTodosCommand}" />
-                        </controls:GlassPanel.GestureRecognizers>
-                        <Grid ColumnDefinitions="Auto,*,Auto"
-                              ColumnSpacing="12">
-                            <Grid WidthRequest="40"
-                                  HeightRequest="40">
-                                <BoxView CornerRadius="20"
-                                         BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource DarkAccentSoft}}" />
-                                <Label Text="&#xE7C3;"
-                                       FontFamily="Segoe Fluent Icons"
-                                       FontSize="18"
-                                       HorizontalOptions="Center"
-                                       VerticalOptions="Center"
-                                       TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
-                            </Grid>
-                            <VerticalStackLayout Grid.Column="1"
-                                                 Spacing="2"
-                                                 VerticalOptions="Center">
-                                <Label Text="Görevler"
-                                       Style="{StaticResource SubtitleMedium}" />
-                                <Label Text="Tüm görevlerinizi yönetin"
-                                       Style="{StaticResource CaptionText}" />
-                            </VerticalStackLayout>
-                            <Label Grid.Column="2"
-                                   Text="&#xE76B;"
+                        </Border.GestureRecognizers>
+                        <Border.Shadow>
+                            <Shadow Brush="{AppThemeBinding Light={StaticResource ShadowMd}, Dark={StaticResource DarkShadowMd}}"
+                                    Offset="0,8"
+                                    Radius="22"
+                                    Opacity="0.5" />
+                        </Border.Shadow>
+                        <Grid>
+                            <Grid.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Offset="0.0"
+                                                  Color="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
+                                    <GradientStop Offset="1.0"
+                                                  Color="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource DarkSecondary}}" />
+                                </LinearGradientBrush>
+                            </Grid.Background>
+                            <Label Text="&#xE91F;"
                                    FontFamily="Segoe Fluent Icons"
-                                   FontSize="14"
-                                   VerticalOptions="Center"
-                                   TextColor="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}" />
+                                   FontSize="26"
+                                   TextColor="White"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center" />
                         </Grid>
-                    </controls:GlassPanel>
-
-                    <controls:GlassPanel Grid.Column="1">
-                        <controls:GlassPanel.GestureRecognizers>
-                            <TapGestureRecognizer Command="{Binding NavigateToSettingsCommand}" />
-                        </controls:GlassPanel.GestureRecognizers>
-                        <Grid ColumnDefinitions="Auto,*,Auto"
-                              ColumnSpacing="12">
-                            <Grid WidthRequest="40"
-                                  HeightRequest="40">
-                                <BoxView CornerRadius="20"
-                                         BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource DarkAccentSoft}}" />
-                                <Label Text="&#xE713;"
-                                       FontFamily="Segoe Fluent Icons"
-                                       FontSize="18"
-                                       HorizontalOptions="Center"
-                                       VerticalOptions="Center"
-                                       TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
-                            </Grid>
-                            <VerticalStackLayout Grid.Column="1"
-                                                 Spacing="2"
-                                                 VerticalOptions="Center">
-                                <Label Text="Ayarlar"
-                                       Style="{StaticResource SubtitleMedium}" />
-                                <Label Text="Uygulama tercihleriniz"
-                                       Style="{StaticResource CaptionText}" />
-                            </VerticalStackLayout>
-                            <Label Grid.Column="2"
-                                   Text="&#xE76B;"
-                                   FontFamily="Segoe Fluent Icons"
-                                   FontSize="14"
-                                   VerticalOptions="Center"
-                                   TextColor="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}" />
-                        </Grid>
-                    </controls:GlassPanel>
-
+                    </Border>
                 </Grid>
 
-                <!-- Footer -->
-                <Label Text="Todo Voice v1.0"
+                <Label Text="Dokun ve konuş"
                        Style="{StaticResource MicroLabel}"
                        HorizontalOptions="Center"
-                       Margin="0,8,0,0" />
+                       Margin="0,12,0,0" />
 
             </VerticalStackLayout>
-        </ScrollView>
+
+            <!-- alt boşluk satırı -->
+            <BoxView Grid.Row="3" Color="Transparent" />
+
+            <!-- ALT BÖLGE · istatistikler + CTA -->
+            <VerticalStackLayout Grid.Row="4" Spacing="10">
+
+                <!-- istatistikler · 3'lü tintli cam kart -->
+                <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
+
+                    <!-- görev · indigo tint -->
+                    <Border Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}"
+                            StrokeThickness="1"
+                            StrokeShape="RoundRectangle 16">
+                        <Border.Background>
+                            <AppThemeBinding Light="{StaticResource GlassTintIndigoLight}" Dark="{StaticResource GlassTintIndigoDark}" />
+                        </Border.Background>
+                        <Grid RowDefinitions="Auto,*">
+                            <BoxView HeightRequest="1.5" Margin="12,0,12,0" VerticalOptions="Start">
+                                <BoxView.Background>
+                                    <AppThemeBinding Light="{StaticResource GlassSpecularLight}" Dark="{StaticResource GlassSpecularDark}" />
+                                </BoxView.Background>
+                            </BoxView>
+                            <VerticalStackLayout Grid.Row="1" Spacing="0" HorizontalOptions="Center" Padding="10,6,10,8">
+                                <Label Text="{Binding TotalTodos}"
+                                       Style="{StaticResource SubtitleMedium}"
+                                       FontSize="18" LineHeight="1.2"
+                                       TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}"
+                                       HorizontalOptions="Center" />
+                                <Label Text="görev"
+                                       Style="{StaticResource MicroLabel}"
+                                       HorizontalOptions="Center" />
+                            </VerticalStackLayout>
+                        </Grid>
+                    </Border>
+
+                    <!-- tamam · yeşil tint -->
+                    <Border Grid.Column="1"
+                            Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}"
+                            StrokeThickness="1"
+                            StrokeShape="RoundRectangle 16">
+                        <Border.Background>
+                            <AppThemeBinding Light="{StaticResource GlassTintGreenLight}" Dark="{StaticResource GlassTintGreenDark}" />
+                        </Border.Background>
+                        <Grid RowDefinitions="Auto,*">
+                            <BoxView HeightRequest="1.5" Margin="12,0,12,0" VerticalOptions="Start">
+                                <BoxView.Background>
+                                    <AppThemeBinding Light="{StaticResource GlassSpecularLight}" Dark="{StaticResource GlassSpecularDark}" />
+                                </BoxView.Background>
+                            </BoxView>
+                            <VerticalStackLayout Grid.Row="1" Spacing="0" HorizontalOptions="Center" Padding="10,6,10,8">
+                                <Label Text="{Binding CompletedTodos}"
+                                       Style="{StaticResource SubtitleMedium}"
+                                       FontSize="18" LineHeight="1.2"
+                                       TextColor="{AppThemeBinding Light={StaticResource Success}, Dark={StaticResource DarkSuccess}}"
+                                       HorizontalOptions="Center" />
+                                <Label Text="tamam"
+                                       Style="{StaticResource MicroLabel}"
+                                       HorizontalOptions="Center" />
+                            </VerticalStackLayout>
+                        </Grid>
+                    </Border>
+
+                    <!-- sesli · turkuaz tint -->
+                    <Border Grid.Column="2"
+                            Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}"
+                            StrokeThickness="1"
+                            StrokeShape="RoundRectangle 16">
+                        <Border.Background>
+                            <AppThemeBinding Light="{StaticResource GlassTintTealLight}" Dark="{StaticResource GlassTintTealDark}" />
+                        </Border.Background>
+                        <Grid RowDefinitions="Auto,*">
+                            <BoxView HeightRequest="1.5" Margin="12,0,12,0" VerticalOptions="Start">
+                                <BoxView.Background>
+                                    <AppThemeBinding Light="{StaticResource GlassSpecularLight}" Dark="{StaticResource GlassSpecularDark}" />
+                                </BoxView.Background>
+                            </BoxView>
+                            <VerticalStackLayout Grid.Row="1" Spacing="0" HorizontalOptions="Center" Padding="10,6,10,8">
+                                <Label Text="{Binding VoiceTodos}"
+                                       Style="{StaticResource SubtitleMedium}"
+                                       FontSize="18" LineHeight="1.2"
+                                       TextColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource DarkSecondary}}"
+                                       HorizontalOptions="Center" />
+                                <Label Text="sesli"
+                                       Style="{StaticResource MicroLabel}"
+                                       HorizontalOptions="Center" />
+                            </VerticalStackLayout>
+                        </Grid>
+                    </Border>
+
+                </Grid>
+
+                <!-- CTA -->
+                <Button Text="Görevlerime Git"
+                        Command="{Binding NavigateToTodosCommand}"
+                        HeightRequest="42"
+                        CornerRadius="21"
+                        Margin="0,2,0,0" />
+
+            </VerticalStackLayout>
+
+        </Grid>
 
     </Grid>
 

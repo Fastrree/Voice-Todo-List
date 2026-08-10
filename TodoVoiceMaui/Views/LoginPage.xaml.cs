@@ -44,11 +44,5 @@ public partial class LoginPage : ContentPage
     protected override void OnAppearing()
     {
         base.OnAppearing();
-        
-        // Focus on email entry when page appears
-        if (EmailEntry != null)
-        {
-            EmailEntry.Focus();
-        }
     }
 }

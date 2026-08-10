@@ -6,234 +6,175 @@
              x:Class="TodoVoiceMaui.Views.SettingsPage"
              x:DataType="viewmodels:SettingsPageViewModel"
              Title="Ayarlar"
+             Shell.NavBarIsVisible="False"
              BackgroundColor="{AppThemeBinding Light={StaticResource Background}, Dark={StaticResource DarkBackground}}">
 
     <ContentPage.Resources>
         <ResourceDictionary>
-            <converters:IsNotNullConverter x:Key="IsNotNullConverter" />
+            <converters:InverseBoolConverter x:Key="InverseBoolConverter" />
         </ResourceDictionary>
     </ContentPage.Resources>
 
-    <ScrollView>
-        <StackLayout Padding="24" Spacing="16">
+    <Grid IsClippedToBounds="True">
 
-            <!-- KULLANICI PROFİLİ -->
-            <Frame Style="{StaticResource GlassFrame}">
-                <StackLayout Spacing="14">
+        <!-- ATMOSFER -->
+        <Grid InputTransparent="True">
+            <Grid.Background>
+                <AppThemeBinding Light="{StaticResource AuroraBackgroundLight}" Dark="{StaticResource AuroraBackgroundDark}" />
+            </Grid.Background>
+        </Grid>
 
-                    <Label Text="KULLANICI PROFİLİ"
-                           Style="{StaticResource MicroLabel}" />
+        <Grid Padding="24,14,24,12"
+              RowDefinitions="Auto,*">
 
-                    <StackLayout Orientation="Horizontal" Spacing="14">
-                        <Frame BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource DarkAccentSoft}}"
-                               CornerRadius="999"
-                               WidthRequest="56"
-                               HeightRequest="56"
-                               Padding="0"
-                               HasShadow="False">
-                            <Label Text="&#xE77B;"
-                                   FontFamily="Segoe Fluent Icons"
-                                   FontSize="28"
-                                   HorizontalOptions="Center"
-                                   VerticalOptions="Center"
-                                   TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
-                        </Frame>
-                        <StackLayout Spacing="2"
-                                    VerticalOptions="Center">
-                            <Label Text="{Binding FullName, FallbackValue='Profil'}"
-                                   Style="{StaticResource SubtitleMedium}" />
-                            <Label Text="{Binding Email}"
-                                   Style="{StaticResource CaptionText}" />
-                        </StackLayout>
-                    </StackLayout>
+            <!-- BAŞLIK -->
+            <Grid Grid.Row="0" Padding="0,0,0,8">
+                <VerticalStackLayout Spacing="0">
+                    <Label Text="AYARLAR" Style="{StaticResource MicroLabel}"
+                           TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
+                    <Label Text="Uygulama tercihleri" Style="{StaticResource SubtitleMedium}" />
+                </VerticalStackLayout>
+            </Grid>
 
-                    <Label Text="Ad Soyad"
-                           Style="{StaticResource MicroLabel}" />
-                    <Entry Text="{Binding FullName}"
-                           Placeholder="Ad Soyad"
-                           Style="{StaticResource SearchEntry}" />
+            <!-- İÇERİK -->
+            <ScrollView Grid.Row="1" VerticalScrollBarVisibility="Never">
+                <VerticalStackLayout Spacing="10">
 
-                    <Button Text="Profili Güncelle"
-                            Command="{Binding SaveProfileCommand}" />
+                    <!-- PROFİL -->
+                    <Border Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}"
+                            StrokeThickness="1"
+                            StrokeShape="RoundRectangle 20"
+                            Padding="14,12">
+                        <Border.Background>
+                            <AppThemeBinding Light="{StaticResource GlassSurfaceLight}" Dark="{StaticResource GlassSurfaceDark}" />
+                        </Border.Background>
+                        <VerticalStackLayout Spacing="8">
+                            <Label Text="PROFİL" Style="{StaticResource MicroLabel}" />
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                <VerticalStackLayout Grid.Column="0" Spacing="4">
+                                    <Label Text="Ad Soyad" Style="{StaticResource CaptionText}" />
+                                    <Frame BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource DarkSurface}}"
+                                           CornerRadius="12" Padding="0" HasShadow="False">
+                                        <Entry Text="{Binding FullName}" Placeholder="Adınız"
+                                               Style="{StaticResource SearchEntry}" Margin="12,0" />
+                                    </Frame>
+                                </VerticalStackLayout>
+                                <VerticalStackLayout Grid.Column="1" Spacing="4">
+                                    <Label Text="E-posta" Style="{StaticResource CaptionText}" />
+                                    <Frame BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource DarkSurface}}"
+                                           CornerRadius="12" Padding="0" HasShadow="False">
+                                        <Entry Text="{Binding Email}" Placeholder="E-posta" Keyboard="Email"
+                                               Style="{StaticResource SearchEntry}" Margin="12,0" />
+                                    </Frame>
+                                </VerticalStackLayout>
+                            </Grid>
+                            <Button Text="Profili Güncelle" Command="{Binding SaveProfileCommand}"
+                                    HeightRequest="40" CornerRadius="20" />
+                        </VerticalStackLayout>
+                    </Border>
 
-                </StackLayout>
-            </Frame>
+                    <!-- TERCİHLER -->
+                    <Border Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}"
+                            StrokeThickness="1"
+                            StrokeShape="RoundRectangle 20"
+                            Padding="14,12">
+                        <Border.Background>
+                            <AppThemeBinding Light="{StaticResource GlassSurfaceLight}" Dark="{StaticResource GlassSurfaceDark}" />
+                        </Border.Background>
+                        <VerticalStackLayout Spacing="8">
+                            <Label Text="TERCİHLER" Style="{StaticResource MicroLabel}" />
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                <VerticalStackLayout Grid.Column="0" Spacing="4">
+                                    <Label Text="Dil" Style="{StaticResource CaptionText}" />
+                                    <Frame BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource DarkSurface}}"
+                                           CornerRadius="12" Padding="0" HasShadow="False">
+                                        <Picker x:Name="LanguagePicker" Title="Dil" ItemsSource="{Binding LanguageOptions}"
+                                                ItemDisplayBinding="{Binding Value}" SelectedIndex="0"
+                                                SelectedIndexChanged="OnLanguagePickerChanged"
+                                                Style="{StaticResource InlinePicker}" />
+                                    </Frame>
+                                </VerticalStackLayout>
+                                <VerticalStackLayout Grid.Column="1" Spacing="4">
+                                    <Label Text="Tema" Style="{StaticResource CaptionText}" />
+                                    <Frame BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource DarkSurface}}"
+                                           CornerRadius="12" Padding="0" HasShadow="False">
+                                        <Picker x:Name="ThemePicker" Title="Tema" ItemsSource="{Binding ThemeOptions}"
+                                                ItemDisplayBinding="{Binding Value}" SelectedIndex="0"
+                                                SelectedIndexChanged="OnThemePickerChanged"
+                                                Style="{StaticResource InlinePicker}" />
+                                    </Frame>
+                                </VerticalStackLayout>
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto" RowSpacing="4">
+                                <Label Text="Bildirimler" Style="{StaticResource BodyText}" VerticalOptions="Center" />
+                                <Switch Grid.Column="1" IsToggled="{Binding EnableNotifications}"
+                                        OnColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Text="Sesli kayıt" Style="{StaticResource BodyText}" VerticalOptions="Center" />
+                                <Switch Grid.Column="1" IsToggled="{Binding EnableVoiceRecording}"
+                                        OnColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Text="Otomatik senkron" Style="{StaticResource BodyText}" VerticalOptions="Center" />
+                                <Switch Grid.Column="1" IsToggled="{Binding AutoSync}"
+                                        OnColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
+                            </Grid>
+                            <Button Text="Tercihleri Kaydet" Command="{Binding SavePreferencesCommand}"
+                                    HeightRequest="40" CornerRadius="20" />
+                        </VerticalStackLayout>
+                    </Border>
 
-            <!-- TERCİHLER -->
-            <Frame Style="{StaticResource GlassFrame}">
-                <StackLayout Spacing="14">
+                    <!-- SENKRONİZASYON -->
+                    <Border Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}"
+                            StrokeThickness="1"
+                            StrokeShape="RoundRectangle 20"
+                            Padding="14,12">
+                        <Border.Background>
+                            <AppThemeBinding Light="{StaticResource GlassSurfaceLight}" Dark="{StaticResource GlassSurfaceDark}" />
+                        </Border.Background>
+                        <VerticalStackLayout Spacing="8">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <VerticalStackLayout Spacing="0">
+                                    <Label Text="SENKRONİZASYON" Style="{StaticResource MicroLabel}" />
+                                    <Label Text="{Binding SyncStatusText}" Style="{StaticResource BodyText}" FontAttributes="Bold" />
+                                    <Label Text="{Binding LastSyncText}" Style="{StaticResource CaptionText}" />
+                                </VerticalStackLayout>
+                                <Label Grid.Column="1" Text="&#xE721;" FontFamily="Segoe Fluent Icons" FontSize="18"
+                                       VerticalOptions="Center"
+                                       TextColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource DarkSecondary}}" />
+                            </Grid>
+                            <Button Text="Şimdi Senkronize Et" Command="{Binding SyncNowCommand}"
+                                    Style="{StaticResource GhostButton}" HeightRequest="40" CornerRadius="20" />
+                        </VerticalStackLayout>
+                    </Border>
 
-                    <Label Text="TERCİHLER"
-                           Style="{StaticResource MicroLabel}" />
+                    <!-- İŞLEMLER -->
+                    <Border Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}"
+                            StrokeThickness="1"
+                            StrokeShape="RoundRectangle 20"
+                            Padding="14,12">
+                        <Border.Background>
+                            <AppThemeBinding Light="{StaticResource GlassSurfaceLight}" Dark="{StaticResource GlassSurfaceDark}" />
+                        </Border.Background>
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="İŞLEMLER" Style="{StaticResource MicroLabel}" />
+                            <Button Text="Yerel Verileri Temizle" Command="{Binding ClearLocalDataCommand}"
+                                    Style="{StaticResource GhostButton}" HeightRequest="38" CornerRadius="19" />
+                            <Button Text="Hakkında" Command="{Binding ShowAboutCommand}"
+                                    Style="{StaticResource GhostButton}" HeightRequest="38" CornerRadius="19" />
+                            <Button Text="Çıkış Yap" Command="{Binding SignOutCommand}"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DarkRecordingSoft}}"
+                                    TextColor="{AppThemeBinding Light={StaticResource AccentContrast}, Dark={StaticResource Danger}}"
+                                    HeightRequest="38" CornerRadius="19" />
+                        </VerticalStackLayout>
+                    </Border>
 
-                    <StackLayout Orientation="Horizontal">
-                        <Label Text="Bildirimler"
-                               Style="{StaticResource BodyText}"
-                               VerticalOptions="Center"
-                               HorizontalOptions="StartAndExpand" />
-                        <Switch IsToggled="{Binding EnableNotifications}" />
-                    </StackLayout>
+                </VerticalStackLayout>
+            </ScrollView>
 
-                    <StackLayout Orientation="Horizontal">
-                        <Label Text="Ses Kayıt"
-                               Style="{StaticResource BodyText}"
-                               VerticalOptions="Center"
-                               HorizontalOptions="StartAndExpand" />
-                        <Switch IsToggled="{Binding EnableVoiceRecording}" />
-                    </StackLayout>
+        </Grid>
 
-                    <StackLayout Orientation="Horizontal">
-                        <Label Text="Otomatik Senkronizasyon"
-                               Style="{StaticResource BodyText}"
-                               VerticalOptions="Center"
-                               HorizontalOptions="StartAndExpand" />
-                        <Switch IsToggled="{Binding AutoSync}" />
-                    </StackLayout>
-
-                    <StackLayout Orientation="Horizontal">
-                        <Label Text="Tema"
-                               Style="{StaticResource BodyText}"
-                               VerticalOptions="Center"
-                               HorizontalOptions="StartAndExpand" />
-                        <Picker Title="Tema"
-                                ItemsSource="{Binding ThemeOptions}"
-                                ItemDisplayBinding="{Binding Value}"
-                                SelectedIndex="0"
-                                SelectedIndexChanged="OnThemePickerChanged"
-                                WidthRequest="160" />
-                    </StackLayout>
-
-                    <StackLayout Orientation="Horizontal">
-                        <Label Text="Dil"
-                               Style="{StaticResource BodyText}"
-                               VerticalOptions="Center"
-                               HorizontalOptions="StartAndExpand" />
-                        <Picker Title="Dil"
-                                ItemsSource="{Binding LanguageOptions}"
-                                ItemDisplayBinding="{Binding Value}"
-                                SelectedIndex="0"
-                                SelectedIndexChanged="OnLanguagePickerChanged"
-                                WidthRequest="160" />
-                    </StackLayout>
-
-                    <Button Text="Tercihleri Kaydet"
-                            Command="{Binding SavePreferencesCommand}" />
-
-                </StackLayout>
-            </Frame>
-
-            <!-- SENKRONİZASYON -->
-            <Frame Style="{StaticResource GlassFrame}">
-                <StackLayout Spacing="14">
-
-                    <Label Text="SENKRONİZASYON"
-                           Style="{StaticResource MicroLabel}" />
-
-                    <StackLayout Orientation="Horizontal" Spacing="8">
-                        <BoxView WidthRequest="8"
-                                 HeightRequest="8"
-                                 CornerRadius="4"
-                                 Color="{AppThemeBinding Light={StaticResource Success}, Dark={StaticResource Success}}"
-                                 VerticalOptions="Center" />
-                        <Label Text="{Binding SyncStatusText}"
-                               Style="{StaticResource BodyText}" />
-                    </StackLayout>
-
-                    <Label Text="{Binding LastSyncText}"
-                           Style="{StaticResource CaptionText}" />
-
-                    <Button Text="Şimdi Senkronize Et"
-                            Command="{Binding SyncNowCommand}" />
-
-                </StackLayout>
-            </Frame>
-
-            <!-- İSTATİSTİKLER -->
-            <Frame Style="{StaticResource GlassFrame}"
-                   IsVisible="{Binding UserStats, Converter={StaticResource IsNotNullConverter}}">
-                <StackLayout Spacing="14">
-
-                    <Label Text="İSTATİSTİKLER"
-                           Style="{StaticResource MicroLabel}" />
-
-                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="12">
-
-                        <Frame Style="{StaticResource GlassFrame}" Grid.Column="0" Grid.Row="0" Padding="16">
-                            <StackLayout Spacing="2">
-                                <Label Text="{Binding UserStats.TotalTodos}"
-                                       Style="{StaticResource DisplayMedium}"
-                                       TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}"
-                                       HorizontalOptions="Center" />
-                                <Label Text="Toplam Görev"
-                                       Style="{StaticResource MicroLabel}"
-                                       HorizontalOptions="Center" />
-                            </StackLayout>
-                        </Frame>
-
-                        <Frame Style="{StaticResource GlassFrame}" Grid.Column="1" Grid.Row="0" Padding="16">
-                            <StackLayout Spacing="2">
-                                <Label Text="{Binding UserStats.CompletedTodos}"
-                                       Style="{StaticResource DisplayMedium}"
-                                       TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}"
-                                       HorizontalOptions="Center" />
-                                <Label Text="Tamamlanan"
-                                       Style="{StaticResource MicroLabel}"
-                                       HorizontalOptions="Center" />
-                            </StackLayout>
-                        </Frame>
-
-                        <Frame Style="{StaticResource GlassFrame}" Grid.Column="0" Grid.Row="1" Padding="16">
-                            <StackLayout Spacing="2">
-                                <Label Text="{Binding UserStats.TodosWithVoice}"
-                                       Style="{StaticResource DisplayMedium}"
-                                       TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}"
-                                       HorizontalOptions="Center" />
-                                <Label Text="Sesli Görev"
-                                       Style="{StaticResource MicroLabel}"
-                                       HorizontalOptions="Center" />
-                            </StackLayout>
-                        </Frame>
-
-                        <Frame Style="{StaticResource GlassFrame}" Grid.Column="1" Grid.Row="1" Padding="16">
-                            <StackLayout Spacing="2">
-                                <Label Text="{Binding UserStats.CompletionRate, StringFormat='{0}%'}"
-                                       Style="{StaticResource DisplayMedium}"
-                                       TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}"
-                                       HorizontalOptions="Center" />
-                                <Label Text="Tamamlama Oranı"
-                                       Style="{StaticResource MicroLabel}"
-                                       HorizontalOptions="Center" />
-                            </StackLayout>
-                        </Frame>
-
-                    </Grid>
-
-                </StackLayout>
-            </Frame>
-
-            <!-- İŞLEMLER -->
-            <Frame Style="{StaticResource GlassFrame}">
-                <StackLayout Spacing="14">
-
-                    <Label Text="İŞLEMLER"
-                           Style="{StaticResource MicroLabel}" />
-
-                    <Button Text="Yerel Verileri Temizle"
-                            Command="{Binding ClearLocalDataCommand}"
-                            Style="{StaticResource GhostButton}" />
-
-                    <Button Text="Hakkında"
-                            Command="{Binding ShowAboutCommand}"
-                            Style="{StaticResource GhostButton}" />
-
-                    <Button Text="Çıkış Yap"
-                            Command="{Binding SignOutCommand}"
-                            BackgroundColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource Danger}}" />
-
-                </StackLayout>
-            </Frame>
-
-        </StackLayout>
-    </ScrollView>
+    </Grid>
 
 </ContentPage>

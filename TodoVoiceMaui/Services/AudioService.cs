@@ -78,10 +78,13 @@ public class AudioService : INotifyPropertyChanged
                 return false;
 
             // Check and request microphone permission
-            var permissionStatus = await Permissions.RequestAsync<Permissions.Microphone>();
+            // (Unpackaged WinUI 3'te MAUI Permissions.Microphone manifest'e dayanır ve
+            //  çalışmaz; Windows'ta WinRT DeviceAccessInformation ile kontrol edilir.)
+            var permissionStatus = await GetMicrophonePermissionAsync();
             if (permissionStatus != PermissionStatus.Granted)
             {
-                throw new UnauthorizedAccessException("Mikrofon izni gerekli. Lütfen uygulamanın mikrofon kullanma iznini verin.");
+                await OpenMicrophoneSettingsAsync();
+                throw new UnauthorizedAccessException("Mikrofon izni gerekli. Ayarlar açıldı — mikrofon erişimini açıp tekrar deneyin.");
             }
 
             _audioRecorder = _audioManager.CreateRecorder();
@@ -307,6 +310,53 @@ public class AudioService : INotifyPropertyChanged
             PlaybackPositionUpdated?.Invoke(this, PlaybackPosition);
             await Task.Delay(100); // Update every 100ms
         }
+    }
+
+    /// <summary>
+    /// Mikrofon izni durumu. Windows'ta unpackaged uygulamalar için
+    /// MAUI Permissions çalışmaz — WinRT DeviceAccessInformation kullanılır.
+    /// </summary>
+    private static async Task<PermissionStatus> GetMicrophonePermissionAsync()
+    {
+#if WINDOWS
+        try
+        {
+            // Mikrofon cihaz sınıfı GUID'i (DeviceClass.AudioCapture)
+            var accessInfo = Windows.Devices.Enumeration.DeviceAccessInformation.CreateFromDeviceClassId(
+                new Guid("2eef81be-33ca-48f0-9680-1d474d6b3f4f"));
+
+            return accessInfo.CurrentStatus switch
+            {
+                Windows.Devices.Enumeration.DeviceAccessStatus.Allowed => PermissionStatus.Granted,
+                _ => PermissionStatus.Denied
+            };
+        }
+        catch
+        {
+            return PermissionStatus.Unknown;
+        }
+#else
+        return await Permissions.RequestAsync<Permissions.Microphone>();
+#endif
+    }
+
+    /// <summary>
+    /// İzin yoksa Windows mikrofon gizlilik ayarlarını açar.
+    /// Unpackaged uygulamalar için 'Masaüstü uygulamalarının mikrofonunuza
+    /// erişmesine izin ver' anahtarının açık olması gerekir.
+    /// </summary>
+    private static async Task OpenMicrophoneSettingsAsync()
+    {
+#if WINDOWS
+        try
+        {
+            await Windows.System.Launcher.LaunchUriAsync(new Uri("ms-settings:privacy-microphone"));
+        }
+        catch
+        {
+            // best-effort
+        }
+#endif
     }
 
     public void Dispose()

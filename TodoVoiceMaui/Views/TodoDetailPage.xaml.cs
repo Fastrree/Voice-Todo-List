@@ -12,4 +12,9 @@ public partial class TodoDetailPage : ContentPage
         _viewModel = viewModel;
         BindingContext = _viewModel;
     }
+
+    private async void OnBackTapped(object? sender, TappedEventArgs e)
+    {
+        await Shell.Current.GoToAsync("..");
+    }
 }

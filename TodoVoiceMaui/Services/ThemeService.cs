@@ -28,7 +28,7 @@ public static class ThemeService
 
     public static string GetSavedTheme()
     {
-        return Preferences.Default.Get(ThemePreferenceKey, "system");
+        return Preferences.Default.Get(ThemePreferenceKey, "light");
     }
 
     public static void ApplySavedTheme()

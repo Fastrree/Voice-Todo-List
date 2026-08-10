@@ -15,11 +15,14 @@
     </Style>
 
     <Style TargetType="Shell" ApplyToDerivedTypes="True">
-        <Setter Property="Shell.BackgroundColor" Value="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
-        <Setter Property="Shell.ForegroundColor" Value="{StaticResource AccentContrast}" />
-        <Setter Property="Shell.TabBarBackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource DarkSurface}}" />
-        <Setter Property="Shell.TabBarForegroundColor" Value="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}" />
-        <Setter Property="Shell.TabBarTitleColor" Value="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}" />
+        <Setter Property="Shell.BackgroundColor" Value="{AppThemeBinding Light={StaticResource Background}, Dark={StaticResource DarkBackground}}" />
+        <Setter Property="Shell.ForegroundColor" Value="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource DarkTextPrimary}}" />
+        <Setter Property="Shell.TitleColor" Value="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource DarkTextPrimary}}" />
+        <Setter Property="Shell.DisabledColor" Value="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}" />
+        <Setter Property="Shell.UnselectedColor" Value="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}" />
+        <Setter Property="Shell.TabBarBackgroundColor" Value="{AppThemeBinding Light={StaticResource GlassBackground}, Dark={StaticResource DarkSurfaceElevated}}" />
+        <Setter Property="Shell.TabBarForegroundColor" Value="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
+        <Setter Property="Shell.TabBarTitleColor" Value="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
         <Setter Property="Shell.TabBarUnselectedColor" Value="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}" />
     </Style>
 
@@ -31,59 +34,59 @@
         <Setter Property="LineBreakMode" Value="TailTruncation" />
     </Style>
 
-    <!-- Display 1 · 34/40 — karşılama, büyük rakamlar -->
+    <!-- Display 1 · 34pt — karşılama, büyük rakamlar -->
     <Style x:Key="DisplayLarge" TargetType="Label">
         <Setter Property="FontFamily" Value="SoraBold" />
         <Setter Property="FontSize" Value="34" />
-        <Setter Property="LineHeight" Value="40" />
+        <Setter Property="LineHeight" Value="1.15" />
         <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource DarkTextPrimary}}" />
     </Style>
 
-    <!-- Display 2 · 28/34 — sayfa başlığı -->
+    <!-- Display 2 · 28pt — sayfa başlığı -->
     <Style x:Key="DisplayMedium" TargetType="Label">
         <Setter Property="FontFamily" Value="SoraBold" />
         <Setter Property="FontSize" Value="28" />
-        <Setter Property="LineHeight" Value="34" />
+        <Setter Property="LineHeight" Value="1.2" />
         <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource DarkTextPrimary}}" />
     </Style>
 
-    <!-- Title · 22/28 — kart başlığı -->
+    <!-- Title · 22pt — kart başlığı -->
     <Style x:Key="TitleLarge" TargetType="Label">
         <Setter Property="FontFamily" Value="SoraSemiBold" />
         <Setter Property="FontSize" Value="22" />
-        <Setter Property="LineHeight" Value="28" />
+        <Setter Property="LineHeight" Value="1.25" />
         <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource DarkTextPrimary}}" />
     </Style>
 
-    <!-- Subtitle · 17/24 — bölüm başlığı -->
+    <!-- Subtitle · 17pt — bölüm başlığı -->
     <Style x:Key="SubtitleMedium" TargetType="Label">
         <Setter Property="FontFamily" Value="SoraSemiBold" />
         <Setter Property="FontSize" Value="17" />
-        <Setter Property="LineHeight" Value="24" />
+        <Setter Property="LineHeight" Value="1.35" />
         <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource DarkTextPrimary}}" />
     </Style>
 
-    <!-- Body · 15/22 -->
+    <!-- Body · 15pt -->
     <Style x:Key="BodyText" TargetType="Label">
         <Setter Property="FontFamily" Value="Sora" />
         <Setter Property="FontSize" Value="15" />
-        <Setter Property="LineHeight" Value="22" />
+        <Setter Property="LineHeight" Value="1.4" />
         <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource DarkTextPrimary}}" />
     </Style>
 
-    <!-- Caption · 13/18 -->
+    <!-- Caption · 13pt -->
     <Style x:Key="CaptionText" TargetType="Label">
         <Setter Property="FontFamily" Value="Sora" />
         <Setter Property="FontSize" Value="13" />
-        <Setter Property="LineHeight" Value="18" />
+        <Setter Property="LineHeight" Value="1.35" />
         <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}" />
     </Style>
 
-    <!-- Micro · 11/14 ALL-CAPS (etiket, rozet, bölüm başlığı) -->
+    <!-- Micro · 11pt ALL-CAPS (etiket, rozet, bölüm başlığı) -->
     <Style x:Key="MicroLabel" TargetType="Label">
         <Setter Property="FontFamily" Value="SoraSemiBold" />
         <Setter Property="FontSize" Value="11" />
-        <Setter Property="LineHeight" Value="14" />
+        <Setter Property="LineHeight" Value="1.3" />
         <Setter Property="CharacterSpacing" Value="1.5" />
         <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}" />
     </Style>
@@ -167,6 +170,133 @@
         <Setter Property="Margin" Value="0" />
     </Style>
 
+    <!-- === AURORA ZEMİN FİRÇALARI (tema-bağımlı) ===
+         GradientStop içinde AppThemeBinding render edilmediği için
+         tüm sayfa arka planları bu brush çiftlerine bağlanır. -->
+    <LinearGradientBrush x:Key="AuroraBackgroundLight" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Offset="0.00" Color="#F8F9FB" />
+        <GradientStop Offset="0.55" Color="#F1F2F7" />
+        <GradientStop Offset="1.00" Color="#E4E8F2" />
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="AuroraBackgroundDark" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Offset="0.00" Color="#0B0A12" />
+        <GradientStop Offset="0.55" Color="#100F1A" />
+        <GradientStop Offset="1.00" Color="#161427" />
+    </LinearGradientBrush>
+
+    <!-- === AURORA GLOW FİRÇALARI (tema-bağımlı çiftler) === -->
+    <!-- şeftali (Light) / indigo (Dark) -->
+    <LinearGradientBrush x:Key="GlowPeachLight" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Offset="0.0" Color="#FFC9A3" />
+        <GradientStop Offset="0.7" Color="#00FFC9A3" />
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="GlowIndigoDark" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Offset="0.0" Color="#332E7A" />
+        <GradientStop Offset="0.7" Color="#00332E7A" />
+    </LinearGradientBrush>
+    <!-- lavanta (Light) / amethyst (Dark) -->
+    <LinearGradientBrush x:Key="GlowLavenderLight" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Offset="0.0" Color="#C9B8FF" />
+        <GradientStop Offset="0.7" Color="#00C9B8FF" />
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="GlowAmethystDark" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Offset="0.0" Color="#57286E" />
+        <GradientStop Offset="0.7" Color="#0057286E" />
+    </LinearGradientBrush>
+    <!-- gökyüzü (Light) / turkuaz (Dark) -->
+    <LinearGradientBrush x:Key="GlowSkyLight" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Offset="0.0" Color="#A8D8FF" />
+        <GradientStop Offset="0.7" Color="#00A8D8FF" />
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="GlowTealDark" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Offset="0.0" Color="#0F4A4E" />
+        <GradientStop Offset="0.7" Color="#000F4A4E" />
+    </LinearGradientBrush>
+    <!-- nane (Light) / mor (Dark) -->
+    <LinearGradientBrush x:Key="GlowMintLight" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Offset="0.0" Color="#A8E8D8" />
+        <GradientStop Offset="0.7" Color="#00A8E8D8" />
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="GlowVioletDark" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Offset="0.0" Color="#4A2A7A" />
+        <GradientStop Offset="0.7" Color="#004A2A7A" />
+    </LinearGradientBrush>
+
+    <!-- === LIQUID GLASS FIRÇALARI (yeniden kullanılabilir) ===
+         İlke: cam rengi arkadaki ışıktan gelir. Yüzeyler hafif tint alır,
+         specular üst kenarda ışık yakalar, altta derinleşir. -->
+
+    <!-- Temel cam yüzey — Light: sıcak beyaz, üstte ışık -->
+    <LinearGradientBrush x:Key="GlassSurfaceLight" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Offset="0.00" Color="#F5FFFEFB" />
+        <GradientStop Offset="0.18" Color="#E0FFFDF6" />
+        <GradientStop Offset="1.00" Color="#B3FFF9EE" />
+    </LinearGradientBrush>
+    <!-- Temel cam yüzey — Dark: ince indigo tonlu beyaz, görünür -->
+    <LinearGradientBrush x:Key="GlassSurfaceDark" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Offset="0.00" Color="#4AE8ECFF" />
+        <GradientStop Offset="0.18" Color="#30E2E6FF" />
+        <GradientStop Offset="1.00" Color="#16CDD2FF" />
+    </LinearGradientBrush>
+
+    <!-- Specular kenar ışığı: ortada parlak, kenarlarda sönük (fade #00FFFFFF) -->
+    <LinearGradientBrush x:Key="GlassSpecularLight" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Offset="0.0" Color="#00FFFFFF" />
+        <GradientStop Offset="0.5" Color="#F0FFFFFF" />
+        <GradientStop Offset="1.0" Color="#00FFFFFF" />
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="GlassSpecularDark" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Offset="0.0" Color="#00FFFFFF" />
+        <GradientStop Offset="0.5" Color="#7AFFFFFF" />
+        <GradientStop Offset="1.0" Color="#00FFFFFF" />
+    </LinearGradientBrush>
+
+    <!-- İstatistik kartı tint'leri — her kart kendi ambient rengini yansıtır -->
+    <!-- indigo tint (görev) -->
+    <LinearGradientBrush x:Key="GlassTintIndigoLight" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Offset="0.00" Color="#F2FFFFFF" />
+        <GradientStop Offset="0.18" Color="#E6E8FB" />
+        <GradientStop Offset="1.00" Color="#C6CCF5" />
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="GlassTintIndigoDark" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Offset="0.00" Color="#3D8B93FF" />
+        <GradientStop Offset="0.18" Color="#2A4F55E5" />
+        <GradientStop Offset="1.00" Color="#16332E7A" />
+    </LinearGradientBrush>
+    <!-- yeşil tint (tamamlanan) -->
+    <LinearGradientBrush x:Key="GlassTintGreenLight" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Offset="0.00" Color="#F2FFFFFF" />
+        <GradientStop Offset="0.18" Color="#E4F5ED" />
+        <GradientStop Offset="1.00" Color="#C4E8D9" />
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="GlassTintGreenDark" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Offset="0.00" Color="#3D2DD4BF" />
+        <GradientStop Offset="0.18" Color="#2A0F4A4E" />
+        <GradientStop Offset="1.00" Color="#160C2920" />
+    </LinearGradientBrush>
+    <!-- turkuaz tint (sesli) -->
+    <LinearGradientBrush x:Key="GlassTintTealLight" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Offset="0.00" Color="#F2FFFFFF" />
+        <GradientStop Offset="0.18" Color="#E2F4F1" />
+        <GradientStop Offset="1.00" Color="#C2E6E0" />
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="GlassTintTealDark" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Offset="0.00" Color="#3D0F4A4E" />
+        <GradientStop Offset="0.18" Color="#2A0A3A40" />
+        <GradientStop Offset="1.00" Color="#16061E22" />
+    </LinearGradientBrush>
+    <!-- mor tint (ses kayıtları / vurgu) -->
+    <LinearGradientBrush x:Key="GlassTintVioletLight" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Offset="0.00" Color="#F2FFFFFF" />
+        <GradientStop Offset="0.18" Color="#EFE9FB" />
+        <GradientStop Offset="1.00" Color="#D8CCF5" />
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="GlassTintVioletDark" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Offset="0.00" Color="#3D4A2A7A" />
+        <GradientStop Offset="0.18" Color="#2A33206E" />
+        <GradientStop Offset="1.00" Color="#161C1250" />
+    </LinearGradientBrush>
+
     <!-- === CARDS (cam & solid) === -->
     <Style x:Key="Card" TargetType="Border">
         <Setter Property="StrokeThickness" Value="1" />
@@ -184,19 +314,23 @@
         </Setter>
     </Style>
 
-    <!-- Cam kart: Mica üzerine bindirme (design-system §6) -->
+    <!-- Cam kart: gradient yüzey + specular kenar + derinlik (design-system §6) -->
     <Style x:Key="GlassCard" TargetType="Border">
         <Setter Property="StrokeThickness" Value="1" />
         <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}" />
-        <Setter Property="Background" Value="{AppThemeBinding Light={StaticResource GlassBackground}, Dark={StaticResource DarkGlassBackground}}" />
+        <Setter Property="Background">
+            <Setter.Value>
+                <AppThemeBinding Light="{StaticResource GlassSurfaceLight}" Dark="{StaticResource GlassSurfaceDark}" />
+            </Setter.Value>
+        </Setter>
         <Setter Property="StrokeShape" Value="RoundRectangle 24" />
         <Setter Property="Padding" Value="20" />
         <Setter Property="Shadow">
             <Setter.Value>
                 <Shadow Brush="{AppThemeBinding Light={StaticResource ShadowMd}, Dark={StaticResource DarkShadowMd}}"
-                        Offset="0,8"
-                        Radius="24"
-                        Opacity="0.8" />
+                        Offset="0,12"
+                        Radius="30"
+                        Opacity="0.55" />
             </Setter.Value>
         </Setter>
     </Style>
@@ -208,23 +342,6 @@
         <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource GlassBackground}, Dark={StaticResource DarkGlassBackground}}" />
         <Setter Property="CornerRadius" Value="16" />
         <Setter Property="BorderColor" Value="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}" />
-    </Style>
-
-    <!-- İstatistik kartı (büyük rakam + label) -->
-    <Style x:Key="StatCard" TargetType="Border">
-        <Setter Property="StrokeThickness" Value="1" />
-        <Setter Property="Stroke" Value="{AppThemeBinding Light={StaticResource BorderDefault}, Dark={StaticResource DarkBorderDefault}}" />
-        <Setter Property="Background" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource DarkSurface}}" />
-        <Setter Property="StrokeShape" Value="RoundRectangle 24" />
-        <Setter Property="Padding" Value="16" />
-        <Setter Property="Shadow">
-            <Setter.Value>
-                <Shadow Brush="{AppThemeBinding Light={StaticResource ShadowSm}, Dark={StaticResource DarkShadowSm}}"
-                        Offset="0,4"
-                        Radius="12"
-                        Opacity="0.8" />
-            </Setter.Value>
-        </Setter>
     </Style>
 
     <!-- === COLLECTION / LIST === -->

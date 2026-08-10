@@ -5,108 +5,99 @@
              x:Class="TodoVoiceMaui.Views.LoginPage"
              x:DataType="viewmodels:LoginPageViewModel"
              Shell.NavBarIsVisible="False"
-             BackgroundColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}">
+             BackgroundColor="{AppThemeBinding Light={StaticResource Background}, Dark={StaticResource DarkBackground}}">
 
-    <ScrollView>
-        <Grid RowDefinitions="*, Auto, *" 
-              Padding="40,60,40,40">
-            
-            <!-- Header -->
-            <StackLayout Grid.Row="0" 
-                        VerticalOptions="End"
-                        HorizontalOptions="Center"
-                        Spacing="20">
-                
-                <!-- App Logo/Icon -->
-                <Label Text="🎤" 
-                       FontSize="80"
-                       HorizontalOptions="Center" />
-                
-                <Label Text="{Binding TitleText}"
-                       FontSize="32"
-                       FontAttributes="Bold"
-                       TextColor="White"
-                       HorizontalOptions="Center" />
-                
-                <Label Text="{Binding SubtitleText}"
-                       FontSize="16"
-                       TextColor="White"
-                       Opacity="0.8"
-                       HorizontalOptions="Center" />
-                
-            </StackLayout>
+    <Grid IsClippedToBounds="True">
 
-            <!-- Login Form -->
-            <StackLayout Grid.Row="1" 
-                        VerticalOptions="Center"
-                        Spacing="20"
-                        Margin="0,60,0,0">
-                
-                <!-- Error Message -->
+        <!-- ATMOSFER -->
+        <Grid InputTransparent="True">
+            <Grid.Background>
+                <AppThemeBinding Light="{StaticResource AuroraBackgroundLight}" Dark="{StaticResource AuroraBackgroundDark}" />
+            </Grid.Background>
+        </Grid>
+
+        <!-- glow · lavanta/indigo (üst) + turkuaz (alt)
+             Light: görünür pastel aurora; Dark: güçlü ambient -->
+        <BoxView WidthRequest="400" HeightRequest="400" CornerRadius="200"
+                 HorizontalOptions="Center" VerticalOptions="Start"
+                 TranslationY="-100"
+                 Opacity="{AppThemeBinding Light=0.38, Dark=0.4}"
+                 Color="Transparent" InputTransparent="True">
+            <BoxView.Background>
+                <AppThemeBinding Light="{StaticResource GlowLavenderLight}" Dark="{StaticResource GlowIndigoDark}" />
+            </BoxView.Background>
+        </BoxView>
+        <BoxView WidthRequest="380" HeightRequest="380" CornerRadius="190"
+                 HorizontalOptions="End" VerticalOptions="End"
+                 TranslationX="140" TranslationY="160"
+                 Opacity="{AppThemeBinding Light=0.36, Dark=0.4}"
+                 Color="Transparent" InputTransparent="True">
+            <BoxView.Background>
+                <AppThemeBinding Light="{StaticResource GlowMintLight}" Dark="{StaticResource GlowTealDark}" />
+            </BoxView.Background>
+        </BoxView>
+
+        <!-- MERKEZ: login kartı (pencere sabit genişlikte → tam genişlik) -->
+        <Grid RowDefinitions="*,Auto,*"
+              Padding="32,0">
+
+            <!-- ÜST: marka -->
+            <VerticalStackLayout Grid.Row="0" Spacing="4" VerticalOptions="End" HorizontalOptions="Center">
+                <Label Text="🎤" FontSize="48" HorizontalOptions="Center" />
+                <Label Text="{Binding TitleText}" FontFamily="SoraBold" FontSize="28"
+                       LineHeight="1.2" HorizontalOptions="Center" />
+                <Label Text="{Binding SubtitleText}" Style="{StaticResource CaptionText}"
+                       HorizontalOptions="Center" />
+            </VerticalStackLayout>
+
+            <!-- ORTA: form -->
+            <VerticalStackLayout Grid.Row="1" Spacing="12" VerticalOptions="Center">
+
                 <Frame IsVisible="{Binding HasError}"
-                       BackgroundColor="{StaticResource Danger}"
-                       Padding="15"
-                       CornerRadius="10"
-                       HasShadow="False">
-                    <Label Text="{Binding ErrorMessage}"
-                           TextColor="White"
-                           FontSize="14"
-                           HorizontalTextAlignment="Center" />
+                       BackgroundColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DarkDanger}}"
+                       Padding="12" CornerRadius="12" HasShadow="False">
+                    <Label Text="{Binding ErrorMessage}" TextColor="White"
+                           FontSize="13" HorizontalTextAlignment="Center" />
                 </Frame>
 
-                <!-- Email Input -->
-                <Frame BackgroundColor="White" 
-                       Padding="0"
-                       CornerRadius="25"
-                       HasShadow="False">
-                    <Entry x:Name="EmailEntry"
-                           Text="{Binding Email}"
-                           Placeholder="E-posta adresiniz"
-                           Keyboard="Email"
-                           FontSize="16"
-                           Margin="20,0" />
-                </Frame>
+                <Border Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}"
+                        StrokeThickness="1"
+                        StrokeShape="RoundRectangle 20"
+                        Padding="0">
+                    <Border.Background>
+                        <AppThemeBinding Light="{StaticResource GlassSurfaceLight}" Dark="{StaticResource GlassSurfaceDark}" />
+                    </Border.Background>
+                    <Entry Text="{Binding Email}" Placeholder="E-posta" Keyboard="Email"
+                           Style="{StaticResource SearchEntry}" Margin="16,0" />
+                </Border>
 
-                <!-- Password Input -->
-                <Frame BackgroundColor="White" 
-                       Padding="0"
-                       CornerRadius="25"
-                       HasShadow="False">
-                    <Entry Text="{Binding Password}"
-                           Placeholder="Şifreniz"
-                           IsPassword="True"
-                           FontSize="16"
-                           Margin="20,0" />
-                </Frame>
+                <Border Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}"
+                        StrokeThickness="1"
+                        StrokeShape="RoundRectangle 20"
+                        Padding="0">
+                    <Border.Background>
+                        <AppThemeBinding Light="{StaticResource GlassSurfaceLight}" Dark="{StaticResource GlassSurfaceDark}" />
+                    </Border.Background>
+                    <Entry Text="{Binding Password}" Placeholder="Şifre" IsPassword="True"
+                           Style="{StaticResource SearchEntry}" Margin="16,0" />
+                </Border>
 
-                <!-- Confirm Password (Signup only) -->
-                <Frame BackgroundColor="White" 
-                       Padding="0"
-                       CornerRadius="25"
-                       HasShadow="False"
-                       IsVisible="{Binding IsSignupMode}">
-                    <Entry Text="{Binding ConfirmPassword}"
-                           Placeholder="Şifre onayı"
-                           IsPassword="True"
-                           FontSize="16"
-                           Margin="20,0" />
-                </Frame>
+                <Border Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}"
+                        StrokeThickness="1"
+                        StrokeShape="RoundRectangle 20"
+                        Padding="0"
+                        IsVisible="{Binding IsSignupMode}">
+                    <Border.Background>
+                        <AppThemeBinding Light="{StaticResource GlassSurfaceLight}" Dark="{StaticResource GlassSurfaceDark}" />
+                    </Border.Background>
+                    <Entry Text="{Binding ConfirmPassword}" Placeholder="Şifre onayı" IsPassword="True"
+                           Style="{StaticResource SearchEntry}" Margin="16,0" />
+                </Border>
 
-                <!-- Primary Action Button -->
-                <Button x:Name="PrimaryButton"
-                        Text="{Binding PrimaryButtonText}"
-                        BackgroundColor="White"
-                        TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}"
-                        FontSize="18"
-                        FontAttributes="Bold"
-                        CornerRadius="25"
-                        HeightRequest="50"
-                        Margin="0,20,0,0">
-                    
+                <Button x:Name="PrimaryButton" Text="{Binding PrimaryButtonText}"
+                        HeightRequest="48" CornerRadius="24" Margin="0,8,0,0">
                     <Button.Triggers>
-                        <DataTrigger TargetType="Button" 
-                                   Binding="{Binding IsLoading}" 
-                                   Value="True">
+                        <DataTrigger TargetType="Button" Binding="{Binding IsLoading}" Value="True">
                             <Setter Property="Text" Value="Yükleniyor..." />
                             <Setter Property="Opacity" Value="0.6" />
                             <Setter Property="IsEnabled" Value="False" />
@@ -114,45 +105,19 @@
                     </Button.Triggers>
                 </Button>
 
-                <!-- Secondary Action Button -->
-                <Button x:Name="ToggleModeButton"
-                        Text="{Binding SecondaryButtonText}"
+                <Button Text="{Binding SecondaryButtonText}"
                         Command="{Binding ToggleModeCommand}"
-                        BackgroundColor="Transparent"
-                        TextColor="White"
-                        FontSize="14"
-                        Margin="0,10,0,0">
-                    
-                    <Button.Triggers>
-                        <DataTrigger TargetType="Button" 
-                                   Binding="{Binding IsLoading}" 
-                                   Value="True">
-                            <Setter Property="IsEnabled" Value="False" />
-                        </DataTrigger>
-                    </Button.Triggers>
-                </Button>
+                        Style="{StaticResource GhostButton}"
+                        HeightRequest="40" CornerRadius="20" />
 
-            </StackLayout>
+            </VerticalStackLayout>
 
-            <!-- Footer -->
-            <StackLayout Grid.Row="2" 
-                        VerticalOptions="End"
-                        HorizontalOptions="Center">
-                <Label Text="Todo Voice v1.0"
-                       FontSize="12"
-                       TextColor="White"
-                       Opacity="0.6"
-                       HorizontalOptions="Center" />
-            </StackLayout>
+            <!-- ALT: footer -->
+            <Label Grid.Row="2" Text="Todo Voice v1.0" Style="{StaticResource CaptionText}"
+                   HorizontalOptions="Center" VerticalOptions="End" Margin="0,0,0,16" />
 
         </Grid>
-    </ScrollView>
 
-    <ContentPage.Resources>
-        <ResourceDictionary>
-            <!-- Converters would be defined here in a real app -->
-            <!-- For now, we'll handle this in code-behind -->
-        </ResourceDictionary>
-    </ContentPage.Resources>
+    </Grid>
 
 </ContentPage>

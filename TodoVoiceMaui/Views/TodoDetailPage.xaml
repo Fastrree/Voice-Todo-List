@@ -7,6 +7,7 @@
              x:Class="TodoVoiceMaui.Views.TodoDetailPage"
              x:DataType="viewmodels:TodoDetailPageViewModel"
              Title="Görev Detayı"
+             Shell.NavBarIsVisible="False"
              BackgroundColor="{AppThemeBinding Light={StaticResource Background}, Dark={StaticResource DarkBackground}}">
 
     <ContentPage.Resources>
@@ -17,232 +18,185 @@
         </ResourceDictionary>
     </ContentPage.Resources>
 
-    <ScrollView>
-        <StackLayout Padding="24" Spacing="16">
+    <Grid IsClippedToBounds="True">
 
-            <!-- Todo Info -->
-            <Frame Style="{StaticResource GlassFrame}">
-                <StackLayout Spacing="14">
+        <!-- ATMOSFER -->
+        <Grid InputTransparent="True">
+            <Grid.Background>
+                <AppThemeBinding Light="{StaticResource AuroraBackgroundLight}" Dark="{StaticResource AuroraBackgroundDark}" />
+            </Grid.Background>
+        </Grid>
 
-                    <Label Text="{Binding Title}"
-                           Style="{StaticResource TitleLarge}" />
+        <Grid Padding="24,14,24,12"
+              RowDefinitions="Auto,*">
 
-                    <Label Text="{Binding Description}"
-                           Style="{StaticResource BodyText}"
-                           IsVisible="{Binding Description, Converter={StaticResource IsNotNullOrEmptyConverter}}" />
+            <!-- BAŞLIK · geri butonu + bağlam -->
+            <Grid Grid.Row="0" ColumnDefinitions="Auto,*" ColumnSpacing="12" Padding="0,0,0,8">
+                <!-- geri butonu (NavBar gizli olduğundan elle) -->
+                <Border Grid.Column="0"
+                        Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}"
+                        StrokeThickness="1"
+                        StrokeShape="RoundRectangle 999"
+                        Padding="10,8"
+                        VerticalOptions="Center">
+                    <Border.Background>
+                        <AppThemeBinding Light="{StaticResource GlassSurfaceLight}" Dark="{StaticResource GlassSurfaceDark}" />
+                    </Border.Background>
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnBackTapped" />
+                    </Border.GestureRecognizers>
+                    <Label Text="&#xE72B;" FontFamily="Segoe Fluent Icons" FontSize="14"
+                           TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}"
+                           HorizontalOptions="Center" />
+                </Border>
+                <VerticalStackLayout Grid.Column="1" Spacing="1" VerticalOptions="Center">
+                    <Label Text="GÖREV DETAYI"
+                           Style="{StaticResource MicroLabel}"
+                           TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
+                    <Label Text="{Binding Title}" Style="{StaticResource SubtitleMedium}" />
+                </VerticalStackLayout>
+            </Grid>
 
-                    <StackLayout Orientation="Horizontal" Spacing="10">
-                        <Label Text="ÖNCELİK"
-                               Style="{StaticResource MicroLabel}"
-                               VerticalOptions="Center" />
-                        <Label Text="{Binding Priority}"
-                               Style="{StaticResource BodyText}"
-                               VerticalOptions="Center" />
-                    </StackLayout>
+            <!-- İÇERİK -->
+            <ScrollView Grid.Row="1" VerticalScrollBarVisibility="Never">
+                <VerticalStackLayout Spacing="10">
 
-                    <StackLayout Orientation="Horizontal" Spacing="10">
-                        <Label Text="DURUM"
-                               Style="{StaticResource MicroLabel}"
-                               VerticalOptions="Center" />
-                        <Label Text="{Binding Completed, Converter={StaticResource BoolToStatusConverter}}"
-                               Style="{StaticResource BodyText}"
-                               VerticalOptions="Center" />
-                    </StackLayout>
+                    <!-- BİLGİ -->
+                    <Border Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}"
+                            StrokeThickness="1"
+                            StrokeShape="RoundRectangle 20"
+                            Padding="14,12">
+                        <Border.Background>
+                            <AppThemeBinding Light="{StaticResource GlassSurfaceLight}" Dark="{StaticResource GlassSurfaceDark}" />
+                        </Border.Background>
+                        <VerticalStackLayout Spacing="8">
+                            <Label Text="{Binding Title}" Style="{StaticResource SubtitleMedium}" />
+                            <Label Text="{Binding Description}" Style="{StaticResource BodyText}"
+                                   IsVisible="{Binding Description, Converter={StaticResource IsNotNullOrEmptyConverter}}" />
+                            <Grid ColumnDefinitions="Auto,*,Auto,*" ColumnSpacing="8">
+                                <Label Grid.Column="0" Text="ÖNCELİK" Style="{StaticResource MicroLabel}" VerticalOptions="Center" />
+                                <Label Grid.Column="1" Text="{Binding Priority}" Style="{StaticResource BodyText}" VerticalOptions="Center" />
+                                <Label Grid.Column="2" Text="DURUM" Style="{StaticResource MicroLabel}" VerticalOptions="Center" />
+                                <Label Grid.Column="3" Text="{Binding Completed, Converter={StaticResource BoolToStatusConverter}}"
+                                       Style="{StaticResource BodyText}" VerticalOptions="Center" />
+                            </Grid>
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8"
+                                  IsVisible="{Binding IsEditing, Converter={StaticResource InverseBoolConverter}}">
+                                <Label Grid.Column="0" Text="TESLİM" Style="{StaticResource MicroLabel}" VerticalOptions="Center" />
+                                <Label Grid.Column="1" Text="{Binding DueDate, StringFormat='{0:dd.MM.yyyy}'}"
+                                       Style="{StaticResource BodyText}" VerticalOptions="Center" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="12" IsVisible="{Binding IsEditing}">
+                                <VerticalStackLayout Grid.Column="0" Spacing="4">
+                                    <Label Text="TESLİM TARİHİ" Style="{StaticResource MicroLabel}" />
+                                    <DatePicker Date="{Binding EditDueDate}" Format="dd.MM.yyyy" />
+                                </VerticalStackLayout>
+                                <VerticalStackLayout Grid.Column="1" Spacing="4">
+                                    <Label Text="HATIRLATICI" Style="{StaticResource MicroLabel}" />
+                                    <DatePicker Date="{Binding EditReminderDate}" Format="dd.MM.yyyy" />
+                                </VerticalStackLayout>
+                            </Grid>
+                        </VerticalStackLayout>
+                    </Border>
 
-                    <StackLayout Orientation="Horizontal" Spacing="10"
-                                 IsVisible="{Binding IsEditing, Converter={StaticResource InverseBoolConverter}}">
-                        <Label Text="TESLİM"
-                               Style="{StaticResource MicroLabel}"
-                               VerticalOptions="Center" />
-                        <Label Text="{Binding DueDate, StringFormat='{0:dd.MM.yyyy}'}"
-                               Style="{StaticResource BodyText}"
-                               VerticalOptions="Center" />
-                    </StackLayout>
+                    <!-- SES KAYDI -->
+                    <Border Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}"
+                            StrokeThickness="1"
+                            StrokeShape="RoundRectangle 20"
+                            Padding="14,12">
+                        <Border.Background>
+                            <AppThemeBinding Light="{StaticResource GlassSurfaceLight}" Dark="{StaticResource GlassSurfaceDark}" />
+                        </Border.Background>
+                        <VerticalStackLayout Spacing="8">
+                            <Label Text="YENİ SES KAYDI" Style="{StaticResource MicroLabel}" />
+                            <StackLayout Orientation="Horizontal" Spacing="10" HorizontalOptions="Center">
+                                <Button Text="&#xE91F;" FontFamily="Segoe Fluent Icons"
+                                        Command="{Binding StartRecordingCommand}"
+                                        Style="{StaticResource IconButton}" WidthRequest="48" HeightRequest="48"
+                                        CornerRadius="999" FontSize="18">
+                                    <Button.Triggers>
+                                        <DataTrigger TargetType="Button" Binding="{Binding IsRecording}" Value="True">
+                                            <Setter Property="Text" Value="&#xE711;" />
+                                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DarkDanger}}" />
+                                            <Setter Property="TextColor" Value="White" />
+                                        </DataTrigger>
+                                    </Button.Triggers>
+                                </Button>
+                                <Label Text="{Binding RecordingDuration}" Style="{StaticResource BodyText}"
+                                       FontAttributes="Bold" VerticalOptions="Center" />
+                            </StackLayout>
+                            <StackLayout Orientation="Horizontal" HorizontalOptions="Center" Spacing="8"
+                                         IsVisible="{Binding HasPendingVoice}">
+                                <Button Text="Kaydet" Command="{Binding SaveVoiceRecordingCommand}"
+                                        IsEnabled="{Binding CanSaveVoice}" HeightRequest="38" CornerRadius="19" />
+                                <Button Text="İptal" Command="{Binding ClearRecordingCommand}"
+                                        Style="{StaticResource GhostButton}" HeightRequest="38" CornerRadius="19" />
+                            </StackLayout>
+                        </VerticalStackLayout>
+                    </Border>
 
-                    <StackLayout Orientation="Horizontal" Spacing="10"
-                                 IsVisible="{Binding IsEditing, Converter={StaticResource InverseBoolConverter}}">
-                        <Label Text="HATIRLATMA"
-                               Style="{StaticResource MicroLabel}"
-                               VerticalOptions="Center" />
-                        <Label Text="{Binding ReminderDate, StringFormat='{0:dd.MM.yyyy}'}"
-                               Style="{StaticResource BodyText}"
-                               VerticalOptions="Center" />
-                    </StackLayout>
+                    <!-- SES KAYITLARI -->
+                    <Border Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}"
+                            StrokeThickness="1"
+                            StrokeShape="RoundRectangle 20"
+                            Padding="14,12"
+                            IsVisible="{Binding HasVoiceRecordings}">
+                        <Border.Background>
+                            <AppThemeBinding Light="{StaticResource GlassSurfaceLight}" Dark="{StaticResource GlassSurfaceDark}" />
+                        </Border.Background>
+                        <VerticalStackLayout Spacing="8">
+                            <Label Text="SES KAYITLARI" Style="{StaticResource MicroLabel}" />
+                            <CollectionView x:Name="VoiceCollection" ItemsSource="{Binding VoiceRecordings}" HeightRequest="200">
+                                <CollectionView.ItemTemplate>
+                                    <DataTemplate x:DataType="models:VoiceRecording">
+                                        <Border Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}"
+                                                StrokeThickness="1"
+                                                StrokeShape="RoundRectangle 16"
+                                                Margin="0,3" Padding="12,8">
+                                            <Border.Background>
+                                                <AppThemeBinding Light="{StaticResource GlassSurfaceLight}" Dark="{StaticResource GlassSurfaceDark}" />
+                                            </Border.Background>
+                                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                                                <VerticalStackLayout Grid.Column="0" Spacing="1" VerticalOptions="Center">
+                                                    <Label Text="{Binding FileName}" Style="{StaticResource BodyText}" LineBreakMode="TailTruncation" />
+                                                    <Label Text="{Binding FormattedDuration}" Style="{StaticResource CaptionText}" />
+                                                </VerticalStackLayout>
+                                                <Button Grid.Column="1" Text="&#xE768;" FontFamily="Segoe Fluent Icons"
+                                                        Command="{Binding Source={x:Reference VoiceCollection}, Path=BindingContext.PlayVoiceRecordingCommand}"
+                                                        CommandParameter="{Binding .}"
+                                                        Style="{StaticResource IconButton}" WidthRequest="38" HeightRequest="38"
+                                                        CornerRadius="999" FontSize="14" />
+                                                <Button Grid.Column="2" Text="&#xE74D;" FontFamily="Segoe Fluent Icons"
+                                                        Command="{Binding Source={x:Reference VoiceCollection}, Path=BindingContext.DeleteVoiceRecordingCommand}"
+                                                        CommandParameter="{Binding .}" BackgroundColor="Transparent"
+                                                        TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DarkDanger}}"
+                                                        WidthRequest="38" HeightRequest="38" CornerRadius="999" FontSize="14" Padding="0" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </CollectionView.ItemTemplate>
+                            </CollectionView>
+                        </VerticalStackLayout>
+                    </Border>
 
-                    <Grid ColumnDefinitions="*,*"
-                          ColumnSpacing="12"
-                          IsVisible="{Binding IsEditing}">
-                        <StackLayout Spacing="6">
-                            <Label Text="TESLİM TARİHİ"
-                                   Style="{StaticResource MicroLabel}" />
-                            <DatePicker Date="{Binding EditDueDate}"
-                                        Format="dd.MM.yyyy" />
-                        </StackLayout>
-                        <StackLayout Grid.Column="1" Spacing="6">
-                            <Label Text="HATIRLATICI"
-                                   Style="{StaticResource MicroLabel}" />
-                            <DatePicker Date="{Binding EditReminderDate}"
-                                        Format="dd.MM.yyyy" />
-                        </StackLayout>
-                    </Grid>
+                    <!-- AKSIYONLAR -->
+                    <VerticalStackLayout Spacing="6">
+                        <Button Text="Düzenle" Command="{Binding StartEditingCommand}"
+                                IsVisible="{Binding IsEditing, Converter={StaticResource InverseBoolConverter}}" />
+                        <Button Text="Kaydet" Command="{Binding SaveChangesCommand}"
+                                IsVisible="{Binding IsEditing}"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource Success}, Dark={StaticResource Success}}" />
+                        <Button Text="İptal" Command="{Binding CancelEditingCommand}"
+                                IsVisible="{Binding IsEditing}" Style="{StaticResource GhostButton}" />
+                        <Button Text="Sil" Command="{Binding DeleteTodoCommand}"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DarkDanger}}" />
+                    </VerticalStackLayout>
 
-                </StackLayout>
-            </Frame>
+                </VerticalStackLayout>
+            </ScrollView>
 
-            <!-- Yeni Ses Kaydı -->
-            <Frame Style="{StaticResource GlassFrame}">
-                <StackLayout Spacing="14">
+        </Grid>
 
-                    <Label Text="YENİ SES KAYDI"
-                           Style="{StaticResource MicroLabel}" />
-
-                    <StackLayout Orientation="Horizontal"
-                                Spacing="12"
-                                HorizontalOptions="Center">
-                        <Button Text="&#xE91F;"
-                                FontFamily="Segoe Fluent Icons"
-                                Command="{Binding StartRecordingCommand}"
-                                Style="{StaticResource IconButton}"
-                                WidthRequest="56"
-                                HeightRequest="56"
-                                CornerRadius="999"
-                                FontSize="22">
-                            <Button.Triggers>
-                                <DataTrigger TargetType="Button"
-                                             Binding="{Binding IsRecording}"
-                                             Value="True">
-                                    <Setter Property="Text" Value="&#xE711;" />
-                                    <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource Danger}}" />
-                                    <Setter Property="TextColor" Value="White" />
-                                </DataTrigger>
-                            </Button.Triggers>
-                        </Button>
-                        <Label Text="{Binding RecordingDuration}"
-                               Style="{StaticResource BodyText}"
-                               FontAttributes="Bold"
-                               VerticalOptions="Center" />
-                    </StackLayout>
-
-                    <StackLayout Orientation="Horizontal"
-                                HorizontalOptions="Center"
-                                Spacing="10"
-                                IsVisible="{Binding HasPendingVoice}">
-                        <Button Text="Kaydet"
-                                Command="{Binding SaveVoiceRecordingCommand}"
-                                IsEnabled="{Binding CanSaveVoice}" />
-                        <Button Text="İptal"
-                                Command="{Binding ClearRecordingCommand}"
-                                Style="{StaticResource GhostButton}" />
-                    </StackLayout>
-
-                </StackLayout>
-            </Frame>
-
-            <!-- Voice Recordings -->
-            <Frame Style="{StaticResource GlassFrame}"
-                   IsVisible="{Binding HasVoiceRecordings}">
-                <StackLayout Spacing="10">
-
-                    <Label Text="SES KAYITLARI"
-                           Style="{StaticResource MicroLabel}" />
-
-                    <CollectionView x:Name="VoiceCollection"
-                                   ItemsSource="{Binding VoiceRecordings}">
-                        <CollectionView.ItemTemplate>
-                            <DataTemplate x:DataType="models:VoiceRecording">
-                                <Frame Style="{StaticResource GlassFrame}"
-                                       Margin="0,4"
-                                       Padding="14,10">
-                                    <Grid ColumnDefinitions="*,Auto,Auto"
-                                          RowDefinitions="Auto,Auto"
-                                          ColumnSpacing="10">
-
-                                        <StackLayout Grid.Column="0"
-                                                    Grid.Row="0"
-                                                    Spacing="2"
-                                                    VerticalOptions="Center">
-                                            <Label Text="{Binding FileName}"
-                                                   Style="{StaticResource BodyText}"
-                                                   LineBreakMode="TailTruncation" />
-                                            <Label Text="{Binding FormattedDuration}"
-                                                   Style="{StaticResource CaptionText}" />
-                                        </StackLayout>
-
-                                        <ProgressBar Grid.Column="0"
-                                                     Grid.Row="1"
-                                                     Progress="{Binding PlaybackProgress}"
-                                                     ProgressColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}"
-                                                     BackgroundColor="{AppThemeBinding Light={StaticResource BorderDefault}, Dark={StaticResource DarkBorderDefault}}"
-                                                     IsVisible="{Binding IsPlaying}"
-                                                     HeightRequest="4" />
-
-                                        <Button Grid.Column="1"
-                                                Grid.Row="0"
-                                                Text="&#xE768;"
-                                                FontFamily="Segoe Fluent Icons"
-                                                Command="{Binding Source={x:Reference VoiceCollection}, Path=BindingContext.PlayVoiceRecordingCommand}"
-                                                CommandParameter="{Binding .}"
-                                                Style="{StaticResource IconButton}"
-                                                WidthRequest="44"
-                                                HeightRequest="44"
-                                                CornerRadius="999"
-                                                FontSize="16">
-                                            <Button.Triggers>
-                                                <DataTrigger TargetType="Button"
-                                                             Binding="{Binding IsPlaying}"
-                                                             Value="True">
-                                                    <Setter Property="Text" Value="&#xE769;" />
-                                                </DataTrigger>
-                                            </Button.Triggers>
-                                        </Button>
-
-                                        <Button Grid.Column="2"
-                                                Grid.Row="0"
-                                                Text="&#xE74D;"
-                                                FontFamily="Segoe Fluent Icons"
-                                                Command="{Binding Source={x:Reference VoiceCollection}, Path=BindingContext.DeleteVoiceRecordingCommand}"
-                                                CommandParameter="{Binding .}"
-                                                BackgroundColor="Transparent"
-                                                TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource Danger}}"
-                                                WidthRequest="44"
-                                                HeightRequest="44"
-                                                CornerRadius="999"
-                                                FontSize="16"
-                                                Padding="0" />
-
-                                    </Grid>
-                                </Frame>
-                            </DataTemplate>
-                        </CollectionView.ItemTemplate>
-                    </CollectionView>
-
-                </StackLayout>
-            </Frame>
-
-            <!-- Actions -->
-            <StackLayout Spacing="10">
-
-                <Button Text="Düzenle"
-                        Command="{Binding StartEditingCommand}"
-                        IsVisible="{Binding IsEditing, Converter={StaticResource InverseBoolConverter}}" />
-
-                <Button Text="Kaydet"
-                        Command="{Binding SaveChangesCommand}"
-                        IsVisible="{Binding IsEditing}"
-                        BackgroundColor="{AppThemeBinding Light={StaticResource Success}, Dark={StaticResource Success}}" />
-
-                <Button Text="İptal"
-                        Command="{Binding CancelEditingCommand}"
-                        IsVisible="{Binding IsEditing}"
-                        Style="{StaticResource GhostButton}" />
-
-                <Button Text="Sil"
-                        Command="{Binding DeleteTodoCommand}"
-                        BackgroundColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource Danger}}" />
-
-            </StackLayout>
-
-        </StackLayout>
-    </ScrollView>
+    </Grid>
 
 </ContentPage>

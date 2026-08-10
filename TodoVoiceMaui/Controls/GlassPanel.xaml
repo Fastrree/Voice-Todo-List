@@ -3,9 +3,10 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="TodoVoiceMaui.Controls.GlassPanel">
 
-    <!-- Liquid Glass KATMAN 2 (design-system §6 / transition-framework §2.3):
-         Cam panel = yarı saydam zemin + ince border + üst specular ışık çizgisi.
-         Gerçek blur pencere seviyesinde (BackdropService); panel blur'suzdur.
+    <!-- Liquid Glass KATMAN 2 (design-system §6):
+         Gerçek material hierarchy:
+         ambient aurora → gradient cam yüzey (üstte ışık yakalar) →
+         specular kenar ışığı → ince hairline → derinlik gölgesi → içerik.
          Kırılma/yansıma gradient+border tabanlı, platform bağımsız simülasyon.
          ContentView.Content, ContentPresenter üzerinden ControlTemplate'te render edilir. -->
 
@@ -13,27 +14,50 @@
         <ControlTemplate x:Key="GlassPanelTemplate">
             <Border StrokeShape="RoundRectangle 24"
                     StrokeThickness="1"
-                    Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}"
-                    Background="{AppThemeBinding Light={StaticResource GlassBackground}, Dark={StaticResource DarkGlassBackground}}">
+                    Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}">
 
-                <Grid RowDefinitions="Auto,*">
+                <!-- YÜZEY: dikey gradient — üstte ışık, altta derinlik (paylaşılan fırça) -->
+                <Border.Background>
+                    <AppThemeBinding Light="{StaticResource GlassSurfaceLight}" Dark="{StaticResource GlassSurfaceDark}" />
+                </Border.Background>
 
-                    <!-- Specular yansıma: üst kenar yatay degrade ışık çizgisi -->
+                <Border.Shadow>
+                    <Shadow Brush="{AppThemeBinding Light={StaticResource ShadowMd}, Dark={StaticResource DarkShadowMd}}"
+                            Offset="0,10"
+                            Radius="26"
+                            Opacity="0.5" />
+                </Border.Shadow>
+
+                <Grid RowDefinitions="Auto,Auto,*">
+
+                    <!-- SPECULAR KENAR: üstte içten parlayan ışık çizgisi (paylaşılan fırça) -->
                     <BoxView Grid.Row="0"
                              HeightRequest="1.5"
-                             Margin="18,10,18,0"
+                             Margin="16,0,16,0"
                              VerticalOptions="Start">
                         <BoxView.Background>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                <GradientStop Offset="0.0" Color="Transparent" />
-                                <GradientStop Offset="0.5" Color="{AppThemeBinding Light={StaticResource GlassHighlight}, Dark={StaticResource DarkGlassHighlight}}" />
-                                <GradientStop Offset="1.0" Color="Transparent" />
+                            <AppThemeBinding Light="{StaticResource GlassSpecularLight}" Dark="{StaticResource GlassSpecularDark}" />
+                        </BoxView.Background>
+                    </BoxView>
+
+                    <!-- İÇ YANSIMA: üst bölgede yumuşak cam parlaması -->
+                    <BoxView Grid.Row="1"
+                             HeightRequest="16"
+                             Margin="0,0,0,0"
+                             VerticalOptions="Start"
+                             InputTransparent="True">
+                        <BoxView.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                <GradientStop Offset="0.0"
+                                              Color="{AppThemeBinding Light=#40FFFFFF, Dark=#12FFFFFF}" />
+                                <GradientStop Offset="1.0"
+                                              Color="{AppThemeBinding Light=#00FFFFFF, Dark=#00FFFFFF}" />
                             </LinearGradientBrush>
                         </BoxView.Background>
                     </BoxView>
 
-                    <!-- İçerik -->
-                    <ContentPresenter Grid.Row="1" Padding="18" />
+                    <!-- İÇERİK -->
+                    <ContentPresenter Grid.Row="2" Padding="18,4,18,18" />
 
                 </Grid>
             </Border>
