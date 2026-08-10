@@ -330,6 +330,8 @@ public partial class TodoDetailPageViewModel : ObservableObject
         }
         
         RecordingDuration = "00:00";
+        OnPropertyChanged(nameof(HasPendingVoice));
+        OnPropertyChanged(nameof(CanSaveVoice));
     }
 
     [RelayCommand]
@@ -450,6 +452,8 @@ public partial class TodoDetailPageViewModel : ObservableObject
         MainThread.BeginInvokeOnMainThread(() =>
         {
             _pendingVoiceFilePath = filePath;
+            OnPropertyChanged(nameof(HasPendingVoice));
+            OnPropertyChanged(nameof(CanSaveVoice));
         });
     }
 

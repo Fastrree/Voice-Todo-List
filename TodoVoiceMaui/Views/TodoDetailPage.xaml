@@ -6,7 +6,8 @@
              xmlns:converters="clr-namespace:TodoVoiceMaui.Converters"
              x:Class="TodoVoiceMaui.Views.TodoDetailPage"
              x:DataType="viewmodels:TodoDetailPageViewModel"
-             Title="Görev Detayı">
+             Title="Görev Detayı"
+             BackgroundColor="{AppThemeBinding Light={StaticResource Background}, Dark={StaticResource DarkBackground}}">
 
     <ContentPage.Resources>
         <ResourceDictionary>
@@ -17,144 +18,228 @@
     </ContentPage.Resources>
 
     <ScrollView>
-        <StackLayout Padding="20" Spacing="20">
-            
+        <StackLayout Padding="24" Spacing="16">
+
             <!-- Todo Info -->
-            <Frame Style="{StaticResource CardFrame}">
-                <StackLayout Spacing="15">
-                    
+            <Frame Style="{StaticResource GlassFrame}">
+                <StackLayout Spacing="14">
+
                     <Label Text="{Binding Title}"
-                           Style="{StaticResource HeadlineMedium}" />
-                    
+                           Style="{StaticResource TitleLarge}" />
+
                     <Label Text="{Binding Description}"
-                           Style="{StaticResource BodyLarge}"
+                           Style="{StaticResource BodyText}"
                            IsVisible="{Binding Description, Converter={StaticResource IsNotNullOrEmptyConverter}}" />
-                    
+
                     <StackLayout Orientation="Horizontal" Spacing="10">
-                        <Label Text="Öncelik:"
-                               Style="{StaticResource LabelMedium}" />
+                        <Label Text="ÖNCELİK"
+                               Style="{StaticResource MicroLabel}"
+                               VerticalOptions="Center" />
                         <Label Text="{Binding Priority}"
-                               Style="{StaticResource BodyMedium}" />
+                               Style="{StaticResource BodyText}"
+                               VerticalOptions="Center" />
                     </StackLayout>
-                    
+
                     <StackLayout Orientation="Horizontal" Spacing="10">
-                        <Label Text="Durum:"
-                               Style="{StaticResource LabelMedium}" />
+                        <Label Text="DURUM"
+                               Style="{StaticResource MicroLabel}"
+                               VerticalOptions="Center" />
                         <Label Text="{Binding Completed, Converter={StaticResource BoolToStatusConverter}}"
-                               Style="{StaticResource BodyMedium}" />
+                               Style="{StaticResource BodyText}"
+                               VerticalOptions="Center" />
+                    </StackLayout>
+
+                    <StackLayout Orientation="Horizontal" Spacing="10"
+                                 IsVisible="{Binding IsEditing, Converter={StaticResource InverseBoolConverter}}">
+                        <Label Text="TESLİM"
+                               Style="{StaticResource MicroLabel}"
+                               VerticalOptions="Center" />
+                        <Label Text="{Binding DueDate, StringFormat='{0:dd.MM.yyyy}'}"
+                               Style="{StaticResource BodyText}"
+                               VerticalOptions="Center" />
+                    </StackLayout>
+
+                    <StackLayout Orientation="Horizontal" Spacing="10"
+                                 IsVisible="{Binding IsEditing, Converter={StaticResource InverseBoolConverter}}">
+                        <Label Text="HATIRLATMA"
+                               Style="{StaticResource MicroLabel}"
+                               VerticalOptions="Center" />
+                        <Label Text="{Binding ReminderDate, StringFormat='{0:dd.MM.yyyy}'}"
+                               Style="{StaticResource BodyText}"
+                               VerticalOptions="Center" />
                     </StackLayout>
 
                     <Grid ColumnDefinitions="*,*"
-                          ColumnSpacing="10"
+                          ColumnSpacing="12"
                           IsVisible="{Binding IsEditing}">
-                        <StackLayout Spacing="4">
-                            <Label Text="Teslim Tarihi"
-                                   Style="{StaticResource LabelSmall}" />
+                        <StackLayout Spacing="6">
+                            <Label Text="TESLİM TARİHİ"
+                                   Style="{StaticResource MicroLabel}" />
                             <DatePicker Date="{Binding EditDueDate}"
                                         Format="dd.MM.yyyy" />
                         </StackLayout>
-                        <StackLayout Grid.Column="1" Spacing="4">
-                            <Label Text="Hatırlatıcı"
-                                   Style="{StaticResource LabelSmall}" />
+                        <StackLayout Grid.Column="1" Spacing="6">
+                            <Label Text="HATIRLATICI"
+                                   Style="{StaticResource MicroLabel}" />
                             <DatePicker Date="{Binding EditReminderDate}"
                                         Format="dd.MM.yyyy" />
                         </StackLayout>
                     </Grid>
 
-                    <StackLayout Orientation="Horizontal" Spacing="10"
-                                 IsVisible="{Binding IsEditing, Converter={StaticResource InverseBoolConverter}}">
-                        <Label Text="Teslim:"
-                               Style="{StaticResource LabelMedium}" />
-                        <Label Text="{Binding DueDate, StringFormat='{0:dd.MM.yyyy}'}"
-                               Style="{StaticResource BodyMedium}" />
+                </StackLayout>
+            </Frame>
+
+            <!-- Yeni Ses Kaydı -->
+            <Frame Style="{StaticResource GlassFrame}">
+                <StackLayout Spacing="14">
+
+                    <Label Text="YENİ SES KAYDI"
+                           Style="{StaticResource MicroLabel}" />
+
+                    <StackLayout Orientation="Horizontal"
+                                Spacing="12"
+                                HorizontalOptions="Center">
+                        <Button Text="&#xE91F;"
+                                FontFamily="Segoe Fluent Icons"
+                                Command="{Binding StartRecordingCommand}"
+                                Style="{StaticResource IconButton}"
+                                WidthRequest="56"
+                                HeightRequest="56"
+                                CornerRadius="999"
+                                FontSize="22">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button"
+                                             Binding="{Binding IsRecording}"
+                                             Value="True">
+                                    <Setter Property="Text" Value="&#xE711;" />
+                                    <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource Danger}}" />
+                                    <Setter Property="TextColor" Value="White" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                        <Label Text="{Binding RecordingDuration}"
+                               Style="{StaticResource BodyText}"
+                               FontAttributes="Bold"
+                               VerticalOptions="Center" />
                     </StackLayout>
 
-                    <StackLayout Orientation="Horizontal" Spacing="10"
-                                 IsVisible="{Binding IsEditing, Converter={StaticResource InverseBoolConverter}}">
-                        <Label Text="Hatırlatma:"
-                               Style="{StaticResource LabelMedium}" />
-                        <Label Text="{Binding ReminderDate, StringFormat='{0:dd.MM.yyyy}'}"
-                               Style="{StaticResource BodyMedium}" />
+                    <StackLayout Orientation="Horizontal"
+                                HorizontalOptions="Center"
+                                Spacing="10"
+                                IsVisible="{Binding HasPendingVoice}">
+                        <Button Text="Kaydet"
+                                Command="{Binding SaveVoiceRecordingCommand}"
+                                IsEnabled="{Binding CanSaveVoice}" />
+                        <Button Text="İptal"
+                                Command="{Binding ClearRecordingCommand}"
+                                Style="{StaticResource GhostButton}" />
                     </StackLayout>
-                    
+
                 </StackLayout>
             </Frame>
 
             <!-- Voice Recordings -->
-            <Frame Style="{StaticResource CardFrame}"
+            <Frame Style="{StaticResource GlassFrame}"
                    IsVisible="{Binding HasVoiceRecordings}">
                 <StackLayout Spacing="10">
-                    
-                    <Label Text="Ses Kayıtları"
-                           Style="{StaticResource TitleMedium}" />
-                    
+
+                    <Label Text="SES KAYITLARI"
+                           Style="{StaticResource MicroLabel}" />
+
                     <CollectionView x:Name="VoiceCollection"
                                    ItemsSource="{Binding VoiceRecordings}">
                         <CollectionView.ItemTemplate>
                             <DataTemplate x:DataType="models:VoiceRecording">
-                                <Grid ColumnDefinitions="*,Auto,Auto" 
-                                      RowDefinitions="Auto,Auto"
-                                      Padding="0,10">
-                                    
-                                    <StackLayout Grid.Column="0"
-                                                Grid.Row="0">
-                                        <Label Text="{Binding FileName}"
-                                               Style="{StaticResource BodyMedium}" />
-                                        <Label Text="{Binding FormattedDuration}"
-                                               Style="{StaticResource BodySmall}" />
-                                    </StackLayout>
-                                    
-                                    <ProgressBar Grid.Column="0"
-                                                 Grid.Row="1"
-                                                 Progress="{Binding PlaybackProgress}"
-                                                 ProgressColor="{StaticResource Primary}"
-                                                 BackgroundColor="{StaticResource BorderPrimary}"
-                                                 IsVisible="{Binding IsPlaying}" />
-                                    
-                                    <Button Grid.Column="1"
-                                            Grid.Row="0"
-                                            Text="{Binding PlayButtonText}"
-                                            Command="{Binding Source={x:Reference VoiceCollection}, Path=BindingContext.PlayVoiceRecordingCommand}"
-                                            CommandParameter="{Binding .}"
-                                            Style="{StaticResource IconButton}" />
-                                    
-                                    <Button Grid.Column="2"
-                                            Grid.Row="0"
-                                            Text="🗑️"
-                                            Command="{Binding Source={x:Reference VoiceCollection}, Path=BindingContext.DeleteVoiceRecordingCommand}"
-                                            CommandParameter="{Binding .}"
-                                            Style="{StaticResource IconButton}"
-                                            BackgroundColor="{StaticResource Danger}" />
-                                    
-                                </Grid>
+                                <Frame Style="{StaticResource GlassFrame}"
+                                       Margin="0,4"
+                                       Padding="14,10">
+                                    <Grid ColumnDefinitions="*,Auto,Auto"
+                                          RowDefinitions="Auto,Auto"
+                                          ColumnSpacing="10">
+
+                                        <StackLayout Grid.Column="0"
+                                                    Grid.Row="0"
+                                                    Spacing="2"
+                                                    VerticalOptions="Center">
+                                            <Label Text="{Binding FileName}"
+                                                   Style="{StaticResource BodyText}"
+                                                   LineBreakMode="TailTruncation" />
+                                            <Label Text="{Binding FormattedDuration}"
+                                                   Style="{StaticResource CaptionText}" />
+                                        </StackLayout>
+
+                                        <ProgressBar Grid.Column="0"
+                                                     Grid.Row="1"
+                                                     Progress="{Binding PlaybackProgress}"
+                                                     ProgressColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}"
+                                                     BackgroundColor="{AppThemeBinding Light={StaticResource BorderDefault}, Dark={StaticResource DarkBorderDefault}}"
+                                                     IsVisible="{Binding IsPlaying}"
+                                                     HeightRequest="4" />
+
+                                        <Button Grid.Column="1"
+                                                Grid.Row="0"
+                                                Text="&#xE768;"
+                                                FontFamily="Segoe Fluent Icons"
+                                                Command="{Binding Source={x:Reference VoiceCollection}, Path=BindingContext.PlayVoiceRecordingCommand}"
+                                                CommandParameter="{Binding .}"
+                                                Style="{StaticResource IconButton}"
+                                                WidthRequest="44"
+                                                HeightRequest="44"
+                                                CornerRadius="999"
+                                                FontSize="16">
+                                            <Button.Triggers>
+                                                <DataTrigger TargetType="Button"
+                                                             Binding="{Binding IsPlaying}"
+                                                             Value="True">
+                                                    <Setter Property="Text" Value="&#xE769;" />
+                                                </DataTrigger>
+                                            </Button.Triggers>
+                                        </Button>
+
+                                        <Button Grid.Column="2"
+                                                Grid.Row="0"
+                                                Text="&#xE74D;"
+                                                FontFamily="Segoe Fluent Icons"
+                                                Command="{Binding Source={x:Reference VoiceCollection}, Path=BindingContext.DeleteVoiceRecordingCommand}"
+                                                CommandParameter="{Binding .}"
+                                                BackgroundColor="Transparent"
+                                                TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource Danger}}"
+                                                WidthRequest="44"
+                                                HeightRequest="44"
+                                                CornerRadius="999"
+                                                FontSize="16"
+                                                Padding="0" />
+
+                                    </Grid>
+                                </Frame>
                             </DataTemplate>
                         </CollectionView.ItemTemplate>
                     </CollectionView>
-                    
+
                 </StackLayout>
             </Frame>
 
             <!-- Actions -->
             <StackLayout Spacing="10">
-                
+
                 <Button Text="Düzenle"
                         Command="{Binding StartEditingCommand}"
                         IsVisible="{Binding IsEditing, Converter={StaticResource InverseBoolConverter}}" />
-                
+
                 <Button Text="Kaydet"
                         Command="{Binding SaveChangesCommand}"
                         IsVisible="{Binding IsEditing}"
-                        BackgroundColor="{StaticResource Success}" />
-                
+                        BackgroundColor="{AppThemeBinding Light={StaticResource Success}, Dark={StaticResource Success}}" />
+
                 <Button Text="İptal"
                         Command="{Binding CancelEditingCommand}"
                         IsVisible="{Binding IsEditing}"
-                        Style="{StaticResource SecondaryButton}" />
-                
+                        Style="{StaticResource GhostButton}" />
+
                 <Button Text="Sil"
                         Command="{Binding DeleteTodoCommand}"
-                        BackgroundColor="{StaticResource Danger}" />
-                
+                        BackgroundColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource Danger}}" />
+
             </StackLayout>
 
         </StackLayout>
