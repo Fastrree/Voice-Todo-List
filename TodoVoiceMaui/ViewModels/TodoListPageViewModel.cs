@@ -4,7 +4,6 @@ using System.Collections.ObjectModel;
 using TodoVoiceMaui.Models;
 using TodoVoiceMaui.Services;
 using TodoVoiceMaui.Views;
-
 namespace TodoVoiceMaui.ViewModels;
 
 public partial class TodoListPageViewModel : ObservableObject
@@ -15,10 +14,10 @@ public partial class TodoListPageViewModel : ObservableObject
     private readonly SpeechToTextService _speechToTextService;
 
     [ObservableProperty]
-    private ObservableCollection<Todo> todos = new();
+    private ObservableCollection<TodoListItem> todos = new();
 
     [ObservableProperty]
-    private ObservableCollection<Todo> filteredTodos = new();
+    private ObservableCollection<TodoListItem> filteredTodos = new();
 
     [ObservableProperty]
     private string newTodoTitle = string.Empty;
@@ -109,7 +108,7 @@ public partial class TodoListPageViewModel : ObservableObject
             Todos.Clear();
             foreach (var todo in todoList.OrderByDescending(t => t.CreatedAt))
             {
-                Todos.Add(todo);
+                Todos.Add(new TodoListItem(todo));
             }
 
             ApplyFilter();
@@ -208,7 +207,7 @@ public partial class TodoListPageViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task ToggleTodoAsync(Todo todo)
+    private async Task ToggleTodoAsync(TodoListItem todo)
     {
         try
         {
@@ -224,7 +223,7 @@ public partial class TodoListPageViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task DeleteTodoAsync(Todo todo)
+    private async Task DeleteTodoAsync(TodoListItem todo)
     {
         var result = await Shell.Current.DisplayAlert("Onay", $"'{todo.Title}' görevi silinsin mi?", "Evet", "Hayır");
         
@@ -244,11 +243,11 @@ public partial class TodoListPageViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task OpenTodoDetailAsync(Todo todo)
+    private async Task OpenTodoDetailAsync(TodoListItem todo)
     {
         var parameters = new Dictionary<string, object>
         {
-            { "Todo", todo }
+            { "Todo", todo.Model }
         };
         
         await Shell.Current.GoToAsync($"{nameof(TodoDetailPage)}", parameters);

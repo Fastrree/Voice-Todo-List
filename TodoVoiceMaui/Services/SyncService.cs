@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using TodoVoiceMaui.Models;
+using TodoVoiceMaui.Core.Domain.Entities;
 
 namespace TodoVoiceMaui.Services;
 
@@ -208,7 +209,7 @@ public class SyncService : INotifyPropertyChanged
             {
                 try
                 {
-                    Todo? serverTodo = null;
+                    TodoDto? serverTodo = null;
 
                     if (await _databaseService.GetSyncStatusAsync(localTodo.Id) == null)
                     {
@@ -270,14 +271,14 @@ public class SyncService : INotifyPropertyChanged
                 if (localTodo == null)
                 {
                     // New todo from server, add to local
-                    var newLocalTodo = LocalTodo.FromTodo(serverTodo, false);
+                    var newLocalTodo = LocalTodo.FromTodo(serverTodo.ToTodo(), false);
                     await _databaseService.SaveTodoAsync(newLocalTodo);
                     await _databaseService.UpdateSyncStatusAsync(serverTodo.Id, "Todo", true);
                 }
                 else if (serverTodo.UpdatedAt > localTodo.UpdatedAt && !localTodo.NeedsSync)
                 {
                     // Server version is newer and local doesn't have pending changes
-                    var updatedLocalTodo = LocalTodo.FromTodo(serverTodo, false);
+                    var updatedLocalTodo = LocalTodo.FromTodo(serverTodo.ToTodo(), false);
                     await _databaseService.SaveTodoAsync(updatedLocalTodo);
                 }
             }

@@ -150,7 +150,7 @@ public class SupabaseService
     }
 
     // Todo operations via edge functions
-    public async Task<Todo?> CreateTodoAsync(string title, string? description = null, string priority = "medium", DateTime? dueDate = null, string? voiceUrl = null, int? voiceDuration = null)
+    public async Task<TodoDto?> CreateTodoAsync(string title, string? description = null, string priority = "medium", DateTime? dueDate = null, string? voiceUrl = null, int? voiceDuration = null)
     {
         var parameters = new
         {
@@ -169,7 +169,7 @@ public class SupabaseService
         return result?.Todo;
     }
 
-    public async Task<Todo?> UpdateTodoAsync(string todoId, object updates)
+    public async Task<TodoDto?> UpdateTodoAsync(string todoId, object updates)
     {
         var parameters = new
         {
@@ -194,7 +194,7 @@ public class SupabaseService
         return result?.Operation == "deleted";
     }
 
-    public async Task<List<Todo>> GetTodosAsync(bool? completed = null)
+    public async Task<List<TodoDto>> GetTodosAsync(bool? completed = null)
     {
         var parameters = new
         {
@@ -203,10 +203,10 @@ public class SupabaseService
         };
 
         var result = await InvokeFunctionAsync<TodoListResult>("todo-manager", parameters);
-        return result?.Todos ?? new List<Todo>();
+        return result?.Todos ?? new List<TodoDto>();
     }
 
-    public async Task<(Todo?, List<VoiceRecording>)> GetTodoWithVoiceAsync(string todoId)
+    public async Task<(TodoDto?, List<VoiceRecording>)> GetTodoWithVoiceAsync(string todoId)
     {
         var parameters = new
         {
@@ -291,19 +291,19 @@ public class ErrorInfo
 
 public class TodoOperationResult
 {
-    public Todo? Todo { get; set; }
+    public TodoDto? Todo { get; set; }
     public string? Operation { get; set; }
 }
 
 public class TodoListResult
 {
-    public List<Todo>? Todos { get; set; }
+    public List<TodoDto>? Todos { get; set; }
     public string? Operation { get; set; }
 }
 
 public class TodoDetailResult
 {
-    public Todo? Todo { get; set; }
+    public TodoDto? Todo { get; set; }
     public List<VoiceRecording>? VoiceRecordings { get; set; }
     public string? Operation { get; set; }
 }

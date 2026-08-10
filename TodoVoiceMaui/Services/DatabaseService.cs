@@ -1,5 +1,6 @@
 using SQLite;
 using TodoVoiceMaui.Models;
+using TodoVoiceMaui.Core.Domain.Entities;
 
 namespace TodoVoiceMaui.Services;
 

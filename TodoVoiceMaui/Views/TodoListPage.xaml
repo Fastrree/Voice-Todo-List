@@ -168,7 +168,7 @@
                 </CollectionView.EmptyView>
                 
                 <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="models:Todo">
+                    <DataTemplate x:DataType="models:TodoListItem">
                         <Grid RowDefinitions="Auto" 
                               Padding="15,5">
                             

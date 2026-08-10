@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using System.Collections.ObjectModel;
 using TodoVoiceMaui.Models;
 using TodoVoiceMaui.Services;
+using TodoVoiceMaui.Core.Domain.Entities;
 
 namespace TodoVoiceMaui.ViewModels;
 
