@@ -8,9 +8,8 @@ namespace TodoVoiceMaui.ViewModels;
 
 public partial class SettingsPageViewModel : ObservableObject
 {
-    private readonly SupabaseService _supabaseService;
-    private readonly DatabaseService _databaseService;
     private readonly SyncService _syncService;
+    private readonly ITodoStore _todoStore;
 
     [ObservableProperty]
     private UserProfile? userProfile;
@@ -54,11 +53,10 @@ public partial class SettingsPageViewModel : ObservableObject
     [ObservableProperty]
     private bool isOnline = true;
 
-    public SettingsPageViewModel(SupabaseService supabaseService, DatabaseService databaseService, SyncService syncService)
+    public SettingsPageViewModel(SyncService syncService, ITodoStore todoStore)
     {
-        _supabaseService = supabaseService;
-        _databaseService = databaseService;
         _syncService = syncService;
+        _todoStore = todoStore;
 
         // Subscribe to sync service
         _syncService.PropertyChanged += OnSyncServicePropertyChanged;
@@ -78,12 +76,12 @@ public partial class SettingsPageViewModel : ObservableObject
         {
             IsLoading = true;
 
-            var user = _supabaseService.GetCurrentUser();
+            var user = _syncService.GetCurrentUser();
             if (user != null)
             {
                 Email = user.Email ?? string.Empty;
                 
-                UserProfile = await _supabaseService.GetOrCreateProfileAsync();
+                UserProfile = await _syncService.GetOrCreateProfileAsync();
                 if (UserProfile != null)
                 {
                     FullName = UserProfile.FullName ?? string.Empty;
@@ -112,7 +110,7 @@ public partial class SettingsPageViewModel : ObservableObject
     {
         try
         {
-            UserStats = await _supabaseService.GetUserStatsAsync();
+            UserStats = await _syncService.GetUserStatsAsync();
         }
         catch (Exception ex)
         {
@@ -132,7 +130,7 @@ public partial class SettingsPageViewModel : ObservableObject
                 fullName = string.IsNullOrWhiteSpace(FullName) ? null : FullName.Trim()
             };
 
-            var updatedProfile = await _supabaseService.UpdateProfileAsync(updates);
+            var updatedProfile = await _syncService.UpdateProfileAsync(updates);
             
             if (updatedProfile != null)
             {
@@ -167,7 +165,7 @@ public partial class SettingsPageViewModel : ObservableObject
                 ["defaultPriority"] = DefaultPriority
             };
 
-            var updatedProfile = await _supabaseService.UpdateProfileAsync(new { preferences });
+            var updatedProfile = await _syncService.UpdateProfileAsync(new { preferences });
             
             if (updatedProfile != null)
             {
@@ -218,7 +216,7 @@ public partial class SettingsPageViewModel : ObservableObject
         {
             try
             {
-                await _databaseService.ClearAllDataAsync();
+                await _todoStore.ClearAllDataAsync();
                 await Shell.Current.DisplayAlert("Başarılı", "Yerel veriler temizlendi.", "Tamam");
             }
             catch (Exception ex)
@@ -239,14 +237,14 @@ public partial class SettingsPageViewModel : ObservableObject
             {
                 IsLoading = true;
                 
-                await _supabaseService.SignOutAsync();
-                await _databaseService.ClearAllDataAsync();
+                await _syncService.SignOutAsync();
+                await _todoStore.ClearAllDataAsync();
                 
                 // Navigate to login page
                 if (Application.Current?.Windows.Count > 0)
                 {
                     Application.Current.Windows[0].Page =
-                        new NavigationPage(new LoginPage(new LoginPageViewModel(_supabaseService, _databaseService)));
+                        new NavigationPage(new LoginPage(new LoginPageViewModel(_syncService, _todoStore)));
                 }
             }
             catch (Exception ex)

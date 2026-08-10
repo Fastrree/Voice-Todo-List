@@ -13,7 +13,6 @@ public partial class TodoListPageViewModel : ObservableObject
 {
     private readonly SyncService _syncService;
     private readonly AudioService _audioService;
-    private readonly SupabaseService _supabaseService;
     private readonly SpeechToTextService _speechToTextService;
     private readonly IVoiceCommandParser _voiceCommandParser;
     private readonly IVoiceCommandHandler _voiceCommandHandler;
@@ -71,11 +70,10 @@ public partial class TodoListPageViewModel : ObservableObject
 
     private string? _pendingVoiceFilePath;
 
-    public TodoListPageViewModel(SyncService syncService, AudioService audioService, SupabaseService supabaseService, SpeechToTextService speechToTextService, IVoiceCommandParser voiceCommandParser, IVoiceCommandHandler voiceCommandHandler)
+    public TodoListPageViewModel(SyncService syncService, AudioService audioService, SpeechToTextService speechToTextService, IVoiceCommandParser voiceCommandParser, IVoiceCommandHandler voiceCommandHandler)
     {
         _syncService = syncService;
         _audioService = audioService;
-        _supabaseService = supabaseService;
         _speechToTextService = speechToTextService;
         _voiceCommandParser = voiceCommandParser;
         _voiceCommandHandler = voiceCommandHandler;
@@ -167,7 +165,7 @@ public partial class TodoListPageViewModel : ObservableObject
                         var base64Data = _audioService.ConvertToBase64(audioData);
                         var fileName = $"todo_voice_{DateTime.Now:yyyyMMdd_HHmmss}.wav";
                         
-                        var uploadedRecording = await _supabaseService.UploadVoiceRecordingAsync(base64Data, fileName, duration: (int)_audioService.RecordingDuration.TotalSeconds);
+                        var uploadedRecording = await _syncService.UploadVoiceRecordingAsync(base64Data, fileName, duration: (int)_audioService.RecordingDuration.TotalSeconds);
                         
                         if (uploadedRecording != null)
                         {

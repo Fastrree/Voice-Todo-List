@@ -39,7 +39,10 @@ Bir ajan bu klasöre ilk adım attığında bu dosyayı okur ve yoluna devam ede
 3. Görev tamamlanınca **ilgili dokümanlar güncellenir** (doküman sahibi ol).
 4. Regression guard (AGENT.md): her görev bitişi 4 soru — XAML/MAUI 8
    kısıtları, ses/transkripsiyon akışı, sync/local-first, tema.
-5. `C:\Users\sniya\Desktop\chicky-pos` **yalnız okunur** — asla değiştirilmez.
+5. **Audit → Drift Detection → Mini-Slice** (AGENT.md §6.2): mimari/sınır ihlali
+   fark edilince uygulamaya devam etmeden önce kısa audit yapılır; sapma en küçük
+   mini-slice ile düzeltilir, build doğrulanır, doküman güncellenir.
+6. `C:\Users\sniya\Desktop\chicky-pos` **yalnız okunur** — asla değiştirilmez.
 
 ---
 

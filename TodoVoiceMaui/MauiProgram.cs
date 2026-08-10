@@ -26,7 +26,7 @@ public static class MauiProgram
 		builder.Services.AddHttpClient();
 		builder.Services.AddSingleton<SupabaseService>();
 		builder.Services.AddSingleton<AudioService>();
-		builder.Services.AddSingleton<DatabaseService>();
+		builder.Services.AddSingleton<ITodoStore, DatabaseService>();
 		builder.Services.AddSingleton<SyncService>();
 		builder.Services.AddSingleton<ReminderService>();
 		builder.Services.AddSingleton<SpeechToTextService>();

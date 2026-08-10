@@ -52,7 +52,12 @@ git'te kalır). Geçmiş TUTMAZ — sadece bugünü anlatır.
 - `SyncService` 4 adım sync (profil → ses → todo push → todo pull)
 - Çevrimdışı→online geçişte otomatik sync
 - Login yokken `local-user` fallback ile çalışır
-- Güven: `HIGH` (logic doğrulandı; supabase çökmeden düşüş test edildi)
+- **Sync envelope (ADR-010/011):** `LocalTodo` `NeedsSync` (dirty) +
+  `IsDeleted` (tombstone) + `LocalVersion` taşır. Silme önce tombstone, server
+  onaylayınca purge edilir — offline silme kaybolmaz.
+- `ITodoStore` (ADR-012) veri katmanını soyutlar; ViewModel'ler `SupabaseService`'i
+  bilmez, `SyncService` facade'ı üzerinden remote erişir.
+- Güven: `HIGH` (build doğrulandı; supabase çökmeden düşüş test edildi)
 
 ### 🔐 Giriş / kayıt (LoginPage)
 - Kod tamam, ancak **varsayılan akışta atlanıyor** (login'siz prototip kararı)

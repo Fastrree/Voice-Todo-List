@@ -12,7 +12,6 @@ public partial class TodoDetailPageViewModel : ObservableObject
 {
     private readonly SyncService _syncService;
     private readonly AudioService _audioService;
-    private readonly SupabaseService _supabaseService;
 
     [ObservableProperty]
     private Todo? todo;
@@ -72,11 +71,10 @@ public partial class TodoDetailPageViewModel : ObservableObject
 
     private string? _pendingVoiceFilePath;
 
-    public TodoDetailPageViewModel(SyncService syncService, AudioService audioService, SupabaseService supabaseService)
+    public TodoDetailPageViewModel(SyncService syncService, AudioService audioService)
     {
         _syncService = syncService;
         _audioService = audioService;
-        _supabaseService = supabaseService;
 
         // Subscribe to audio service events
         _audioService.PropertyChanged += OnAudioServicePropertyChanged;
@@ -119,7 +117,7 @@ public partial class TodoDetailPageViewModel : ObservableObject
         {
             IsLoading = true;
 
-            var (todoDetail, recordings) = await _supabaseService.GetTodoWithVoiceAsync(Todo.Id);
+            var (todoDetail, recordings) = await _syncService.GetTodoWithVoiceAsync(Todo.Id);
 
             VoiceRecordings.Clear();
             if (recordings != null)
@@ -283,7 +281,7 @@ public partial class TodoDetailPageViewModel : ObservableObject
                 var fileName = $"todo_{Todo.Id}_voice_{DateTime.Now:yyyyMMdd_HHmmss}.wav";
                 var duration = (int)_audioService.RecordingDuration.TotalSeconds;
 
-                var uploadedRecording = await _supabaseService.UploadVoiceRecordingAsync(
+                var uploadedRecording = await _syncService.UploadVoiceRecordingAsync(
                     base64Data, fileName, Todo.Id, duration);
 
                 if (uploadedRecording != null)

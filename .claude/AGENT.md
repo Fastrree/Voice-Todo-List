@@ -149,6 +149,34 @@ davranışın hâlâ korunduğunu doğrula.
 
 ---
 
+## 6.2 Audit → Drift Detection → Mini-Slice
+
+Audit sadece mimariyi "incelemek" değildir: mevcut implementasyonun dokümante
+edilmiş mimariyle uyuşup uyuşmadığını sistematik olarak kontrol etmektir
+(drift detection). Dokümantasyon (architecture.md, ADR'ler, AGENT.md bağlayıcı
+kararları) ile gerçek kod arasında sapma bulunduğunda:
+
+```
+Dokümante edilmiş karar → Audit → Sapma/bug → Mini-slice → Build + doğrulama
+                                        → Dokümantasyonu güncelle
+```
+
+- **Tetikleyici:** mimari veya sınır ihlali (ADR ihlali, abstraction eksikliği,
+  veri integrity riski) fark edildiğinde, uygulamaya devam etmeden ÖNCE kısa
+  bir audit yapılır. Her küçük bug için tam audit yapılmaz.
+- **Mini-slice kapsamı:** sapma en küçük uygulanabilir düzeltme olarak
+  gerçekleştirilir (ör. `ITodoStore` + implementasyon + ViewModel yönlendirme +
+  build). Gereksiz genişletme YASAK.
+- **Bitirme:** build/doğrulama başarılı olmalı; etkilenen doküman
+  (architecture.md / ADR / learning.md) sapmanın giderildiği şekilde güncellenir.
+  Kararın kendisi değiştiyse ADR güncellenir (kullanıcı onayı gerekebilir,
+  Madde 5).
+
+Bu akış, mevcut çalışma tarzını resmileştirir; yeni framework veya seremoni
+yaratmaz.
+
+---
+
 ## 7. Sürüm ve Geçmiş (Git)
 
 Bu proje git kullanır. Sürüm ve geçmiş boyutunu GİT taşır — elle dosya

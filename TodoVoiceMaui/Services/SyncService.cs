@@ -8,17 +8,17 @@ namespace TodoVoiceMaui.Services;
 public class SyncService : INotifyPropertyChanged
 {
     private readonly SupabaseService _supabaseService;
-    private readonly DatabaseService _databaseService;
+    private readonly ITodoStore _todoStore;
     private readonly AudioService _audioService;
     private bool _isSyncing;
     private bool _isOnline = true;
     private DateTime _lastSyncTime = DateTime.MinValue;
     private Timer? _syncTimer;
 
-    public SyncService(SupabaseService supabaseService, DatabaseService databaseService, AudioService audioService)
+    public SyncService(SupabaseService supabaseService, ITodoStore todoStore, AudioService audioService)
     {
         _supabaseService = supabaseService;
-        _databaseService = databaseService;
+        _todoStore = todoStore;
         _audioService = audioService;
 
         // Setup connectivity monitoring
@@ -131,7 +131,7 @@ public class SyncService : INotifyPropertyChanged
             var user = _supabaseService.GetCurrentUser();
             if (user == null) return;
 
-            var localProfile = await _databaseService.GetUserProfileAsync(user.Id);
+            var localProfile = await _todoStore.GetUserProfileAsync(user.Id);
             var serverProfile = await _supabaseService.GetOrCreateProfileAsync(
                 localProfile?.FullName, 
                 localProfile != null ? new Dictionary<string, object> { ["preferences"] = localProfile.PreferencesJson } : null
@@ -149,7 +149,7 @@ public class SyncService : INotifyPropertyChanged
                     PreferencesJson = System.Text.Json.JsonSerializer.Serialize(serverProfile.Preferences),
                     NeedsSync = false
                 };
-                await _databaseService.SaveUserProfileAsync(newLocalProfile);
+                await _todoStore.SaveUserProfileAsync(newLocalProfile);
             }
         }
         catch (Exception ex)
@@ -162,7 +162,7 @@ public class SyncService : INotifyPropertyChanged
     {
         try
         {
-            var pendingRecordings = await _databaseService.GetVoiceRecordingsAsync();
+            var pendingRecordings = await _todoStore.GetVoiceRecordingsAsync();
             var needsUpload = pendingRecordings.Where(r => r.NeedsSync && !string.IsNullOrEmpty(r.LocalFilePath) && File.Exists(r.LocalFilePath)).ToList();
 
             foreach (var recording in needsUpload)
@@ -181,9 +181,9 @@ public class SyncService : INotifyPropertyChanged
                             // Update local record with server URL
                             recording.FileUrl = uploadedRecording.FileUrl;
                             recording.NeedsSync = false;
-                            await _databaseService.SaveVoiceRecordingAsync(recording);
+                            await _todoStore.SaveVoiceRecordingAsync(recording);
 
-                            await _databaseService.UpdateSyncStatusAsync(recording.Id, "VoiceRecording", true);
+                            await _todoStore.UpdateSyncStatusAsync(recording.Id, "VoiceRecording", true);
                         }
                     }
                 }
@@ -203,15 +203,27 @@ public class SyncService : INotifyPropertyChanged
     {
         try
         {
-            var pendingTodos = await _databaseService.GetPendingTodosAsync();
+            var pendingTodos = await _todoStore.GetPendingTodosAsync();
 
             foreach (var localTodo in pendingTodos)
             {
                 try
                 {
+                    // Tombstone: push the delete to the server, then remove locally
+                    if (localTodo.IsDeleted)
+                    {
+                        var deleted = await _supabaseService.DeleteTodoAsync(localTodo.Id);
+                        if (deleted)
+                        {
+                            await _todoStore.DeleteTodoAsync(localTodo.Id);
+                            await _todoStore.UpdateSyncStatusAsync(localTodo.Id, "Todo", true);
+                        }
+                        continue;
+                    }
+
                     TodoDto? serverTodo = null;
 
-                    if (await _databaseService.GetSyncStatusAsync(localTodo.Id) == null)
+                    if (await _todoStore.GetSyncStatusAsync(localTodo.Id) == null)
                     {
                         // Create new todo on server
                         serverTodo = await _supabaseService.CreateTodoAsync(
@@ -242,8 +254,8 @@ public class SyncService : INotifyPropertyChanged
                     {
                         // Update local record
                         localTodo.NeedsSync = false;
-                        await _databaseService.SaveTodoAsync(localTodo);
-                        await _databaseService.UpdateSyncStatusAsync(localTodo.Id, "Todo", true);
+                        await _todoStore.SaveTodoAsync(localTodo);
+                        await _todoStore.UpdateSyncStatusAsync(localTodo.Id, "Todo", true);
                     }
                 }
                 catch (Exception ex)
@@ -266,20 +278,20 @@ public class SyncService : INotifyPropertyChanged
 
             foreach (var serverTodo in serverTodos)
             {
-                var localTodo = await _databaseService.GetTodoAsync(serverTodo.Id);
+                var localTodo = await _todoStore.GetTodoAsync(serverTodo.Id);
                 
                 if (localTodo == null)
                 {
                     // New todo from server, add to local
                     var newLocalTodo = LocalTodo.FromTodo(serverTodo.ToTodo(), false);
-                    await _databaseService.SaveTodoAsync(newLocalTodo);
-                    await _databaseService.UpdateSyncStatusAsync(serverTodo.Id, "Todo", true);
+                    await _todoStore.SaveTodoAsync(newLocalTodo);
+                    await _todoStore.UpdateSyncStatusAsync(serverTodo.Id, "Todo", true);
                 }
-                else if (serverTodo.UpdatedAt > localTodo.UpdatedAt && !localTodo.NeedsSync)
+                else if (!localTodo.NeedsSync && !localTodo.IsDeleted && serverTodo.UpdatedAt > localTodo.UpdatedAt)
                 {
                     // Server version is newer and local doesn't have pending changes
                     var updatedLocalTodo = LocalTodo.FromTodo(serverTodo.ToTodo(), false);
-                    await _databaseService.SaveTodoAsync(updatedLocalTodo);
+                    await _todoStore.SaveTodoAsync(updatedLocalTodo);
                 }
             }
         }
@@ -304,11 +316,11 @@ public class SyncService : INotifyPropertyChanged
                 Description = description,
                 Priority = priority,
                 DueDate = dueDate,
-                NeedsSync = false
+                NeedsSync = true
             };
 
             // Save locally first
-            await _databaseService.SaveTodoAsync(localTodo);
+            await _todoStore.SaveTodoAsync(localTodo);
 
             // Try to sync immediately if online and logged in
             if (IsOnline && user != null)
@@ -319,8 +331,8 @@ public class SyncService : INotifyPropertyChanged
                     if (serverTodo != null)
                     {
                         localTodo.NeedsSync = false;
-                        await _databaseService.SaveTodoAsync(localTodo);
-                        await _databaseService.UpdateSyncStatusAsync(localTodo.Id, "Todo", true);
+                        await _todoStore.SaveTodoAsync(localTodo);
+                        await _todoStore.UpdateSyncStatusAsync(localTodo.Id, "Todo", true);
                     }
                 }
                 catch (Exception ex)
@@ -343,7 +355,7 @@ public class SyncService : INotifyPropertyChanged
     {
         try
         {
-            var localTodo = await _databaseService.GetTodoAsync(id);
+            var localTodo = await _todoStore.GetTodoAsync(id);
             if (localTodo == null) return false;
 
             // Apply updates to local todo
@@ -363,7 +375,7 @@ public class SyncService : INotifyPropertyChanged
             localTodo.UpdatedAt = DateTime.UtcNow;
             
             // Save locally first
-            await _databaseService.SaveTodoAsync(localTodo);
+            await _todoStore.SaveTodoAsync(localTodo);
 
             // Try to sync immediately if online
             if (IsOnline)
@@ -374,7 +386,7 @@ public class SyncService : INotifyPropertyChanged
                     if (serverTodo != null)
                     {
                         localTodo.NeedsSync = false;
-                        await _databaseService.SaveTodoAsync(localTodo);
+                        await _todoStore.SaveTodoAsync(localTodo);
                     }
                 }
                 catch (Exception ex)
@@ -397,20 +409,32 @@ public class SyncService : INotifyPropertyChanged
     {
         try
         {
-            // Delete locally first
-            await _databaseService.DeleteTodoAsync(id);
+            var localTodo = await _todoStore.GetTodoAsync(id);
+            if (localTodo == null) return false;
 
-            // Try to delete from server if online
+            // Mark as tombstone locally first (ADR-010: delete must reach server,
+            // offline deletes are never lost). UI hides tombstones via GetTodosAsync.
+            localTodo.IsDeleted = true;
+            localTodo.NeedsSync = true;
+            localTodo.UpdatedAt = DateTime.UtcNow;
+            await _todoStore.SaveTodoAsync(localTodo);
+
+            // Try to delete from server if online (best-effort; periodic sync retries)
             if (IsOnline)
             {
                 try
                 {
-                    await _supabaseService.DeleteTodoAsync(id);
+                    var deleted = await _supabaseService.DeleteTodoAsync(id);
+                    if (deleted)
+                    {
+                        // Server confirmed: purge the tombstone locally (no re-delete on next sync)
+                        await _todoStore.DeleteTodoAsync(id);
+                        await _todoStore.UpdateSyncStatusAsync(id, "Todo", true);
+                    }
                 }
                 catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine($"Server delete failed: {ex.Message}");
-                    // Todo is already deleted locally
                 }
             }
 
@@ -427,7 +451,7 @@ public class SyncService : INotifyPropertyChanged
     {
         try
         {
-            var localTodos = await _databaseService.GetTodosAsync();
+            var localTodos = await _todoStore.GetTodosAsync();
             return localTodos.Select(t => t.ToTodo()).ToList();
         }
         catch (Exception ex)
@@ -436,6 +460,33 @@ public class SyncService : INotifyPropertyChanged
             return new List<Todo>();
         }
     }
+
+    // ---- Remote facade (ADR-012: Application must not see SupabaseService) ----
+
+    public async Task InitializeAsync() => await _supabaseService.InitializeAsync();
+
+    public Task<bool> IsUserLoggedInAsync() => _supabaseService.IsUserLoggedInAsync();
+
+    public Task<bool> SignInAsync(string email, string password) => _supabaseService.SignInAsync(email, password);
+
+    public Task<bool> SignUpAsync(string email, string password) => _supabaseService.SignUpAsync(email, password);
+
+    public Task<bool> SignOutAsync() => _supabaseService.SignOutAsync();
+
+    public Supabase.Gotrue.User? GetCurrentUser() => _supabaseService.GetCurrentUser();
+
+    public Task<UserProfile?> GetOrCreateProfileAsync(string? fullName = null, Dictionary<string, object>? preferences = null)
+        => _supabaseService.GetOrCreateProfileAsync(fullName, preferences);
+
+    public Task<UserProfile?> UpdateProfileAsync(object updates) => _supabaseService.UpdateProfileAsync(updates);
+
+    public Task<UserStats?> GetUserStatsAsync() => _supabaseService.GetUserStatsAsync();
+
+    public Task<VoiceRecording?> UploadVoiceRecordingAsync(string audioData, string fileName, string? todoId = null, int? duration = null)
+        => _supabaseService.UploadVoiceRecordingAsync(audioData, fileName, todoId, duration);
+
+    public Task<(TodoDto?, List<VoiceRecording>)> GetTodoWithVoiceAsync(string todoId)
+        => _supabaseService.GetTodoWithVoiceAsync(todoId);
 
     public void Dispose()
     {

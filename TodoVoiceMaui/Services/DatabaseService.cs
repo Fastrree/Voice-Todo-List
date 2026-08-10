@@ -4,7 +4,7 @@ using TodoVoiceMaui.Core.Domain.Entities;
 
 namespace TodoVoiceMaui.Services;
 
-public class DatabaseService
+public class DatabaseService : ITodoStore
 {
     private SQLiteAsyncConnection? _database;
 
@@ -35,6 +35,14 @@ public class DatabaseService
             {
                 await Database.ExecuteAsync("ALTER TABLE Todos ADD COLUMN ReminderAt datetime");
             }
+            if (columns.All(c => c.Name != "IsDeleted"))
+            {
+                await Database.ExecuteAsync("ALTER TABLE Todos ADD COLUMN IsDeleted integer NOT NULL DEFAULT 0");
+            }
+            if (columns.All(c => c.Name != "LocalVersion"))
+            {
+                await Database.ExecuteAsync("ALTER TABLE Todos ADD COLUMN LocalVersion integer NOT NULL DEFAULT 0");
+            }
         }
         catch
         {
@@ -55,6 +63,7 @@ public class DatabaseService
     {
         await InitAsync();
         return await Database.Table<LocalTodo>()
+                            .Where(t => !t.IsDeleted)
                             .OrderByDescending(t => t.CreatedAt)
                             .ToListAsync();
     }
@@ -67,28 +76,31 @@ public class DatabaseService
                             .FirstOrDefaultAsync();
     }
 
-    public async Task<int> SaveTodoAsync(LocalTodo todo)
+    public async Task<bool> SaveTodoAsync(LocalTodo todo)
     {
         await InitAsync();
         
         if (string.IsNullOrEmpty(todo.Id))
             todo.Id = Guid.NewGuid().ToString();
         
-        todo.UpdatedAt = DateTime.UtcNow;
-        
         var existing = await GetTodoAsync(todo.Id);
         if (existing != null)
         {
-            return await Database.UpdateAsync(todo);
+            todo.CreatedAt = existing.CreatedAt;
+            todo.LocalVersion = existing.LocalVersion + 1;
+            todo.UpdatedAt = DateTime.UtcNow;
+            return await Database.UpdateAsync(todo) > 0;
         }
         else
         {
+            todo.LocalVersion = 1;
             todo.CreatedAt = DateTime.UtcNow;
-            return await Database.InsertAsync(todo);
+            todo.UpdatedAt = DateTime.UtcNow;
+            return await Database.InsertAsync(todo) > 0;
         }
     }
 
-    public async Task<int> DeleteTodoAsync(string id)
+    public async Task<bool> DeleteTodoAsync(string id)
     {
         await InitAsync();
         
@@ -99,7 +111,7 @@ public class DatabaseService
         
         return await Database.Table<LocalTodo>()
                              .Where(t => t.Id == id)
-                             .DeleteAsync();
+                             .DeleteAsync() > 0;
     }
 
     public async Task<List<LocalTodo>> GetPendingTodosAsync()
@@ -123,7 +135,7 @@ public class DatabaseService
                          .ToListAsync();
     }
 
-    public async Task<int> SaveVoiceRecordingAsync(LocalVoiceRecording recording)
+    public async Task<bool> SaveVoiceRecordingAsync(LocalVoiceRecording recording)
     {
         await InitAsync();
         
@@ -136,21 +148,21 @@ public class DatabaseService
         
         if (existing != null)
         {
-            return await Database.UpdateAsync(recording);
+            return await Database.UpdateAsync(recording) > 0;
         }
         else
         {
             recording.CreatedAt = DateTime.UtcNow;
-            return await Database.InsertAsync(recording);
+            return await Database.InsertAsync(recording) > 0;
         }
     }
 
-    public async Task<int> DeleteVoiceRecordingAsync(string id)
+    public async Task<bool> DeleteVoiceRecordingAsync(string id)
     {
         await InitAsync();
         return await Database.Table<LocalVoiceRecording>()
                              .Where(v => v.Id == id)
-                             .DeleteAsync();
+                             .DeleteAsync() > 0;
     }
 
     // User profile operations
@@ -162,7 +174,7 @@ public class DatabaseService
                             .FirstOrDefaultAsync();
     }
 
-    public async Task<int> SaveUserProfileAsync(LocalUserProfile profile)
+    public async Task<bool> SaveUserProfileAsync(LocalUserProfile profile)
     {
         await InitAsync();
         
@@ -171,12 +183,12 @@ public class DatabaseService
         var existing = await GetUserProfileAsync(profile.Id);
         if (existing != null)
         {
-            return await Database.UpdateAsync(profile);
+            return await Database.UpdateAsync(profile) > 0;
         }
         else
         {
             profile.CreatedAt = DateTime.UtcNow;
-            return await Database.InsertAsync(profile);
+            return await Database.InsertAsync(profile) > 0;
         }
     }
 
@@ -189,7 +201,7 @@ public class DatabaseService
                             .FirstOrDefaultAsync();
     }
 
-    public async Task<int> UpdateSyncStatusAsync(string entityId, string entityType, bool synced, DateTime? lastSyncAt = null)
+    public async Task<bool> UpdateSyncStatusAsync(string entityId, string entityType, bool synced, DateTime? lastSyncAt = null)
     {
         await InitAsync();
         
@@ -204,11 +216,11 @@ public class DatabaseService
         
         if (await GetSyncStatusAsync(entityId) != null)
         {
-            return await Database.UpdateAsync(syncStatus);
+            return await Database.UpdateAsync(syncStatus) > 0;
         }
         else
         {
-            return await Database.InsertAsync(syncStatus);
+            return await Database.InsertAsync(syncStatus) > 0;
         }
     }
 
@@ -250,6 +262,8 @@ public class LocalTodo
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public bool NeedsSync { get; set; } = true;
+    public bool IsDeleted { get; set; }
+    public int LocalVersion { get; set; }
     public string? LocalVoiceFilePath { get; set; }
 
     // Convert to API model
@@ -289,7 +303,8 @@ public class LocalTodo
             ReminderAt = todo.ReminderAt,
             CreatedAt = todo.CreatedAt,
             UpdatedAt = todo.UpdatedAt,
-            NeedsSync = needsSync
+            NeedsSync = needsSync,
+            LocalVersion = 1
         };
     }
 }

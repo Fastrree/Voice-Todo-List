@@ -170,6 +170,10 @@ değerli olan tekler: `ISpeechTranscriber` (Windows→Azure/Whisper),
 `SupabaseService`'e interface YOK — Application onu bilmez, `ITodoStore`/sync
 abstraction'ının arkasında altta kalır.
 
+Uygulandı (C0 mini-slice): `ITodoStore` = `DatabaseService`; `SyncService`
+remote facade olarak SupabaseService'i sarmalar; ViewModel'ler yalnızca
+`SyncService` + `ITodoStore` görür.
+
 ### ADR-013: VoiceFlowState = Application ↔ UI sözleşmesi
 `Idle → Listening → Processing → Recognized → Failed`. UI bu state'i render
 eder, kendi türetmez. Visual language (Liquid Glass + motion) bu state'in
@@ -225,17 +229,23 @@ Tam temiz rebuild: `-t:Rebuild` eklenir.
 
 ## 5. Veri Katmanı
 
-### SQLite (DatabaseService)
+### SQLite (DatabaseService : ITodoStore)
 Tablolar (Local* sınıfları):
 - `LocalTodo` — id, user_id, title, description, completed, priority, due_date,
-  reminder_at, voice_recording_url, voice_duration, needs_sync, created/updated_at
+  reminder_at, voice_recording_url, voice_duration, needs_sync, is_deleted,
+  local_version, created/updated_at
 - `LocalVoiceRecording` — id, todo_id, user_id, file_url, file_name, file_size,
   duration, mime_type, created_at, needs_sync
 - `LocalUserProfile` — id, email, full_name, avatar_url, preferences_json
 - Sync durumu ayrı tabloda tutulur.
 
-Migration: `MigrateAsync` PRAGMA + `ALTER TABLE` ile `reminder_at` sütunu
-mevcut DB'lere eklenir (mevcut veriyi korur).
+**Sync envelope (ADR-010/011):** `NeedsSync` (dirty) + `IsDeleted` (tombstone) +
+`LocalVersion` (client-local revision). Silme önce tombstone işaretlenir; server
+DELETE onaylarsa purge edilir. Offline silme kaybolmaz. `GetTodosAsync` tombstone
+kayıtları gizler (UI listesi temiz); `GetPendingTodosAsync` dahil eder (sync).
+
+Migration: `MigrateAsync` PRAGMA + `ALTER TABLE` ile `reminder_at`, `is_deleted`,
+`local_version` sütunları mevcut DB'lere eklenir (mevcut veriyi korur).
 
 ### Supabase (SupabaseService)
 - Auth: `SignInAsync`, `SignUpAsync`, `SignOutAsync`, `GetCurrentUser`
@@ -244,9 +254,13 @@ mevcut DB'lere eklenir (mevcut veriyi korur).
   - `user-profile` (profil + istatistik)
   - `voice-upload` (base64 ses yükleme)
 - Storage: `voice-recordings` bucket
+- **ADR-012:** ViewModel'ler SupabaseService'i GÖRMEZ. Remote erişim `SyncService`
+  facade'ı üzerinden; local erişim `ITodoStore` üzerinden.
 
 ### Sync (SyncService)
 - `SyncAllAsync`: profil → ses yükleme → todo push → todo pull (4 adım)
+- Push önce, pull sonra (ADR-011: local dirty asla sessizce silinmez).
+  Pull'da `NeedsSync || IsDeleted` ise local korunur.
 - `IsOnline` / `LastSyncTime` / `IsSyncing` PropertyChanged ile UI'a yansır
 - Connectivity değişince (çevrimdışı→online) otomatik `SyncAllAsync`
 - `UpdateTodoAsync` reflect'te `BindingFlags.IgnoreCase` kullanır
@@ -292,15 +306,15 @@ Navigasyon: Shell tab + `Routing.RegisterRoute(nameof(TodoDetailPage))`.
 
 ## 8. DI Kayıtları (MauiProgram.cs)
 
-Singleton: `IAudioManager`, `SupabaseService`, `AudioService`, `DatabaseService`,
-`SyncService`, `ReminderService`, `SpeechToTextService`, `MainPage`,
-`MainPageViewModel`.
+Singleton: `IAudioManager`, `SupabaseService`, `AudioService`, `ITodoStore`
+(`DatabaseService`), `SyncService`, `ReminderService`, `SpeechToTextService`,
+`MainPage`, `MainPageViewModel`.
 Transient: `LoginPageViewModel`, `TodoListPageViewModel`, `TodoDetailPageViewModel`,
 `SettingsPageViewModel` + ilgili sayfalar.
 `AddHttpClient()` kayıtlı.
 
-Seam abstraction'ları (B-dilimi sonrası): `ISpeechTranscriber`,
-`IVoiceCommandParser`, `ITodoStore` DI'ya bağlanır (ADR-012).
+Seam abstraction'ları (uygulandı): `ITodoStore` (local), `IVoiceCommandParser`,
+`ISpeechTranscriber`, `IVoiceCommandHandler` DI'ya bağlanır (ADR-012).
 
 ---
 

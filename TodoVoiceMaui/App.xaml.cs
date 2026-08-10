@@ -6,13 +6,13 @@ namespace TodoVoiceMaui;
 
 public partial class App : Application
 {
-	private readonly SupabaseService _supabaseService;
+	private readonly SyncService _syncService;
 	private readonly ReminderService _reminderService;
 
-	public App(SupabaseService supabaseService, ReminderService reminderService)
+	public App(SyncService syncService, ReminderService reminderService)
 	{
 		InitializeComponent();
-		_supabaseService = supabaseService;
+		_syncService = syncService;
 		_reminderService = reminderService;
 		ThemeService.ApplySavedTheme();
 	}
@@ -38,10 +38,10 @@ public partial class App : Application
 	{
 		try
 		{
-			await _supabaseService.InitializeAsync();
+			await _syncService.InitializeAsync();
 
 			// Prototype flow: no login required, go straight to the todo list.
-			var isLoggedIn = await _supabaseService.IsUserLoggedInAsync();
+			var isLoggedIn = await _syncService.IsUserLoggedInAsync();
 			if (isLoggedIn)
 			{
 				_reminderService.Start();

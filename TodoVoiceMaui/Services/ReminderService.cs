@@ -4,13 +4,13 @@ namespace TodoVoiceMaui.Services;
 
 public class ReminderService : IDisposable
 {
-    private readonly DatabaseService _databaseService;
+    private readonly ITodoStore _todoStore;
     private CancellationTokenSource? _cts;
     private readonly HashSet<string> _firedReminders = new();
 
-    public ReminderService(DatabaseService databaseService)
+    public ReminderService(ITodoStore todoStore)
     {
-        _databaseService = databaseService;
+        _todoStore = todoStore;
     }
 
     public void Start()
@@ -51,7 +51,7 @@ public class ReminderService : IDisposable
     {
         try
         {
-            var todos = await _databaseService.GetTodosAsync();
+            var todos = await _todoStore.GetTodosAsync();
             var now = DateTime.Now;
 
             foreach (var todo in todos)

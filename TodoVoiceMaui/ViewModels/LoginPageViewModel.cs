@@ -7,8 +7,8 @@ namespace TodoVoiceMaui.ViewModels;
 
 public partial class LoginPageViewModel : ObservableObject
 {
-    private readonly SupabaseService _supabaseService;
-    private readonly DatabaseService _databaseService;
+    private readonly SyncService _syncService;
+    private readonly ITodoStore _todoStore;
 
     [ObservableProperty]
     private string email = string.Empty;
@@ -31,10 +31,10 @@ public partial class LoginPageViewModel : ObservableObject
     [ObservableProperty]
     private bool hasError = false;
 
-    public LoginPageViewModel(SupabaseService supabaseService, DatabaseService databaseService)
+    public LoginPageViewModel(SyncService syncService, ITodoStore todoStore)
     {
-        _supabaseService = supabaseService;
-        _databaseService = databaseService;
+        _syncService = syncService;
+        _todoStore = todoStore;
     }
 
     [RelayCommand]
@@ -50,12 +50,12 @@ public partial class LoginPageViewModel : ObservableObject
             if (!ValidateInput())
                 return;
 
-            var success = await _supabaseService.SignInAsync(Email, Password);
+            var success = await _syncService.SignInAsync(Email, Password);
             
             if (success)
             {
                 // Initialize local database
-                await _databaseService.InitAsync();
+                await _todoStore.InitAsync();
                 
                 // Navigate to main app
                 if (Application.Current?.Windows.Count > 0)
@@ -91,7 +91,7 @@ public partial class LoginPageViewModel : ObservableObject
             if (!ValidateSignupInput())
                 return;
 
-            var success = await _supabaseService.SignUpAsync(Email, Password);
+            var success = await _syncService.SignUpAsync(Email, Password);
             
             if (success)
             {

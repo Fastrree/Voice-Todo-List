@@ -6,8 +6,8 @@ namespace TodoVoiceMaui.ViewModels;
 
 public partial class MainPageViewModel : ObservableObject
 {
-    private readonly SupabaseService _supabaseService;
-    private readonly DatabaseService _databaseService;
+    private readonly SyncService _syncService;
+    private readonly ITodoStore _todoStore;
 
     [ObservableProperty]
     private string welcomeMessage = "Todo Voice'a Hoş Geldiniz";
@@ -30,16 +30,16 @@ public partial class MainPageViewModel : ObservableObject
     [ObservableProperty]
     private bool isLoadingStats;
 
-    public MainPageViewModel(SupabaseService supabaseService, DatabaseService databaseService)
+    public MainPageViewModel(SyncService syncService, ITodoStore todoStore)
     {
-        _supabaseService = supabaseService;
-        _databaseService = databaseService;
+        _syncService = syncService;
+        _todoStore = todoStore;
         LoadUserInfo();
     }
 
     private void LoadUserInfo()
     {
-        var user = _supabaseService.GetCurrentUser();
+        var user = _syncService.GetCurrentUser();
         if (user != null)
         {
             UserDisplayName = user.Email?.Split('@')[0] ?? "Kullanıcı";
@@ -72,8 +72,8 @@ public partial class MainPageViewModel : ObservableObject
         try
         {
             IsLoadingStats = true;
-            var todos = await _databaseService.GetTodosAsync();
-            var todosWithVoice = await _databaseService.GetVoiceRecordingsAsync();
+            var todos = await _todoStore.GetTodosAsync();
+            var todosWithVoice = await _todoStore.GetVoiceRecordingsAsync();
 
             TotalTodos = todos.Count;
             CompletedTodos = todos.Count(t => t.Completed);
