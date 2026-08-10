@@ -4,6 +4,9 @@ using System.Collections.ObjectModel;
 using TodoVoiceMaui.Models;
 using TodoVoiceMaui.Services;
 using TodoVoiceMaui.Views;
+using TodoVoiceMaui.Core.Application.Voice;
+using TodoVoiceMaui.Core.Domain.Entities;
+
 namespace TodoVoiceMaui.ViewModels;
 
 public partial class TodoListPageViewModel : ObservableObject
@@ -12,6 +15,8 @@ public partial class TodoListPageViewModel : ObservableObject
     private readonly AudioService _audioService;
     private readonly SupabaseService _supabaseService;
     private readonly SpeechToTextService _speechToTextService;
+    private readonly IVoiceCommandParser _voiceCommandParser;
+    private readonly IVoiceCommandHandler _voiceCommandHandler;
 
     [ObservableProperty]
     private ObservableCollection<TodoListItem> todos = new();
@@ -59,23 +64,21 @@ public partial class TodoListPageViewModel : ObservableObject
     private string syncStatus = "Senkronize edildi";
 
     [ObservableProperty]
-    private bool isSpeechListening = false;
-
-    [ObservableProperty]
-    private string speechStatus = string.Empty;
+    private VoiceFlowState voiceFlowState = VoiceFlowState.Idle;
 
     [ObservableProperty]
     private string liveTranscript = string.Empty;
 
     private string? _pendingVoiceFilePath;
 
-    public TodoListPageViewModel(SyncService syncService, AudioService audioService, SupabaseService supabaseService, SpeechToTextService speechToTextService)
+    public TodoListPageViewModel(SyncService syncService, AudioService audioService, SupabaseService supabaseService, SpeechToTextService speechToTextService, IVoiceCommandParser voiceCommandParser, IVoiceCommandHandler voiceCommandHandler)
     {
         _syncService = syncService;
         _audioService = audioService;
         _supabaseService = supabaseService;
         _speechToTextService = speechToTextService;
-
+        _voiceCommandParser = voiceCommandParser;
+        _voiceCommandHandler = voiceCommandHandler;
         // Subscribe to service events
         _syncService.PropertyChanged += OnSyncServicePropertyChanged;
         _syncService.SyncProgress += OnSyncProgress;
@@ -256,7 +259,7 @@ public partial class TodoListPageViewModel : ObservableObject
     [RelayCommand]
     private async Task StartSpeechToTextAsync()
     {
-        if (IsSpeechListening)
+        if (VoiceFlowState == VoiceFlowState.Listening)
         {
             await StopSpeechToTextAsync();
             return;
@@ -270,21 +273,18 @@ public partial class TodoListPageViewModel : ObservableObject
 
         try
         {
-            IsSpeechListening = true;
-            SpeechStatus = "Dinliyor... konuşun";
+            VoiceFlowState = VoiceFlowState.Listening;
             LiveTranscript = string.Empty;
 
             var started = await _speechToTextService.StartListeningAsync();
             if (!started)
             {
-                IsSpeechListening = false;
-                SpeechStatus = string.Empty;
+                VoiceFlowState = VoiceFlowState.Failed;
             }
         }
         catch (Exception ex)
         {
-            IsSpeechListening = false;
-            SpeechStatus = string.Empty;
+            VoiceFlowState = VoiceFlowState.Failed;
             await Shell.Current.DisplayAlert("Hata", $"Ses tanıma hatası: {ex.Message}", "Tamam");
         }
     }
@@ -293,8 +293,7 @@ public partial class TodoListPageViewModel : ObservableObject
     private async Task StopSpeechToTextAsync()
     {
         await _speechToTextService.StopListeningAsync();
-        IsSpeechListening = false;
-        SpeechStatus = string.Empty;
+        VoiceFlowState = VoiceFlowState.Processing;
         LiveTranscript = string.Empty;
     }
 
@@ -525,14 +524,41 @@ public partial class TodoListPageViewModel : ObservableObject
         {
             if (string.IsNullOrWhiteSpace(text)) return;
 
+            VoiceFlowState = VoiceFlowState.Processing;
             LiveTranscript = string.Empty;
-            SpeechStatus = "✓ Tanındı: \"" + text + "\"";
 
-            NewTodoTitle = text;
+            try
+            {
+                var transcription = new TranscriptionResult(
+                    text,
+                    TranscriptionConfidence.Medium,
+                    provider: "windows-speech");
 
-            // Auto-add the todo
-            await AddTodoAsync();
-            SpeechStatus = string.Empty;
+                var command = _voiceCommandParser.Parse(transcription);
+                var result = await _voiceCommandHandler.HandleAsync(command);
+
+                if (result.Success)
+                {
+                    VoiceFlowState = VoiceFlowState.Recognized;
+                    NewTodoTitle = string.Empty;
+                    await LoadTodosAsync();
+                }
+                else
+                {
+                    VoiceFlowState = VoiceFlowState.Failed;
+                    await Shell.Current.DisplayAlert("Ses Komutu", result.Message ?? "Komut işlenemedi.", "Tamam");
+                }
+            }
+            catch (Exception ex)
+            {
+                VoiceFlowState = VoiceFlowState.Failed;
+                System.Diagnostics.Debug.WriteLine($"Voice command failed: {ex.Message}");
+                await Shell.Current.DisplayAlert("Hata", $"Komut işlenirken hata oluştu: {ex.Message}", "Tamam");
+            }
+            finally
+            {
+                VoiceFlowState = VoiceFlowState.Idle;
+            }
         });
     }
 
@@ -540,10 +566,10 @@ public partial class TodoListPageViewModel : ObservableObject
     {
         MainThread.BeginInvokeOnMainThread(async () =>
         {
-            IsSpeechListening = false;
-            SpeechStatus = string.Empty;
+            VoiceFlowState = VoiceFlowState.Failed;
             LiveTranscript = string.Empty;
             await Shell.Current.DisplayAlert("Ses Tanıma", error.Message, "Tamam");
+            VoiceFlowState = VoiceFlowState.Idle;
         });
     }
 
@@ -554,4 +580,22 @@ public partial class TodoListPageViewModel : ObservableObject
     public int CompletedTodosCount => Todos.Count(t => t.Completed);
     public int PendingTodosCount => Todos.Count(t => !t.Completed);
     public int VoiceTodosCount => Todos.Count(t => t.HasVoiceRecording);
+
+    // Voice flow — UI state derived from the single Core source of truth
+    public bool IsSpeechListening => VoiceFlowState == VoiceFlowState.Listening;
+
+    public string SpeechStatus => VoiceFlowState switch
+    {
+        VoiceFlowState.Listening => "Dinliyor... konuşun",
+        VoiceFlowState.Processing => "İşleniyor...",
+        VoiceFlowState.Recognized => "✓ Tanındı",
+        VoiceFlowState.Failed => "Anlaşılamadı",
+        _ => string.Empty
+    };
+
+    partial void OnVoiceFlowStateChanged(VoiceFlowState value)
+    {
+        OnPropertyChanged(nameof(IsSpeechListening));
+        OnPropertyChanged(nameof(SpeechStatus));
+    }
 }

@@ -4,6 +4,8 @@ using TodoVoiceMaui.Views;
 using TodoVoiceMaui.Services;
 using CommunityToolkit.Maui;
 using Plugin.Maui.Audio;
+using TodoVoiceMaui.Core.Application.Voice;
+using TodoVoiceMaui.Core.Application.Todos;
 
 namespace TodoVoiceMaui;
 
@@ -28,6 +30,11 @@ public static class MauiProgram
 		builder.Services.AddSingleton<SyncService>();
 		builder.Services.AddSingleton<ReminderService>();
 		builder.Services.AddSingleton<SpeechToTextService>();
+
+		// Voice core wiring
+		builder.Services.AddSingleton<IVoiceCommandParser, RuleBasedVoiceCommandParser>();
+		builder.Services.AddSingleton<ITodoCommandSink, TodoCommandSink>();
+		builder.Services.AddSingleton<IVoiceCommandHandler, TodoVoiceCommandHandler>();
 
 		// Register ViewModels
 		builder.Services.AddSingleton<MainPageViewModel>();
