@@ -52,11 +52,13 @@
     <Color x:Key="Danger">#EF4444</Color>
     <Color x:Key="Info">#3B82F6</Color>
 
-    <!-- VOICE / RECORDING -->
+    <!-- Voice recording (eski adlar, yeni Soft token'larına işaret eder) -->
     <Color x:Key="Recording">#EF4444</Color>
     <Color x:Key="RecordingSoft">#FDEFF0</Color>
+    <Color x:Key="RecordingBackground">#FDEFF0</Color>
     <Color x:Key="VoiceReady">#10B981</Color>
     <Color x:Key="VoiceReadySoft">#E9F9F1</Color>
+    <Color x:Key="VoiceReadyBackground">#E9F9F1</Color>
 
     <!-- PRIORITY -->
     <Color x:Key="PriorityHigh">#EF4444</Color>

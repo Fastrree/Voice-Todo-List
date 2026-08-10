@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="TodoVoiceMaui.Controls.GlassPanel">
+
+    <!-- Liquid Glass KATMAN 2 (design-system §6 / transition-framework §2.3):
+         Cam panel = yarı saydam zemin + ince border + üst specular ışık çizgisi.
+         Gerçek blur pencere seviyesinde (BackdropService); panel blur'suzdur.
+         Kırılma/yansıma gradient+border tabanlı, platform bağımsız simülasyon.
+         ContentView.Content, ContentPresenter üzerinden ControlTemplate'te render edilir. -->
+
+    <ContentView.Resources>
+        <ControlTemplate x:Key="GlassPanelTemplate">
+            <Border StrokeShape="RoundRectangle 24"
+                    StrokeThickness="1"
+                    Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}"
+                    Background="{AppThemeBinding Light={StaticResource GlassBackground}, Dark={StaticResource DarkGlassBackground}}">
+
+                <Grid RowDefinitions="Auto,*">
+
+                    <!-- Specular yansıma: üst kenar yatay degrade ışık çizgisi -->
+                    <BoxView Grid.Row="0"
+                             HeightRequest="1.5"
+                             Margin="18,10,18,0"
+                             VerticalOptions="Start">
+                        <BoxView.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                <GradientStop Offset="0.0" Color="Transparent" />
+                                <GradientStop Offset="0.5" Color="{AppThemeBinding Light={StaticResource GlassHighlight}, Dark={StaticResource DarkGlassHighlight}}" />
+                                <GradientStop Offset="1.0" Color="Transparent" />
+                            </LinearGradientBrush>
+                        </BoxView.Background>
+                    </BoxView>
+
+                    <!-- İçerik -->
+                    <ContentPresenter Grid.Row="1" Padding="18" />
+
+                </Grid>
+            </Border>
+        </ControlTemplate>
+    </ContentView.Resources>
+
+    <ContentView.ControlTemplate>
+        <StaticResource Key="GlassPanelTemplate" />
+    </ContentView.ControlTemplate>
+
+</ContentView>

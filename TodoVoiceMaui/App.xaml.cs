@@ -29,6 +29,20 @@ public partial class App : Application
 			}
 		});
 
+		// Liquid Glass KATMAN 0: pencere seviyesinde Mica/Acrylic backdrop.
+		// Handler hazır olduğunda uygulanır (Mica→Acrylic→fallback zinciri).
+		window.HandlerChanged += (_, _) =>
+		{
+			try
+			{
+				BackdropService.ApplyTo(window);
+			}
+			catch (Exception ex)
+			{
+				Log("Backdrop error: " + ex.ToString());
+			}
+		};
+
 		_ = InitializeAsync(window);
 
 		return window;
