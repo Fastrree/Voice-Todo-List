@@ -17,12 +17,47 @@ Uygulanan her sayfa bu token'lara ve ilkelere uyar.
 
 ## 1. Tasarım Dili (Özet)
 
+- **Hedef:** "Liquid Glass kullanan bir Todo uygulaması" değil; **kendi görsel
+  kimliği olan, cam/ışık/renk davranışıyla ilk bakışta tanınan** bir Todo
+  uygulaması. Apple'ın dilini kopyalamak değil; o dilin *disiplininden* kendi
+  kimliğimizi kurmak.
+- **Tasarım sentezi (tek akıma kilitlenme):** güncel akımların iyi tarafları
+  bilinçli bir bileşimle birleştirilir (kullanıcı kararı, 2026-08):
+  - **Spatial (VisionOS tarzı)** — katmanlar ve derinlik; yüzeyler aynı düzlemde
+    değil, foreground/background ayrımı net. Tüm etkileşimin iskeleti.
+  - **Liquid Glass** — ışık taşıyan yarı saydam yüzeyler; uygulamanın malzemesi
+    (§6). Cam kenar specular, içeriği geçirir.
+  - **Aurora / Mesh Gradient** — zemin atmosferi: yumuşak, akışkan renk
+    geçişleri (mavi-mor-cyan-beyaz birbirine akar). Arka planı "canlı" yapar;
+    camla bütünleşir. Zeminin çoğu düşük kontrast, yalnız belirli bölgelerde
+    görünür.
+  - **Editorial / Swiss typography** — güçlü tipografi, büyük başlıklar, bol
+    whitespace, grid, az ama bilinçli renk. **Sora** burada ana karakter.
+  - **Chromatic / Iridescent accent (çok kontrollü)** — beyaz/gümüş yüzeyde
+    ışığa göre cyan-violet-blue kırılması; yalnız mikrofon halkası, aktif
+    vurgu, cam kenarı gibi **az sayıda noktada** sedefli his verir.
+  - **Bento UI (Dashboard/MainPage)** — farklı boyutlarda modüler, asimetrik
+    ama düzenli kart grid'i; büyük bilgi kartları + küçük aksiyonlar.
+  - **Organic / Fluid (voice anı)** — mikrofon ve canlı transkripsiyonda keskin
+    dikdörtgenler yerine yumuşak blob/flow formları; ses hikayesine doğal hareket.
 - **Estetik:** "yüksek kaliteli ses aleti" — fütüristik ama sıcak. Cam (glass),
-  soft gölgeler, akışkan animasyonlar.
+  soft gölgeler, akışkan animasyonlar, ışık taşıyan yüzeyler.
 - **Hissiyat:** profesyonel, minimal ama karakterli; AI ses asistanı modernliği.
 - **İlham kaynakları (kopya değil):** front-end.md'nin ayırt edici tasarım
   ilkeleri; ui-ux-pro-max'ın 50+ stil / 161 palet / 57 font çifti kataloğu;
   chicky-pos transition-framework.md'nin animasyon dili.
+- **Design system kısıt koyar, yaratıcılığı kısıtlamaz.** Token'lar ve kurallar
+  bir **tabandır**, tavan değil. Bir ekranı yaparken "bunu daha ilginç nasıl
+  yaparım?" sorusu daima sorulur; blueprint'te yazmayan ama ürünü gerçekten
+  güzelleştiren bir fikir, **kendiliğinden önerilir ve uygulanır.**
+  (Kullanıcı kararı, 2026-08.)
+- **Kalite kriterleri:** güzel + anlaşılır + hızlı kullanılabilir. "Fütüristik"
+  uğruna kullanılabilirlik bozulmaz; erişilebilirlik, tıklanabilirlik,
+  performans, MAUI 8 sınırları ve mevcut mimari korunur.
+- **Savunma kuralı:** ilk tasarım iyi görünmüyorsa "token sistemine uyuyor"
+  diye savunulmaz — ürünü güzelleştirecek karar değiştirilir.
+- **İlk açılan ekran ve görevler ekranı** ürünün karakterini taşır; bu
+  ekranlarda kimlik göstermekten çekinilmez.
 
 ---
 
@@ -62,6 +97,18 @@ motion.micro · motion.element · motion.page                (150·300·600ms, �
 shadow.sm · shadow.md · shadow.lg                          (§6)
 ```
 
+Atmosfer token'ları (Malzeme Sistemi — §6; Light/Dark AYRI kayıt):
+
+```
+color.atmosphere.background    zemin gradyan tabanı (temel ton)
+color.atmosphere.highlight     zemin üst tonu / ışık lekesi
+color.atmosphere.tint          hafif cyan/graphite yansıma (gradyan sonu)
+color.glass.background         cam yüzey (yarı saydam)
+color.glass.border             cam kenar (yarı saydam beyaz/açık gri)
+color.glass.specular           üst kenar ışık çizgisi
+color.glass.light              cam içine sızan accent/turkuaz ışık (state/motion)
+```
+
 MAUI karşılığı: `Colors.xaml` / `Styles.xaml` bu adları birebir kullanır;
 ikinci tüketici (web/CSS) gelirse aynı sözlükten üretilir.
 
@@ -88,10 +135,15 @@ TextTertiary           # silik / yer tutucu
 Success / Warning / Danger  # durum renkleri (görev tamam, uyarı, hata)
 ```
 
-- **Light tema:** saf beyaz yerine çok açık soğuk nötr zemin; cam paneller
-  beyaz-%60 blur; metinler koyu "mürekkep" tonu.
-- **Dark tema:** koyu grafit/indigo zemin (tam siyah değil); cam paneller
-  beyaz-%6; accent ışık saçar (glow). Metinler buz beyazı.
+- **Light tema (White / Pearl / Mist glass):** saf beyaz değil; çok açık soğuk
+  nötr zemin + çok hafif cyan-gray (turkuazımsı/mavimsi) gradyan yansıması.
+  Cam paneller beyaz-%40-60 yarı saydam; kontrast koyu "mürekkep" metin.
+  Accent mürekkep mavisi (dark'taki parlak karşılığıyla aynı hex olmak zorunda
+  değil — §6.5).
+- **Dark tema (Black / Graphite / Smoked glass):** tam siyah değil; siyah →
+  grafit → füme/gri gradyan zemin. Cam paneller smoked-glass (beyaz-%5-10);
+  accent ışık saçar (glow). Metinler buz beyazı. "Dark = Light'in koyusu"
+  değil, ayrı bir atmosfer — her bileşen her temada ayrı ele alınır (§6.5).
 
 ### 2.2 Renk Kuralları
 
@@ -103,6 +155,10 @@ Success / Warning / Danger  # durum renkleri (görev tamam, uyarı, hata)
   `voice/listening/active/success`, cam içi ışık ve hareket, mikrofon halkası.
   Butonlar, başlıklar, aktif nav, ana CTA'lar **mürekkep mavisi (accent)** taşır.
   Turkuaz her yere girerse vurgu olmaktan çıkar. (Kullanıcı onayı, 2026-08.)
+- **Tema-farkında kontrast:** hover/press/aktif'te arka plan değişiyorsa
+  **text/icon kontrastı da beraber değişir** (yalnızca arka planı koyulaştırıp
+  metni aynı renkte bırakmak yasak). Accent'in Light/Dark hex'i aynı olmak
+  zorunda değildir; her tema kendi kontrastını ayrı doğrular (§6.5).
 
 ---
 
@@ -145,32 +201,84 @@ Success / Warning / Danger  # durum renkleri (görev tamam, uyarı, hata)
 
 ---
 
-## 6. Gölge & Cam (Glass)
+## 6. Gölge, Işık & Cam — White Glass / Black Glass (Malzeme Sistemi)
 
-- Gölgeler yumuşak, çift katmanlı (ambient + key):
-  - `Shadow-Sm` 0 4 12 @ %8 → hafif kartlar
-  - `Shadow-Md` 0 8 24 @ %12 → açılır, modals
-  - `Shadow-Lg` 0 16 40 @ %16 → hero / aktif durum
-- **Liquid Glass (Apple tasarım dili) hedeflenir:** cam efekti, ışık
-  kırılmaları, yansımalar ve akışkan saydamlık hissi (kullanıcı kararı).
-  Detaylı mühendislik planı `transition-framework.md` §2'dedir.
-- **Cam panel formülü:**
-  - Light: `rgba(255,255,255,0.6)` + pencere `Mica/Acrylic` backdrop + 1px `rgba(255,255,255,0.7)` border
-  - Dark: `rgba(255,255,255,0.05)` + pencere `Mica/Acrylic` backdrop + 1px `rgba(255,255,255,0.08)` border
-  - Specular yansıma: panelin üst kenarında 1px beyaz degrade ışık çizgisi
-    (kırılma/yansıma simülasyonu — gradient tabanlı, platform bağımsız).
-  - Işık kırılması simülasyonu: panel kenarlarında hafif accent tint sızması.
-- **Blur stratejisi:** gerçek blur pencere seviyesinde (`MicaBackdrop` →
-  `DesktopAcrylicBackdrop` → fallback yarı saydam solid). Panel seviyesinde
-  per-element blur yalnız overlay/sticky bar + hero kartlarda (perf); Mica
-  zaten arkayı bulanıklaştırdığı için paneller solid+border ile yeterli.
-- Cam KULLANILACAK: sayfa üstü sticky barlar, mini oynatıcı, mikrofon paneli,
-  modals/sheets. Cam KULLANILMAYACAK: tüm sayfa yüzeyleri (perf + okunabilirlik).
-- **Okunabilirlik:** cam üzerindeki metin daima `TextPrimary/Secondary` token'ı
-  ile okunaklı kalır (cam asla kontrastı feda etmez — Liquid Glass ilkesi).
-- Gölge: MAUI Windows'ta `Shadow` (GraphicsView tabanlı) maliyetli → sayfa
-  geçişinde aşırı kullanma; kartlarda `Shadow` radius kontrollü kullan.
-  `Low/Medium` performans katmanında cam (SystemBackdrop) ve ağır gölge kapalıdır.
+> **Liquid Glass bir bileşen değil; uygulamanın görsel malzemesidir.**
+> "Uygulamaya birkaç `GlassPanel` koymak" değil; zemin + yüzey + ışık +
+> gradient + border + elevation + state'in **birlikte** oluşturduğu görsel dil.
+> Cam kartlar zeminden bağımsız beyaz kutular değildir — zeminle optik olarak
+> bütünleşir. (Kullanıcı kararı, 2026-08.)
+
+### 6.1 Felsefe
+
+- **Cam = malzeme, bileşen değil.** Aynı malzeme yoğunluğuna göre farklı
+  yüzeyler üretir: zemin → hafif cam → derin cam → solid. Bileşenler bu
+  malzemenin yoğunluk dereceleridir; ayrı "şeyler" değil.
+- **Arka plan da camın parçasıdır.** Zemin düz solid değil; hafif katmanlı /
+  gradyanlı bir atmosferdir. Cam paneller bu zeminin ışığını geçirir, zemini
+  yansıtır; "beyaz kutu üstüne cam" olmaz.
+- **Turkuaz = camın içine giren ışık.** Her şeyi turkuaza boyamak değil;
+  belirli bölgelerde cam yüzeyine sızan bir renk yansıması / ışık tint'i
+  (state, aktif, mikrofon).
+- **Kontrast temaya göre yaşar.** Light ≠ Dark'in koyusu. Camın ışığı ve
+  kontrastı temaya göre değişir; bir bileşenin Light'ta iyi görünmesi Dark'ta
+  da otomatik iyi olacağı anlamına gelmez.
+
+### 6.2 Atmosfer (iki ayrı dünya)
+
+**Light — "White / Pearl / Mist":**
+- Zemin: beyaz → çok açık gri → **çok hafif turkuazımsı/mavimsi (cyan-gray)**
+  geçiş; büyük alanlarda çok düşük kontrastlı ışık lekeleri.
+- Aurora: birkaç büyük, yumuşak mesh-gradient leke (çok açık cyan + çok açık
+  violet + beyaz) zemine derinlik katar — "canlı" ama düşük kontrast.
+- Cam: inci beyazı, yarı saydam (%40-60), arkasındaki gradyanı gösterir.
+- Işık: yumuşak, dağınık; kenarlarda ince beyaz/specular highlight; çok hafif
+  derinlik. Gölgeler sert siyah değil; **soğuk, yumuşak, dağılmış** (mavi-alt tonlu).
+- Chromatic: yalnız mikrofon halkası / aktif vurgu / cam kenarı gibi **birkaç
+  noktada** sedefli cyan-violet kırılması (çok kontrollü).
+
+**Dark — "Black / Graphite / Smoked Glass":**
+- Zemin: siyah → grafit → füme/gri geçişler; **tamamen düz siyah değil**.
+- Aurora: karanlıkta beyazımsı + çok hafif cyan/indigo ışık lekeleri (koyu ama
+  ölü değil); accent glow bölgeleri.
+- Cam: smoked-glass (buzlu füme), beyaz-%5-10; arkasındaki gradyanı gösterir.
+- Işık: beyazımsı + hafif turkuazımsı ışık cam yüzeylerde dolaşır; accent glow.
+- Kenarlar: ince açık gri / beyazımsı ışık çizgisi (karanlıkta daha görünür);
+  az sayıda noktada hafif kromatik kenar.
+- Gölge: siyah tabanlı, derin ama yumuşak.
+
+### 6.3 Cam Malzeme Formülü (yönlendirici — bileşen bazlı değil)
+
+- Zemin gradyanı her sayfanın arkasında yaşar (sayfa zemini token'ı + üst katman).
+- Cam yüzey: zeminin ışığını taşıyan yarı saydam katman + 1px yarı saydam kenar
+  (light: beyaz %70 · dark: açık gri %8) + üst kenarda specular ışık çizgisi.
+- Tint: accent/turkuaz yalnız durum/aktif/mikrofon bölgelerinde cam içine sızar.
+- Elevation: yükseldikçe cam parlaklaşır (light) / aydınlanır (dark); gölge
+  büyür ama yumuşak kalır.
+
+### 6.4 Gradient Kuralı
+
+- Gradient "gradient olsun diye" değil; **yüzeyin ışık davranışını kurmak için**
+  kullanılır: zemin atmosferi, cam sızıntısı, hover ışık shift'i.
+- Işık yönü tutarlıdır (üstten/soldan) — tüm yüzeyler aynı ışık kaynağına inanır.
+- Dark'ta gradient daha görünür olur (ışık karanlıkta konuşur).
+
+### 6.5 Kontrast & State (tema farkındalığı)
+
+- Hover/press'te arka plan değişiyorsa **text/icon kontrastı da beraber değişir**.
+- Accent'in Light/Dark hex'i aynı olmak zorunda değildir (dark'ta parlar).
+- Okunabilirlik her koşulda WCAG AA (cam asla kontrastı feda etmez).
+- Her bileşen her temada ayrı ele alınır; "Light'ta güzel → Dark'ta da güzel"
+  varsayımı yasaktır.
+
+### 6.6 Blur & Perf Stratejisi (önceki karar korunur)
+
+- Gerçek blur pencere seviyesinde: `Mica` → `DesktopAcrylic` → fallback.
+- Panel seviyesinde blur yalnız overlay/sticky bar + hero kartlarda; zemin
+  gradyan + cam saydamlık geri kalanını karşılar (perf).
+- `Low/Medium` tier'da system backdrop + ağır gölge kapalı; cam simülasyonuna düş.
+- Gölge: MAUI Windows'ta `Shadow` (GraphicsView) maliyetli → kontrollü kullan;
+  gradyan/specular ile derinlik hissi çoğu zaman gölgeden daha ucuzdur.
 
 ---
 

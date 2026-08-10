@@ -65,6 +65,18 @@ Karşılama bir "hoş geldin" seremonisidir — uygulama kullanıcıya ilk saniy
 6. **Dinamik (dynamic)** — arkadaki içerik değişince cam da değişir (tint/blur
    canlı güncellenir).
 
+Ek ilkeler (KN-7, 2026-08):
+
+7. **Malzeme bütünlüğü** — Liquid Glass bir bileşen değil, uygulamanın görsel
+   malzemesidir; aynı malzeme yoğunluğa göre farklı yüzeyler üretir
+   (zemin → hafif cam → derin cam → solid).
+8. **Atmosfer zemin** — zemin düz solid değil; aurora mesh-gradient + ışık
+   lekeleriyle katmanlıdır ve cam yüzeyler bu zemini geçirir.
+9. **Spatial derinlik** — yüzeyler aynı düzlemde değildir; gölge + specular +
+   yoğunluk foreground/background ayrımını kurar.
+10. **Tema farkındalığı** — Light ≠ Dark'in koyusu; cam ışığı, accent hex'i ve
+    kontrast her temada ayrı doğrulanır (hover'da bg değişince text/icon da değişir).
+
 ### 2.2 Windows/MAUI Gerçeklik Haritası (mühendislik dürüstlüğü)
 
 | Liquid Glass bileşeni | Windows native karşılığı | MAUI erişimi | Yapılabilirlik |
@@ -81,21 +93,31 @@ Karşılama bir "hoş geldin" seremonisidir — uygulama kullanıcıya ilk saniy
 
 ```
 KATMAN 0: SystemBackdrop (pencere)        → Mica (varsa) / DesktopAcrylic (varsa) / yoksa sayfa rengi
-KATMAN 1: Sayfa zemini                    → Background token (yarı saydam değil, Mica'yı gösterir)
-KATMAN 2: Cam paneller                    → rgba(255,255,255,0.60 light / 0.05 dark)
-                                            + ince border (0.7 / 0.08 beyaz)
-                                            + üst kenar specular çizgisi (simülasyon)
+KATMAN 1: Atmosfer zemini                 → Background token + aurora mesh-gradient
+                                             (açık: beyaz→açık gri→çok hafif cyan; koyu: siyah→grafit→füme)
+                                             + büyük düşük kontrastlı ışık lekeleri (spatial derinlik)
+KATMAN 2: Cam yüzeyler (yoğunluk §6)      → hafif cam %40-60 (light) / %5-10 (dark): bölüm kartları, satırlar
+                                             derin cam: sticky bar, modal, mikrofon paneli
+                                             + ince border (0.7 / 0.08 beyaz)
+                                             + üst kenar specular çizgisi (simülasyon)
 KATMAN 3: İçerik                          → metin/ikon; camın üstünde okunaklı token'lar
+KATMAN 4: Işık & state                    → accent/turkuaz cam içi sızıntı (state, hover, mikrofon)
+                                             + kontrollü chromatic kenar (microfon halkası, aktif vurgu)
 ```
 
 - **Gerçek blur** pencere seviyesinde (Mica/Acrylic) uygulanır; panel
   seviyesinde blur'a ihtiyaç duyulmaz çünkü Mica zaten arkayı bulanıklaştırır.
+- **Aurora zemin** gradyan tabanlıdır (platform bağımsız) — blur yok, ucuz,
+  camın arkasından sızar; "düz beyaz/yeşil kutu" hissini kırar (design-system §6.2).
+- **Spatial derinlik:** yüzeyler aynı düzlemde durmaz — zemin en altta, hafif cam
+  orta, derin cam (sticky/modal) üstte; foreground/background ayrımı gölge +
+  specular + yoğunlukla verilir (design-system §1).
 - **Fallback zinciri** (feature detection, `TargetPlatform`/AppWindow denemesi):
   1. `MicaBackdrop` dene → başarılıysa kullan
   2. `DesktopAcrylicBackdrop` dene → Mica yoksa kullan
   3. İkisi de yoksa → cam panel = yarı saydam solid + border (blur'suz cam hissi)
-- **Simülasyon efektleri** (kırılma/yansıma) her koşulda çalışır — bunlar
-  gradient/border tabanlı olduğu için platforma bağımlı değildir.
+- **Simülasyon efektleri** (aurora, kırılma/yansıma, chromatic) her koşulda
+  çalışır — bunlar gradient/border tabanlı olduğu için platforma bağımlı değildir.
 
 ### 2.4 Mühendislik Doğrulama Listesi (cam için)
 
@@ -105,6 +127,9 @@ KATMAN 3: İçerik                          → metin/ikon; camın üstünde oku
 - [ ] Blur performansı: yalnız overlay/sticky bar + hero kartlarda; tüm sayfa değil
 - [ ] Light/Dark ayrı cam tint değerleri (design-system §6)
 - [ ] Fallback path'te (blur yok) da sayfa okunaklı ve şık mı?
+- [ ] Aurora zemin gradyanı düşük kontrast (metin okunurluğunu bozmuyor mu)?
+- [ ] Cam yüzey zeminle optik olarak bütünleşiyor mu (beyaz kutu hissi yok mu)?
+- [ ] Hover/press'te bg değişince text/icon kontrastı beraber değişiyor mu?
 
 ---
 

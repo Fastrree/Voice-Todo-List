@@ -1,8 +1,10 @@
 # ui-blueprint.md — Todo Voice Design Audit & UI Blueprint
 
-> Durum: **ONAYLANDI** (2026-08) — KN-1..6 kapatıldı. 1.2c uygulaması bu
-> dosyadaki hedeflere göre yürütülür; sürekli mikro-müdahale yerine blueprint'e
-> uyulur. Değişiklik gerekirse bu dosya güncellenir, sonra kodlanır.
+> Durum: **REVİZYON** (2026-08) — Liquid Glass felsefesi "malzeme sistemi"ne
+> genişledi (design-system.md §6). KN-1..6 kapalıydı; **KN-7 ile Blueprint'in
+> tasarım felsefesi güncellendi.** Kodlama bu revizyondan sonra blueprint'e göre
+> yürütülür. Bu dosya bir tavan değil tabandır: model, blueprint'te yazmasa da
+> ürünü gerçekten güzelleştirecek tasarım kararlarını **kendiliğinden önerir**.
 
 ---
 
@@ -70,15 +72,25 @@ Kapsam: 5 sayfa (Main, TodoList, TodoDetail, Settings, Login) + AppShell + 5 con
 - **Glass:** tab bar zemininde cam (backdrop yansıtır); aktif tab accent glow (yalnız hover/active).
 - **Karar Noktası KN-1:** Tab bar ikonları için hangi glyph seti? (SegmentAppIcon/Tabler/Fluent) — varsayılan öneri: **Segoe Fluent Icons** (Windows native, font olarak gömülebilir).
 
-### 2.2 MainPage (Ana Sayfa)
-- **Amaç:** anlık özet + iki ana aksiyona (Görevler, Ayarlar) yönlendirme; "hoş geldin" sıcaklığı.
+### 2.2 MainPage (Ana Sayfa — ürünün karakter yüzü)
+- **Amaç:** anlık özet + iki ana aksiyona (Görevler, Ayarlar) yönlendirme; "hoş
+  geldin" sıcaklığı. **Bento grid:** farklı boyutlarda modüler kartlar,
+  asimetrik ama düzenli yerleşim (design-system §1).
 - **Yerleşim:** ScrollView → `StackLayout` (24px padding, maks 720 ortalanmış).
-  - Header: mikrofon ikonu (SVG/glyph, emoji değil) + `DisplayLarge` "Merhaba, {ad}" + `CaptionText` alt.
-  - Bölüm 1 "GENEL BAKIŞ": 4 `GlassPanel` stat kartı (2×2), her biri `DisplayLarge` rakam + `CaptionText` etiket; rakam renkleri: toplam=accent, tamamlanan=secondary(turkuaz), bekleyen=warning, sesli=danger — **vurgu ekonomisi kontrolü** (yalnız bu 4 vurgu rengi).
-  - Bölüm 2 "HIZLI ERİŞİM": 2 `Card` (solid, cam değil — aksiyon kartları) → tıklanabilir, hover yükselme + gölge, ikon + `SubtitleMedium` + `CaptionText`.
+  - Zemin: aurora mesh-gradient (çok açık cyan/violet/beyaz leke; dark'ta koyu
+    ışık lekeleri) — düz `Background` değil.
+  - Header: mikrofon ikonu (SVG/glyph, emoji değil) + `DisplayLarge` "Merhaba,
+    {ad}" + `CaptionText` alt.
+  - Bölüm "GENEL BAKIŞ": **Bento** — büyük "toplam görev" kartı (display rakam,
+    accent) + daha küçük 3 stat kartı (tamamlanan=turkuaz ışık, bekleyen,
+    sesli) → asimetrik grid, tümü hafif cam (§6 yoğunluk).
+  - Bölüm "HIZLI ERİŞİM": 2 `Card` (solid, cam değil — aksiyon kartları),
+    tıklanabilir, hover yükselme + gölge, ikon + `SubtitleMedium` + `CaptionText`.
   - Footer: ghost "Yenile" + versiyon micro-label.
-- **Empty/loading:** yüklenirken 4 skeleton `GlassPanel` (opacity pulse); hata varsa inline mesaj kartı.
-- **Dark:** aynı yapı; rakam renkleri Dark* token'ları (turkuaz glow yalnız vurgu kartında).
+- **Empty/loading:** yüklenirken 4 skeleton `GlassPanel` (opacity pulse); hata
+  varsa inline mesaj kartı.
+- **Dark:** aynı yapı ama **ayrı atmosfer**: smoked-glass zemin, rakam renkleri
+  Dark* token'ları; turkuaz ışık yalnız "tamamlanan" vurgu kartında (glow).
 
 ### 2.3 TodoListPage (Görevler — ürünün kalbi)
 - **Amaç:** görevleri ara/filtrele/sırala, hızlı ekle, sesle oluştur, tamamla/sil.
@@ -124,25 +136,29 @@ Kapsam: 5 sayfa (Main, TodoList, TodoDetail, Settings, Login) + AppShell + 5 con
 
 ## 3. Component Sözlüğü
 
-| Component | Kaynak | Kullanım | State'ler |
-|-----------|--------|----------|-----------|
-| `GlassPanel` | ✔ var (Controls/) | cam kart, sticky bar, mikrofon paneli | — (statik) |
-| `GlassBar` | plan | üst sticky arama/filtre, alt ekleme çubuğu | cam + border |
-| `Card` | `Style x:Key="Card"` var | solid aksiyon kartı, detay kartı | hover yükselme |
-| `GlassCard` | `Style x:Key="GlassCard"` var | liste satırı, bölüm kartı | hover parlaklık |
-| `StatCard` | `Style x:Key="StatCard"` var | istatistik hücresi (Main/Settings) | — |
-| `PrimaryButton` | default Button style | ana CTA | normal/hover/pressed/disabled/focused |
-| `GhostButton` | `Style x:Key="GhostButton"` var | ikincil | + |
-| `IconButton` | `Style x:Key="IconButton"` var | ikon aksiyonları | + |
-| `PillTag` | plan | öncelik/durum chip'leri | seçili/seçili değil |
-| `SegmentedFilter` | plan (KN-2) | filtre + tema segmentleri | kayan accent çubuk |
-| `BreathRing` | plan (1.2) | mikrofon nefes halkası | idle/listening/processing/recognized/failed |
-| `WaveLine` | plan (1.2) | canlı amplitude + oynatma dalgası | recording/playback |
-| `TaskRow` | plan (1.2c) | liste satırı | normal/completed(tick)/swipe-to-delete |
-| `EmptyState` | plan | boş liste | — |
-| `PermissionSheet` | plan (1.3) | mikrofon/KVKK onay | — |
-| `ToastInApp` | plan | sync/success/error bildirim çubuğu (DisplayAlert yerine) | — |
-| `SkeletonCard` | plan (1.4) | loading iskeleti | pulse |
+> Bileşenler §6 yoğunluk spektrumunun somutlaşmasıdır: aynı cam malzeme,
+> kullanım amacına göre yoğunluk alır. Bu tablo bir katalogdur, tavan değil.
+
+| Component | Yoğunluk | Kullanım | State'ler |
+|-----------|----------|----------|-----------|
+| `GlassPanel` | hafif cam (Controls/) | cam kart, sticky bar, mikrofon paneli | hover parlaklık |
+| `GlassBar` | derin cam | üst sticky arama/filtre, alt ekleme çubuğu | cam + border |
+| `GlassFrame` | hafif cam (`Style` var) | bölüm kartları (Frame tabanlı ekranlar) | — |
+| `GlassCard` | hafif cam (`Style` var) | liste satırı, bölüm kartı | hover parlaklık |
+| `Card` | solid (`Style x:Key="Card"` var) | aksiyon kartı, detay kartı | hover yükselme |
+| `StatCard` | hafif cam (`Style` var) | istatistik hücresi (Main/Settings) | — |
+| `PrimaryButton` | solid accent | ana CTA | normal/hover/pressed/disabled/focused |
+| `GhostButton` | solid saydam | ikincil | + |
+| `IconButton` | solid saydam | ikon aksiyonları | + |
+| `PillTag` | solid | öncelik/durum chip'leri | seçili/seçili değil |
+| `SegmentedFilter` | derin cam | filtre + tema segmentleri | kayan accent çubuk |
+| `BreathRing` | organic (derin cam + blob) | mikrofon nefes halkası | idle/listening/processing/recognized/failed |
+| `WaveLine` | organic | canlı amplitude + oynatma dalgası | recording/playback |
+| `TaskRow` | hafif cam | liste satırı | normal/completed(tick)/swipe-to-delete |
+| `EmptyState` | hafif cam | boş liste | — |
+| `PermissionSheet` | derin cam (modal) | mikrofon/KVKK onay | — |
+| `ToastInApp` | derin cam | sync/success/error bildirim çubuğu | — |
+| `SkeletonCard` | hafif cam | loading iskeleti | pulse |
 
 ---
 
@@ -183,28 +199,74 @@ Kapsam: 5 sayfa (Main, TodoList, TodoDetail, Settings, Login) + AppShell + 5 con
 
 ## 5. Light / Dark Tema Kuralları
 
-- **Kaynak:** `Colors.xaml` (yeni sözlük) + `design-system.md §2` — Light ve Dark **ayrı deneyim** (dark ≠ light'ın koyusu).
-- **Light:** `Background #F6F8FC` (çok açık soğuk nötr) + `Surface #FFFFFF` + cam `#99FFFFFF`; metin `TextPrimary #0F1B2E`; accent `#2563EB`; gölgeler mavi-alt tonlu (`ShadowSm #140F1B2E`).
-- **Dark:** `Background #0B1220` (grafit/indigo, tam siyah değil) + cam `#0FFFFFFF` + accent glow `#5B8CFF`; metin buz beyazı `#E9EEF8`; gölgeler siyah tabanlı.
-- **Kural:** metin cam üzerinde daima `TextPrimary/Secondary` (okunabilirlik asla feda edilmez — Liquid Glass ilkesi 5); vurgu renkleri (turkuaz) yalnız state/motion/success; accent her yerde ana karakter.
-- **Aykırılıklar (audit A7, A11):** Login solid mavi + todo ekleme turkuaz → düzeltilecek.
+- **Kaynak:** `Colors.xaml` (yeni sözlük) + `design-system.md §2, §6` — Light ve
+  Dark **ayrı atmosfer** (dark ≠ light'ın koyusu; her bileşen her temada ayrı
+  ele alınır).
+- **Light (White / Pearl / Mist glass):** `Background #F6F8FC` (çok açık soğuk
+  nötr) + **çok hafif cyan-gray aurora mesh-gradient zemin** + `Surface #FFFFFF`
+  + cam `#99FFFFFF` (%40-60 yarı saydam); metin `TextPrimary #0F1B2E`; accent
+  mürekkep mavisi `#2563EB`; gölgeler mavi-alt tonlu (`ShadowSm #140F1B2E`).
+- **Dark (Black / Graphite / Smoked glass):** tam siyah değil; `Background
+  #0B1220` üzerine siyah→grafit→füme gradyan + koyu aurora ışık lekeleri; cam
+  smoked-glass `#0FFFFFFF`; accent glow `#5B8CFF`; metin buz beyazı `#E9EEF8`;
+  gölgeler siyah tabanlı. Accent hex'i light'takiyle aynı olmak zorunda değildir.
+- **Kural:** metin cam üzerinde daima `TextPrimary/Secondary` (okunabilirlik asla
+  feda edilmez — Liquid Glass ilkesi 5); vurgu renkleri (turkuaz) yalnız
+  state/motion/success; accent her yerde ana karakter. **Hover/press/aktif'te
+  arka plan değişiyorsa text/icon kontrastı da beraber değişir.**
+- **Chromatic:** yalnız mikrofon halkası / aktif vurgu / cam kenarı gibi az
+  sayıda noktada sedefli cyan-violet kırılması (kontrollü; "her yere değil").
+- **Aykırılıklar (audit A7, A11):** Login solid mavi + todo ekleme turkuaz →
+  düzeltilecek.
 - Tema seçici: Settings'te `ThemeOptions` (Açık/Koyu/Sistem) UI'a bağlanmalı (KN-4).
 
 ---
 
-## 6. Liquid Glass Kullanım Kuralları (taslak — onaylanacak)
+## 6. Liquid Glass Kullanım Kuralları — Malzeme Sistemi (KN-7)
 
-| Alan | Kullanım |
-|------|----------|
-| **Zemin** | `Background` token, yarı saydam değil; Mica arkadan parlar (BackdropService) |
-| **Sticky bar / overlay / mini oynatıcı** | cam — HER ZAMAN |
-| **Ana içerik kartları** | cam — içerik yoğun liste/detay dahil; zeminle kontrast için `GlassBorder` |
-| **Aksiyon kartları (tıklanabilir)** | `Card` (solid) — cam değil; hover/gölge netliği |
-| **Mikrofon paneli / canlı transkripsiyon** | cam + BreathRing/WaveLine |
-| **Form input'ları** | `Surface` (solid) — cam üzerinde okunabilirlik; radius-pill |
-| **Modal/sheet** | cam panel yukarı kayarak (transition-framework §5) |
-| **KULLANILMAZ** | tüm sayfa yüzeyleri, uzun metin blokları (perf + okunabilirlik) |
-| **Perf** | blur yalnız pencere (Mica); panel blur yok; `Low/Medium` tier'da cam simülasyonuna düş |
+> **Liquid Glass bir bileşen değil; uygulamanın görsel malzemesidir.** Aynı
+> malzeme yoğunluğuna göre farklı yüzeyler üretir. Bileşen adları (GlassPanel,
+> GlassCard, GlassFrame, Card) bu malzemenin **yoğunluk dereceleridir** — ayrı
+> "şeyler" değil.
+
+### 6.1 Yoğunluk Spektrumu (zeminden solid'e)
+
+| Yoğunluk | Malzeme | Kullanım | Işık davranışı |
+|----------|---------|----------|----------------|
+| **Zemin** | `Background` + atmosfer gradyanı (aurora lekesi) | her sayfanın arkası; düz solid değil, katmanlı | Mica'yı gösterir; aurora ışık lekeleri zeminde yaşar |
+| **Hafif cam** | `GlassFrame`/`GlassPanel`, yarı saydam %40-60 (light) / %5-10 (dark) | bölüm kartları, stat kartları, liste satırları, mikrofon paneli | arkasındaki zemini geçirir; ince specular kenar |
+| **Derin cam** | `GlassBar` (sticky), modal/sheet, mini oynatıcı | overlay / yapışkan üst-alt barlar, odak yüzeyleri | daha belirgin kenar + accent tint sızması |
+| **Solid** | `Card`, `Surface` | tıklanabilir aksiyon kartları, form input'ları, uzun metin blokları | net zemin; okunabilirlik garantisi |
+
+- Cam paneller zeminden bağımsız beyaz kutu **değildir**; zeminin gradyanını
+  geçirir, onunla optik olarak bütünleşir.
+- Turkuaz (secondary) **cam içine giren ışık/tint** olarak kullanılır — yalnız
+  state/aktif/mikrofon bölgelerinde; her yere sürülmez (vurgu ekonomisi §2.2).
+- Chromatic sedef kırılması: mikrofon halkası + aktif vurgu + cam kenarı gibi
+  **az sayıda noktada** (kontrollü, §5).
+
+### 6.2 Kontrast & Tema (zorunlu)
+
+- Hover/press/aktif'te arka plan değişirse **text/icon kontrastı beraber
+  değişir** (yalnızca arka planı koyulaştırıp metni sabit bırakmak yasak).
+- Her bileşen Light ve Dark'ta ayrı ele alınır; accent hex'i temaya göre
+  değişebilir. Cam üzerinde metin daima okunaklı (WCAG AA).
+
+### 6.3 Perf Sınırı (korunur)
+
+- Gerçek blur yalnız pencere (Mica → Acrylic → fallback); panel blur yalnız
+  overlay/sticky + hero. Zemin gradyan + cam saydamlık geri kalanını karşılar.
+- `Low/Medium` tier'da system backdrop + ağır gölge kapalı; cam simülasyonu.
+
+### 6.4 Sayfa bazlı yoğunluk kararları (model kendisi seçer)
+
+- MainPage: **Bento grid** — zemin aurora, stat kartları hafif cam, aksiyon
+  kartları solid.
+- TodoList: üst/alt **GlassBar** (derin cam) + satırlar hafif cam.
+- TodoDetail: üst bilgi **hafif cam**, ses kayıtları **solid satırlar** (okunabilirlik).
+- Settings: bölüm kartları hafif cam, işlem butonları solid/ghost.
+- Voice anı: mikrofon paneli derin cam + **organic blob** (BreathRing) — keskin
+  dikdörtgen değil.
 
 ---
 
@@ -227,7 +289,7 @@ Kapsam: 5 sayfa (Main, TodoList, TodoDetail, Settings, Login) + AppShell + 5 con
 
 ---
 
-## 8. Karar Noktaları (KAPALI — onaylandı, 2026-08)
+## 8. Karar Noktaları (KN-7 ile revize, 2026-08)
 
 - **KN-1 ✅** İkon glyph seti: **Segoe Fluent Icons** (Windows native; font gömülür).
 - **KN-2 ✅** Filtre bileşeni: **`SegmentedFilter`** (kayan accent çubuk).
@@ -235,13 +297,20 @@ Kapsam: 5 sayfa (Main, TodoList, TodoDetail, Settings, Login) + AppShell + 5 con
 - **KN-4 ✅** Tema değişimi: **300ms crossfade** (1.4'te uygulanır).
 - **KN-5 ✅** Swipe-to-delete: **yok**; silme butonla (onay sheet).
 - **KN-6 ✅** Login: **şimdilik bekle**, 1.3'te onboarding ile yeniden değerlendirilir; prototip akışı (AppShell) korunur.
+- **KN-7 ✅** **Liquid Glass = malzeme sistemi** (bileşen değil): yoğunluk
+  spektrumu (zemin → hafif cam → derin cam → solid) + iki ayrı atmosfer
+  (White/Pearl/Mist ve Black/Graphite/Smoked) + aurora zemin + kontrollü
+  chromatic + tema-farkında kontrast. Blueprint bir **taban**dır, tavan değil;
+  model, mimari/UX/erişilebilirlik/perf sınırları içinde daha iyi görsel
+  kararları **kendiliğinden üretir** (design-system.md §1, §6).
 
 ---
 
 ## 9. Onay & Uygulama Sırası (design-system §10 ile uyumlu)
 
-1. **Bu blueprint onayı** (karar noktaları + öncelik listesi netleşir).
-2. KN-1/2 onayı → 1.2c yaygınlaştırma (TodoList → Settings → TodoDetail → Login).
-3. `WaveLine`/`BreathRing` (1.2 tamamlama) → voice state bağlama.
-4. 1.3 Onboarding & izinler → 1.4 mikro-etkileşimler → 1.5 kalite kapıları.
-5. Regression guard + build + `app.log` boş + elle çökme testi.
+1. **Bu blueprint revizyonu onayı** (KN-7 dahil).
+2. 1.2c yaygınlaştırma blueprint'e göre tamamlanır (TodoList → Settings → TodoDetail).
+3. MainPage **Bento** düzeni + aurora zemin (kimlik yüzü).
+4. `WaveLine`/`BreathRing` (organic formlar) → voice state bağlama.
+5. 1.3 Onboarding & izinler → 1.4 mikro-etkileşimler → 1.5 kalite kapıları.
+6. Regression guard + build + `app.log` boş + elle çökme testi.
