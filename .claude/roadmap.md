@@ -33,15 +33,24 @@ yeniden tasarla.** Aşağıdaki gereksinimler bağlayıcıdır:
 - [x] Repo GitHub'a push edildi (`Fastrree/Voice-Todo-List`)
 - [x] Kök README.md (GitHub için) + mimari/learning dokümanları
 - [x] design-system.md + transition-framework.md (Liquid Glass + hikaye odaklı plan)
-- [ ] Renk token'larını yenile (Colors.xaml: yeni palette, Dark* ayrı)
-- [ ] Typography & Space & Radius & Shadow token'ları (Styles.xaml)
+- [x] Renk token'larını yenile (Colors.xaml: yeni palette, Dark* ayrı)
+- [x] Typography & Space & Radius & Shadow token'ları (Styles.xaml)
 
 ### 1.2 Liquid Glass Altyapısı (Apple cam dili)
-- [ ] BackdropService: Mica → DesktopAcrylic → fallback (feature detection)
-- [ ] GlassPanel control (specular çizgi + accent tint + ince border)
-- [ ] Cam kart / sticky bar / modal görünümü (Light + Dark ayrı tint)
-- [ ] Kırılma/yansıma simülasyonları (gradient tabanlı, platform bağımsız)
-- [ ] Performans doğrulaması: blur yalnız overlay/hero kartlarda; metin AA kontrastı
+- [x] BackdropService: Mica → DesktopAcrylic → fallback (feature detection)
+- [x] GlassPanel control (specular çizgi + accent tint + ince border)
+- [x] Cam kart / sticky bar / modal görünümü (Light + Dark ayrı tint)
+- [x] Kırılma/yansıma simülasyonları (gradient tabanlı, platform bağımsız)
+- [~] Performans doğrulaması: blur yalnız overlay/hero kartlarda; metin AA kontrastı
+
+### 1.2c Sayfa Yeniden Tasarımı (glass rollout)
+- [x] AppShell: tab bar accent tema-aware (Primary legacy kaldırıldı)
+- [x] MainPage: dashboard kartları (glass kartlar, hover, açılış animasyonu)
+- [x] TodoListPage: liste kartları, mikrofon etkileşim animasyonu, canlı transkripsiyon UI
+- [x] TodoDetailPage: detay + ses kayıt/oynatma deneyimi (record UI, Segoe ikonlar)
+- [x] SettingsPage: tema seçici, profil, sync durumu
+- [x] LEGACY COMPAT kaldırıldı (Styles.xaml + Colors.xaml eski alias'lar silindi; build + runtime doğrulandı)
+- [x] LoginPage: yalnızca token geçişi (Primary → Accent) — tam redesign 1.3'te
 
 ### 1.3 Onboarding & İzinler
 - [ ] İlk açılış onboarding / hoş geldin ekranı (3 ekran storyboard, animasyonlu)
@@ -49,13 +58,9 @@ yeniden tasarla.** Aşağıdaki gereksinimler bağlayıcıdır:
 - [ ] Yasal bilgilendirme / KVKK (kişisel veri) onayı
 - [ ] Ses efekti izni / tercihi
 
-### 1.3 Sayfa Yeniden Tasarımı
-- [ ] AppShell: yeni tab bar görünümü, sayfa geçiş animasyonları
-- [ ] MainPage: dashboard kartları (glass kartlar, hover, açılış animasyonu)
-- [ ] TodoListPage: liste kartları, mikrofon etkileşim animasyonu, canlı transkripsiyon UI
-- [ ] TodoDetailPage: detay + ses kayıt/oynatma deneyimi
-- [ ] SettingsPage: tema seçici, profil, sync durumu
-- [ ] LoginPage: modernize (kullanılabilir hale getir)
+### 1.3 Sayfa Yeniden Tasarımı (devam)
+- [ ] AppShell: sayfa geçiş animasyonları
+- [ ] LoginPage: modernize (kullanılabilir hale getir — §2.6 blueprint)
 
 ### 1.4 Etkileşim & Mikro-etkileşim
 - [ ] Buton hover / press efektleri (PointerOver VisualState, scale + ışık shift)
