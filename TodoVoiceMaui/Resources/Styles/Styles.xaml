@@ -276,6 +276,52 @@
         <Setter Property="MinimumHeightRequest" Value="48" />
     </Style>
 
+    <!-- === SEARCH / FILTER / PICKER (1.2c) === -->
+    <!-- Arama girişi: saydam zemin, Border yuvarlaklığı + Surface zemini sağlar -->
+    <Style x:Key="SearchEntry" TargetType="Entry">
+        <Setter Property="BackgroundColor" Value="Transparent" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource DarkTextPrimary}}" />
+        <Setter Property="PlaceholderColor" Value="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}" />
+        <Setter Property="FontFamily" Value="Sora" />
+        <Setter Property="FontSize" Value="15" />
+        <Setter Property="MinimumHeightRequest" Value="48" />
+        <Setter Property="Margin" Value="0" />
+    </Style>
+
+    <!-- Filtre çipi: yuvarlak hap buton (aktif durumu sayfada DataTrigger ile) -->
+    <Style x:Key="FilterChip" TargetType="Button">
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource DarkSurface}}" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}" />
+        <Setter Property="BorderColor" Value="{AppThemeBinding Light={StaticResource BorderDefault}, Dark={StaticResource DarkBorderDefault}}" />
+        <Setter Property="BorderWidth" Value="1" />
+        <Setter Property="FontFamily" Value="SoraSemiBold" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="CornerRadius" Value="999" />
+        <Setter Property="Padding" Value="16,9" />
+        <Setter Property="MinimumHeightRequest" Value="0" />
+        <Setter Property="VisualStateManager.VisualStateGroups">
+            <VisualStateGroupList>
+                <VisualStateGroup x:Name="CommonStates">
+                    <VisualState x:Name="PointerOver">
+                        <VisualState.Setters>
+                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource SurfaceMuted}, Dark={StaticResource DarkSurfaceMuted}}" />
+                        </VisualState.Setters>
+                    </VisualState>
+                </VisualStateGroup>
+            </VisualStateGroupList>
+        </Setter>
+    </Style>
+
+    <!-- Sıralama/öncelik picker'ı: Border ikonu taşır, Picker saydamdır -->
+    <Style x:Key="InlinePicker" TargetType="Picker">
+        <Setter Property="BackgroundColor" Value="Transparent" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource DarkTextPrimary}}" />
+        <Setter Property="TitleColor" Value="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}" />
+        <Setter Property="FontFamily" Value="Sora" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="MinimumHeightRequest" Value="48" />
+    </Style>
+
     <!-- ============================================================
          LEGACY COMPAT (geçici) — 1.2c'de ekranlar yenilenince silinecek.
          MainPage dışındaki view'lar eski adlarla yeni token değerlerini alır.
