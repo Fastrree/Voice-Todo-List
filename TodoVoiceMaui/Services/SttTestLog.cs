@@ -71,6 +71,22 @@ public static class SttTestLog
     }
 }
 
+/// <summary>Konsol görünüm filtresi (UI çipleri). Filtre yalnız RENDER'ı etkiler — satırlar toplanmaya devam eder.</summary>
+public enum SttConsoleFilter
+{
+    /// <summary>Tüm satırlar.</summary>
+    All,
+
+    /// <summary>Yalnız başarı (✓).</summary>
+    Success,
+
+    /// <summary>Yalnız hata (✗).</summary>
+    Errors,
+
+    /// <summary>Yalnız uyarı (⚠).</summary>
+    Warnings
+}
+
 /// <summary>Konsol satır tipleri için renk paleti (koyu terminal temasına uygun).</summary>
 public static class SttConsolePalette
 {

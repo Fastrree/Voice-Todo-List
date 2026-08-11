@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:viewmodels="clr-namespace:TodoVoiceMaui.ViewModels"
              xmlns:converters="clr-namespace:TodoVoiceMaui.Converters"
+             xmlns:services="clr-namespace:TodoVoiceMaui.Services"
              x:Class="TodoVoiceMaui.Views.SettingsPage"
              x:DataType="viewmodels:SettingsPageViewModel"
              Title="Ayarlar"
@@ -342,7 +343,7 @@
                                     Padding="12,10"
                                     Stroke="#1F2937"
                                     BackgroundColor="#0B1220">
-                                <Grid RowDefinitions="Auto,*" RowSpacing="6">
+                                <Grid RowDefinitions="Auto,Auto,*" RowSpacing="6">
                                     <Grid ColumnDefinitions="*,Auto">
                                         <Label Text="&#xE756; CANLI KONSOL" FontFamily="SoraSemiBold" FontSize="11"
                                                TextColor="#4ADE80" VerticalOptions="Center" />
@@ -352,7 +353,56 @@
                                                 TextColor="#9CA3AF" FontSize="11"
                                                 HeightRequest="24" Padding="6,0" CornerRadius="12" />
                                     </Grid>
-                                    <ScrollView x:Name="TestConsoleScroll" Grid.Row="1" HeightRequest="120"
+
+                                    <!-- FİLTRE ÇİPLERİ -->
+                                    <HorizontalStackLayout Grid.Row="1" Spacing="6">
+                                        <Button Text="Tümü" FontSize="10" HeightRequest="24" CornerRadius="12" Padding="10,0"
+                                                BackgroundColor="Transparent" TextColor="#9CA3AF" BorderWidth="1" BorderColor="#1F2937"
+                                                Command="{Binding SetConsoleFilterCommand}" CommandParameter="{x:Static services:SttConsoleFilter.All}">
+                                            <Button.Triggers>
+                                                <DataTrigger TargetType="Button" Binding="{Binding ConsoleFilter}" Value="{x:Static services:SttConsoleFilter.All}">
+                                                    <Setter Property="BackgroundColor" Value="#60A5FA" />
+                                                    <Setter Property="TextColor" Value="#FFFFFF" />
+                                                    <Setter Property="BorderColor" Value="#60A5FA" />
+                                                </DataTrigger>
+                                            </Button.Triggers>
+                                        </Button>
+                                        <Button Text="✓ Başarı" FontSize="10" HeightRequest="24" CornerRadius="12" Padding="10,0"
+                                                BackgroundColor="Transparent" TextColor="#9CA3AF" BorderWidth="1" BorderColor="#1F2937"
+                                                Command="{Binding SetConsoleFilterCommand}" CommandParameter="{x:Static services:SttConsoleFilter.Success}">
+                                            <Button.Triggers>
+                                                <DataTrigger TargetType="Button" Binding="{Binding ConsoleFilter}" Value="{x:Static services:SttConsoleFilter.Success}">
+                                                    <Setter Property="BackgroundColor" Value="#4ADE80" />
+                                                    <Setter Property="TextColor" Value="#0B1220" />
+                                                    <Setter Property="BorderColor" Value="#4ADE80" />
+                                                </DataTrigger>
+                                            </Button.Triggers>
+                                        </Button>
+                                        <Button Text="✗ Hata" FontSize="10" HeightRequest="24" CornerRadius="12" Padding="10,0"
+                                                BackgroundColor="Transparent" TextColor="#9CA3AF" BorderWidth="1" BorderColor="#1F2937"
+                                                Command="{Binding SetConsoleFilterCommand}" CommandParameter="{x:Static services:SttConsoleFilter.Errors}">
+                                            <Button.Triggers>
+                                                <DataTrigger TargetType="Button" Binding="{Binding ConsoleFilter}" Value="{x:Static services:SttConsoleFilter.Errors}">
+                                                    <Setter Property="BackgroundColor" Value="#F87171" />
+                                                    <Setter Property="TextColor" Value="#0B1220" />
+                                                    <Setter Property="BorderColor" Value="#F87171" />
+                                                </DataTrigger>
+                                            </Button.Triggers>
+                                        </Button>
+                                        <Button Text="⚠ Uyarı" FontSize="10" HeightRequest="24" CornerRadius="12" Padding="10,0"
+                                                BackgroundColor="Transparent" TextColor="#9CA3AF" BorderWidth="1" BorderColor="#1F2937"
+                                                Command="{Binding SetConsoleFilterCommand}" CommandParameter="{x:Static services:SttConsoleFilter.Warnings}">
+                                            <Button.Triggers>
+                                                <DataTrigger TargetType="Button" Binding="{Binding ConsoleFilter}" Value="{x:Static services:SttConsoleFilter.Warnings}">
+                                                    <Setter Property="BackgroundColor" Value="#FBBF24" />
+                                                    <Setter Property="TextColor" Value="#0B1220" />
+                                                    <Setter Property="BorderColor" Value="#FBBF24" />
+                                                </DataTrigger>
+                                            </Button.Triggers>
+                                        </Button>
+                                    </HorizontalStackLayout>
+
+                                    <ScrollView x:Name="TestConsoleScroll" Grid.Row="2" HeightRequest="120"
                                                 VerticalScrollBarVisibility="Never">
                                         <Label FormattedText="{Binding TestConsoleFormatted}"
                                                LineBreakMode="WordWrap"

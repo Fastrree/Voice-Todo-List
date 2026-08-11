@@ -74,6 +74,15 @@ public partial class ModelManagementViewModel : ObservableObject, IDisposable
         private set => SetProperty(ref _testConsoleFormatted, value);
     }
 
+    /// <summary>Aktif konsol filtresi — yalnız render'ı etkiler, satırlar toplanmaya devam eder.</summary>
+    [ObservableProperty]
+    private SttConsoleFilter consoleFilter = SttConsoleFilter.All;
+
+    partial void OnConsoleFilterChanged(SttConsoleFilter value) => RebuildConsole();
+
+    [RelayCommand]
+    private void SetConsoleFilter(SttConsoleFilter filter) => ConsoleFilter = filter;
+
     public event Action? CloseRequested;
 
     public ModelManagementViewModel(SpeechToTextService stt, SettingsPageViewModel settings)
@@ -104,7 +113,7 @@ public partial class ModelManagementViewModel : ObservableObject, IDisposable
     private void RebuildConsole()
     {
         var fs = new FormattedString();
-        foreach (var entry in _consoleLines)
+        foreach (var entry in FilterLines(_consoleLines))
         {
             fs.Spans.Add(new Span
             {
@@ -117,11 +126,20 @@ public partial class ModelManagementViewModel : ObservableObject, IDisposable
         TestConsoleFormatted = fs;
     }
 
+    /// <summary>Aktif filtreye göre satırları seçer (All = hepsi).</summary>
+    private IEnumerable<SttLogEntry> FilterLines(IEnumerable<SttLogEntry> lines) => ConsoleFilter switch
+    {
+        SttConsoleFilter.Success => lines.Where(l => l.Kind == SttLogKind.Success),
+        SttConsoleFilter.Errors => lines.Where(l => l.Kind == SttLogKind.Error),
+        SttConsoleFilter.Warnings => lines.Where(l => l.Kind == SttLogKind.Warning),
+        _ => lines
+    };
+
     [RelayCommand]
     private void ClearTestConsole()
     {
         _consoleLines.Clear();
-        TestConsoleFormatted = new FormattedString();
+        RebuildConsole();
     }
 
     private void OnSttPropertyChanged(object? sender, PropertyChangedEventArgs e)

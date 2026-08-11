@@ -144,6 +144,15 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
         private set => SetProperty(ref _testConsoleFormatted, value);
     }
 
+    /// <summary>Aktif konsol filtresi — yalnız render'ı etkiler, satırlar toplanmaya devam eder.</summary>
+    [ObservableProperty]
+    private SttConsoleFilter consoleFilter = SttConsoleFilter.All;
+
+    partial void OnConsoleFilterChanged(SttConsoleFilter value) => RebuildConsole();
+
+    [RelayCommand]
+    private void SetConsoleFilter(SttConsoleFilter filter) => ConsoleFilter = filter;
+
     [ObservableProperty]
     private bool isApiKeyMasked = true;
 
@@ -205,11 +214,11 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
         });
     }
 
-    /// <summary>Satır tiplerine göre renklendirilmiş FormattedString kurar.</summary>
+    /// <summary>Satır tiplerine göre renklendirilmiş FormattedString kurar (aktif filtreye göre).</summary>
     private void RebuildConsole()
     {
         var fs = new FormattedString();
-        foreach (var entry in _consoleLines)
+        foreach (var entry in FilterLines(_consoleLines))
         {
             fs.Spans.Add(new Span
             {
@@ -221,6 +230,15 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
         }
         TestConsoleFormatted = fs;
     }
+
+    /// <summary>Aktif filtreye göre satırları seçer (All = hepsi).</summary>
+    private IEnumerable<SttLogEntry> FilterLines(IEnumerable<SttLogEntry> lines) => ConsoleFilter switch
+    {
+        SttConsoleFilter.Success => lines.Where(l => l.Kind == SttLogKind.Success),
+        SttConsoleFilter.Errors => lines.Where(l => l.Kind == SttLogKind.Error),
+        SttConsoleFilter.Warnings => lines.Where(l => l.Kind == SttLogKind.Warning),
+        _ => lines
+    };
 
     public async Task InitializeAsync()
     {
@@ -870,7 +888,7 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
     private void ClearTestConsole()
     {
         _consoleLines.Clear();
-        TestConsoleFormatted = new FormattedString();
+        RebuildConsole();
     }
 
     /// <summary>API anahtarı gizle/göster (göz butonu).</summary>

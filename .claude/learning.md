@@ -50,8 +50,11 @@ git'te kalır). Geçmiş TUTMAZ — sadece bugünü anlatır.
   `SttLogKind` enum'ıyla SttTestLog'da ayrıştırılır (Write/Success/Error/Warning/
   Download metotları); UI `FormattedString` + renkli Span'lerle çizer. Otomatik
   kaydırma + Temizle; aynı satırlar `app.log`'a yazılır. Thread güvenli (MainThread
-  marshal), satır sayısı sınırlı (200). Çevrimdışı "Test" butonu seçili modelle
-  GERÇEK transkripsiyon çalıştırır (büyük model onaylı).
+  marshal), satır sayısı sınırlı (200). **Filtre çipleri:** Tümü / ✓ Başarı / ✗ Hata /
+  ⚠ Uyarı — yalnız RENDER'ı filtreler, satırlar toplanmaya devam eder (seçili çip
+  DataTrigger ile vurgulanır). **İndirme satırları:** her %10'da bir renkli
+  `⬇ %X · MB/MB` satırı akar (büyük model terminalde izlenebilir). Çevrimdışı
+  "Test" butonu seçili modelle GERÇEK transkripsiyon çalıştırır (büyük model onaylı).
   Ayarlar'da "Bağlantıyı Test Et" (HTTP 2xx = geçerli) ile doğrulanır.
   **Fallback:** bulut başarısız/anahtar yoksa otomatik çevrimdışı Whisper'a düşülür.
   `TurkishVocabulary.Correct()` tüm kaynaklarda çalışır; prompt önyüklemesi bulut

@@ -403,6 +403,7 @@ public class SpeechToTextService : INotifyPropertyChanged
                 var buffer = new byte[81920];
                 long read = 0;
                 int bytesRead;
+                var lastPercentLogged = 0;
                 var stopwatch = System.Diagnostics.Stopwatch.StartNew();
                 while ((bytesRead = await source.ReadAsync(buffer, _downloadCts.Token)) > 0)
                 {
@@ -414,6 +415,16 @@ public class SpeechToTextService : INotifyPropertyChanged
                         ModelDownloadProgress = (double)read / total;
                         StatusMessage = $"Model indiriliyor %{(int)(ModelDownloadProgress * 100)}…";
                         ModelDownloadProgressChanged?.Invoke(this, ModelDownloadProgress);
+
+                        // Canlı konsola her %10'da bir renkli satır akıt (büyük modelde
+                        // ilerleme terminalde izlenebilir olsun; 3,1GB'ta ~10 satır).
+                        var percent = (int)(ModelDownloadProgress * 100);
+                        if (percent >= lastPercentLogged + 10)
+                        {
+                            SttTestLog.WriteDownload(
+                                $"⬇ {model.DisplayName} %{percent} · {FormatBytes(read)}/{FormatBytes(total)}");
+                            lastPercentLogged = percent;
+                        }
                     }
 
                     var elapsed = stopwatch.Elapsed.TotalSeconds;
