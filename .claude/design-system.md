@@ -182,6 +182,16 @@ Success / Warning / Danger  # durum renkleri (görev tamam, uyarı, hata)
 - Numaralar (istatistik): tabular-lining (monospace rakam) → stabil hizalama.
 - ALL-CAPS + geniş letter-spacing: bölüm etiketleri ve mikro butonlar.
 
+### 3.1 Gömülü Font Kuralı (Türkçe glif zorunluluğu) — 2026-08
+
+- Gömülen display fontu (**Sora** Regular/Medium/SemiBold/Bold) **tam Latin
+  Extended kapsamıyla** gömülür. Subsetlenmiş font kabul edilmez: ş (U+015F),
+  ğ (U+011F), İ (U+0130), ı (U+0131), ö, ü, ç glifleri eksik olan dosyalar UI'da
+  sessizce bozuk görünür (kayıt: 4 dosyada 223 glif → ş/ğ/İ yoktu, bulundu ve
+  tam 378 gliflik sürümle değiştirildi).
+- Doğrulama: font değişimi sonrası `fontTools` ile cmap kontrolü yapılır
+  (ş/ğ/İ/ı/ö/ü/ç kod noktaları). Font'u subsetleme aracından geçirme YASAK.
+
 ---
 
 ## 4. Boşluk & Grid
