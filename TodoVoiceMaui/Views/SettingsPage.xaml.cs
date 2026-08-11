@@ -117,14 +117,4 @@ public partial class SettingsPage : ContentPage
             _viewModel.SelectedLanguage = item.Key;
         }
     }
-
-    /// <summary>
-    /// Windows Hello kilidi Switch'i — doğrudan bağlama YOK (VM doğrulama yapıp
-    /// kendisi ayarlar). VM geri yazınca Toggled tekrar tetiklenir; VM içindeki
-    /// eşitlik guard'ı döngüyü kırar.
-    /// </summary>
-    private async void OnBiometricLockToggled(object? sender, ToggledEventArgs e)
-    {
-        await _viewModel.SetBiometricLockAsync(e.Value);
-    }
 }

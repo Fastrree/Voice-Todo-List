@@ -132,6 +132,104 @@
                         </VerticalStackLayout>
                     </Border>
 
+                    <!-- GÜVENLİK: uygulama kilidi (PIN / Windows Hello) -->
+                    <Border Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}"
+                            StrokeThickness="1"
+                            StrokeShape="RoundRectangle 20"
+                            Padding="14,12">
+                        <Border.Background>
+                            <AppThemeBinding Light="{StaticResource GlassSurfaceLight}" Dark="{StaticResource GlassSurfaceDark}" />
+                        </Border.Background>
+                        <VerticalStackLayout Spacing="8">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <VerticalStackLayout Spacing="0">
+                                    <Label Text="GÜVENLİK" Style="{StaticResource MicroLabel}" />
+                                    <Label Text="Uygulama kilidi" Style="{StaticResource BodyText}" FontAttributes="Bold" />
+                                </VerticalStackLayout>
+                                <Label Grid.Column="1" Text="&#xE72E;" FontFamily="Segoe Fluent Icons" FontSize="18"
+                                       VerticalOptions="Center"
+                                       TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
+                            </Grid>
+
+                            <!-- Yöntem seçici: Kapalı / PIN / Windows Hello -->
+                            <Label Text="Kilit yöntemi" Style="{StaticResource CaptionText}" />
+                            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="6">
+                                <Button Text="Kapalı" FontSize="12" HeightRequest="36" CornerRadius="18"
+                                        Command="{Binding SetLockMethodCommand}" CommandParameter="{x:Static services:AppLockMethod.None}">
+                                    <Button.Triggers>
+                                        <DataTrigger TargetType="Button" Binding="{Binding LockMethod}" Value="{x:Static services:AppLockMethod.None}">
+                                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
+                                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource AccentContrast}, Dark={StaticResource DarkBackground}}" />
+                                        </DataTrigger>
+                                    </Button.Triggers>
+                                </Button>
+                                <Button Grid.Column="1" Text="PIN" FontSize="12" HeightRequest="36" CornerRadius="18"
+                                        Command="{Binding SetLockMethodCommand}" CommandParameter="{x:Static services:AppLockMethod.Pin}">
+                                    <Button.Triggers>
+                                        <DataTrigger TargetType="Button" Binding="{Binding LockMethod}" Value="{x:Static services:AppLockMethod.Pin}">
+                                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
+                                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource AccentContrast}, Dark={StaticResource DarkBackground}}" />
+                                        </DataTrigger>
+                                    </Button.Triggers>
+                                </Button>
+                                <Button Grid.Column="2" Text="Windows Hello" FontSize="12" HeightRequest="36" CornerRadius="18"
+                                        IsEnabled="{Binding CanUseHello}"
+                                        Command="{Binding SetLockMethodCommand}" CommandParameter="{x:Static services:AppLockMethod.WindowsHello}">
+                                    <Button.Triggers>
+                                        <DataTrigger TargetType="Button" Binding="{Binding LockMethod}" Value="{x:Static services:AppLockMethod.WindowsHello}">
+                                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
+                                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource AccentContrast}, Dark={StaticResource DarkBackground}}" />
+                                        </DataTrigger>
+                                    </Button.Triggers>
+                                </Button>
+                            </Grid>
+
+                            <!-- Windows Hello durumu -->
+                            <Label Text="{Binding BiometricStatusText}" Style="{StaticResource CaptionText}"
+                                   LineBreakMode="WordWrap"
+                                   TextColor="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}" />
+
+                            <!-- PIN ayarlayıcı (şifre ayarlayıcı modalı) -->
+                            <Border IsVisible="{Binding IsPinMethod}"
+                                    StrokeThickness="1"
+                                    StrokeShape="RoundRectangle 14"
+                                    Padding="12,10"
+                                    Stroke="{AppThemeBinding Light={StaticResource BorderDefault}, Dark={StaticResource DarkBorderDefault}}"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceMuted}, Dark={StaticResource DarkSurfaceMuted}}">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                    <VerticalStackLayout Spacing="2" VerticalOptions="Center">
+                                        <Label Text="PIN" Style="{StaticResource CaptionText}" />
+                                        <Label Text="{Binding PinStatusText}" Style="{StaticResource CaptionText}"
+                                               FontAttributes="Bold"
+                                               TextColor="{AppThemeBinding Light={StaticResource SecondaryDark}, Dark={StaticResource DarkSecondary}}" />
+                                    </VerticalStackLayout>
+                                    <Button Grid.Column="1" Text="&#xE70F; PIN Oluştur / Değiştir"
+                                            Command="{Binding OpenPinSetupCommand}"
+                                            Style="{StaticResource GhostButton}" HeightRequest="34" CornerRadius="17" FontSize="11"
+                                            VerticalOptions="Center" />
+                                </Grid>
+                            </Border>
+
+                            <!-- Ayarlar girişi sorusu -->
+                            <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding IsLockEnabled}">
+                                <VerticalStackLayout Spacing="2">
+                                    <Label Text="Ayarlar sekmesine geçerken kilidi sor" Style="{StaticResource BodyText}" />
+                                    <Label Text="Açıkken her uygulama açılışında ilk Ayarlar girişinde kimlik doğrulama istenir."
+                                           Style="{StaticResource CaptionText}" LineBreakMode="WordWrap"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}" />
+                                </VerticalStackLayout>
+                                <Switch Grid.Column="1" VerticalOptions="Center"
+                                        IsToggled="{Binding AskOnSettingsEntry}"
+                                        OnColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
+                            </Grid>
+
+                            <!-- Durum özeti -->
+                            <Label Text="{Binding LockStatusText}" Style="{StaticResource CaptionText}"
+                                   LineBreakMode="WordWrap"
+                                   TextColor="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}" />
+                        </VerticalStackLayout>
+                    </Border>
+
                     <!-- SES TANIMA -->
                     <Border Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}"
                             StrokeThickness="1"
@@ -207,21 +305,19 @@
                                     </Frame>
                                 </VerticalStackLayout>
 
-                                <!-- Biyometrik kilit (Windows Hello) -->
-                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Padding="0,2">
+                                <!-- API anahtarı kilidi (GÜVENLİK bölümünden yönetilir) -->
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Padding="0,2" IsVisible="{Binding IsLockEnabled}">
                                     <VerticalStackLayout Spacing="2">
-                                        <Label Text="Windows Hello ile kilitle" Style="{StaticResource BodyText}" />
-                                        <Label Text="{Binding BiometricStatusText}" Style="{StaticResource CaptionText}"
+                                        <Label Text="API anahtarı kilitli" Style="{StaticResource BodyText}" />
+                                        <Label Text="{Binding KeyLockHintText}" Style="{StaticResource CaptionText}"
                                                LineBreakMode="WordWrap"
                                                TextColor="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}" />
                                     </VerticalStackLayout>
-                                    <Switch Grid.Column="1" VerticalOptions="Center"
-                                            IsToggled="{Binding IsBiometricLockEnabled, Mode=OneWay}"
-                                            IsEnabled="{Binding IsBiometricAvailable}"
-                                            Toggled="OnBiometricLockToggled"
-                                            OnColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
+                                    <Label Grid.Column="1" Text="&#xE72E;" FontFamily="Segoe Fluent Icons" FontSize="16"
+                                           VerticalOptions="Center"
+                                           TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
                                 </Grid>
-                                <Button Text="&#xE8F7; Kilidi Aç (Windows Hello)" Command="{Binding UnlockApiKeyCommand}"
+                                <Button Text="{Binding UnlockKeyButtonText}" Command="{Binding UnlockApiKeyCommand}"
                                         IsVisible="{Binding IsKeyLocked}"
                                         Style="{StaticResource GhostButton}" HeightRequest="36" CornerRadius="18" />
 
@@ -546,10 +642,10 @@
 
         </Grid>
 
-        <!-- 🔒 KİLİT OVERLAY (biyometrik kilit açıkken Ayarlar'a girişte) -->
+        <!-- 🔒 KİLİT OVERLAY (GÜVENLİK kilidi açıkken Ayarlar'a girişte) -->
         <Grid IsVisible="{Binding IsSettingsLocked}"
               BackgroundColor="{AppThemeBinding Light=#E6F8FAFC, Dark=#E60A0A0F}">
-            <Border WidthRequest="360"
+            <Border WidthRequest="380"
                     StrokeThickness="1"
                     StrokeShape="RoundRectangle 24"
                     Padding="24,22"
@@ -562,7 +658,7 @@
                     <Shadow Brush="{AppThemeBinding Light={StaticResource ShadowLg}, Dark={StaticResource DarkShadowLg}}"
                             Radius="28" Opacity="0.55" Offset="0,10" />
                 </Border.Shadow>
-                <VerticalStackLayout Spacing="12" HorizontalOptions="Center" WidthRequest="300">
+                <VerticalStackLayout Spacing="12" HorizontalOptions="Center" WidthRequest="320">
                     <Border WidthRequest="64" HeightRequest="64" HorizontalOptions="Center"
                             StrokeThickness="0" StrokeShape="RoundRectangle 32"
                             BackgroundColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}">
@@ -572,18 +668,46 @@
                     </Border>
                     <Label Text="AYARLAR KİLİTLİ" Style="{StaticResource MicroLabel}" HorizontalOptions="Center"
                            TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
-                    <Label Text="Bu bölüm Windows Hello koruması altında."
+                    <Label Text="{Binding LockGateSubtitle}"
                            FontFamily="SoraSemiBold" FontSize="16" HorizontalOptions="Center"
                            TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource DarkTextPrimary}}" />
                     <Label Text="API anahtarlarını görmek ve bağlantı testlerini çalıştırmak için kimliğini doğrula."
                            Style="{StaticResource CaptionText}" HorizontalOptions="Center"
                            HorizontalTextAlignment="Center" LineBreakMode="WordWrap"
                            TextColor="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}" />
-                    <Button Text="&#xE8F7; Windows Hello ile Aç" Command="{Binding UnlockSettingsCommand}"
-                            HeightRequest="44" CornerRadius="22" />
-                    <Label Text="Parmak izi / yüz / PIN kullanılabilir."
-                           Style="{StaticResource CaptionText}" HorizontalOptions="Center"
-                           TextColor="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}" />
+
+                    <!-- PIN formu -->
+                    <VerticalStackLayout Spacing="8" IsVisible="{Binding IsPinMethod}" WidthRequest="280">
+                        <Frame BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource DarkSurface}}"
+                               CornerRadius="14" Padding="0" HasShadow="False">
+                            <Entry Text="{Binding SettingsPinEntry}" Placeholder="PIN"
+                                   Keyboard="Numeric" IsPassword="True" MaxLength="8"
+                                   Style="{StaticResource SearchEntry}" Margin="14,0"
+                                   HorizontalTextAlignment="Center" FontSize="22" />
+                        </Frame>
+                        <Label Text="{Binding PinErrorText}" Style="{StaticResource CaptionText}"
+                               IsVisible="{Binding HasPinError}" HorizontalOptions="Center"
+                               FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource Danger}}" />
+                        <Button Text="PIN ile Aç" Command="{Binding UnlockSettingsCommand}"
+                                HeightRequest="44" CornerRadius="22" />
+                        <Button Text="&#xE8F7; Windows Hello ile Aç" Command="{Binding UnlockSettingsWithHelloCommand}"
+                                IsVisible="{Binding CanUseHello}"
+                                Style="{StaticResource GhostButton}" HeightRequest="38" CornerRadius="19" />
+                        <Button Text="Kiliti sıfırla (PIN unutuldu)" Command="{Binding ResetLockCommand}"
+                                BackgroundColor="Transparent" BorderWidth="0"
+                                TextColor="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}"
+                                HeightRequest="28" FontSize="11" />
+                    </VerticalStackLayout>
+
+                    <!-- Windows Hello formu -->
+                    <VerticalStackLayout Spacing="8" IsVisible="{Binding IsHelloMethod}" WidthRequest="280">
+                        <Button Text="&#xE8F7; Windows Hello ile Aç" Command="{Binding UnlockSettingsCommand}"
+                                HeightRequest="44" CornerRadius="22" />
+                        <Label Text="Parmak izi / yüz / Windows PIN kullanılabilir."
+                               Style="{StaticResource CaptionText}" HorizontalOptions="Center"
+                               TextColor="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}" />
+                    </VerticalStackLayout>
                 </VerticalStackLayout>
             </Border>
         </Grid>

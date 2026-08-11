@@ -130,10 +130,14 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private string providerRegion = string.Empty;
 
-    // ---- Biyometrik kilit (Windows Hello) ----
+    // ---- Uygulama kilidi (GÜVENLİK: PIN / Windows Hello) ----
+
+    /// <summary>Aktif kilit yöntemi (AppLockService ile senkron).</summary>
+    [ObservableProperty]
+    private AppLockMethod lockMethod;
 
     [ObservableProperty]
-    private bool isBiometricLockEnabled;
+    private bool isPinSet;
 
     [ObservableProperty]
     private bool isBiometricAvailable;
@@ -144,11 +148,65 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private string biometricStatusText = string.Empty;
 
-    private bool _keyRevealed = true;
+    [ObservableProperty]
+    private string lockStatusText = string.Empty;
 
-    /// <summary>Ayarlar sayfası kilitli mi? (Biyometrik kilit açıkken girişte overlay gösterilir.)</summary>
+    [ObservableProperty]
+    private string pinStatusText = string.Empty;
+
+    /// <summary>Ayarlar sekmesine geçerken kilit sorusu sorulsun mu? (kalıcı)</summary>
+    [ObservableProperty]
+    private bool askOnSettingsEntry;
+
+    /// <summary>Ayarlar sayfası kilitli mi? (GÜVENLİK kilidi açıkken girişte overlay gösterilir.)</summary>
     [ObservableProperty]
     private bool isSettingsLocked;
+
+    /// <summary>Kilit overlay'indeki PIN girişi.</summary>
+    [ObservableProperty]
+    private string settingsPinEntry = string.Empty;
+
+    [ObservableProperty]
+    private string pinErrorText = string.Empty;
+
+    [ObservableProperty]
+    private bool hasPinError;
+
+    private bool _keyRevealed = true;
+
+    public bool IsLockEnabled => LockMethod != AppLockMethod.None;
+    public bool IsPinMethod => LockMethod == AppLockMethod.Pin;
+    public bool IsHelloMethod => LockMethod == AppLockMethod.WindowsHello;
+    public bool CanUseHello => IsBiometricAvailable;
+
+    public string LockGateSubtitle => IsPinMethod
+        ? "Bu bölüm PIN koruması altında."
+        : "Bu bölüm Windows Hello koruması altında.";
+
+    public string UnlockKeyButtonText => IsPinMethod ? "Kilidi Aç (PIN)" : "Kilidi Aç (Windows Hello)";
+
+    public string KeyLockHintText => IsLockEnabled
+        ? "API anahtarı GÜVENLİK bölümündeki kilit ile korunuyor."
+        : "Kilit kapalı — anahtar görünür. GÜVENLİK bölümünden PIN veya Windows Hello kurabilirsin.";
+
+    partial void OnLockMethodChanged(AppLockMethod value)
+    {
+        AppLockService.Method = value;
+        OnPropertyChanged(nameof(IsLockEnabled));
+        OnPropertyChanged(nameof(IsPinMethod));
+        OnPropertyChanged(nameof(IsHelloMethod));
+        OnPropertyChanged(nameof(LockGateSubtitle));
+        OnPropertyChanged(nameof(UnlockKeyButtonText));
+        OnPropertyChanged(nameof(KeyLockHintText));
+        RefreshKeyLockState();
+        RefreshSecurityStatus();
+    }
+
+    partial void OnAskOnSettingsEntryChanged(bool value) => AppLockService.AskOnSettingsEntry = value;
+
+    partial void OnIsBiometricAvailableChanged(bool value) => OnPropertyChanged(nameof(CanUseHello));
+
+    partial void OnIsPinSetChanged(bool value) => RefreshSecurityStatus();
 
     // ---- Canlı konsol + API anahtarı gizle/göster ----
 
@@ -213,9 +271,13 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
         // STT model durumunu canlı tut (indirme ilerlemesi arayüze yansır)
         _stt.PropertyChanged += OnSttPropertyChanged;
         SttUsageStats.Changed += OnUsageStatsChanged;
-        IsBiometricLockEnabled = Preferences.Default.Get("stt_biometric_lock", false);
+        // Uygulama kilidi (GÜVENLİK): kayıtlı yöntemi, PIN ve soru ayarını geri yükle
+        _keyRevealed = !AppLockService.IsAnyLockEnabled;
+        LockMethod = AppLockService.Method;
+        IsPinSet = AppLockService.IsPinSet;
+        AskOnSettingsEntry = AppLockService.AskOnSettingsEntry;
         // Kilit açıksa İLK KARE'den itibaren overlay görünsün (doğrulama öncesi boşluk yok)
-        IsSettingsLocked = IsBiometricLockEnabled;
+        IsSettingsLocked = AppLockService.NeedsSettingsUnlock;
         // Konsol filtresi kalıcı: Preferences'tan geri yükle (Settings + popup aynı anahtar)
         ConsoleFilter = (SttConsoleFilter)Preferences.Default.Get(ConsoleFilterPreferenceKey, (int)SttConsoleFilter.All);
         SttTestLog.Line += OnTestLogEntry;
@@ -281,25 +343,50 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// Biyometrik kilit açıksa Ayarlar'a girişte Windows Hello ister.
-    /// Kullanıcı onaylarsa sayfa açılır; iptal ederse kilit overlay'i kalır.
+    /// Uygulama kilidi açık + "Ayarlar sekmesine geçerken sor" aktifse giriş kapısı.
+    /// Windows Hello yöntemi: otomatik doğrulama istenir. PIN yöntemi: kullanıcı
+    /// overlay'deki PIN formunu doldurur. Oturum içinde bir kez açılınca tekrar sorulmaz.
     /// </summary>
     private async Task HandleEntryLockAsync()
     {
-        if (!IsBiometricLockEnabled || !IsBiometricAvailable)
+        if (!AppLockService.NeedsSettingsUnlock)
         {
             IsSettingsLocked = false;
             return;
         }
 
-        SttTestLog.Write("🔒 Ayarlar kilitli — Windows Hello doğrulaması isteniyor");
         // Kilit overlay'i doğrulamadan ÖNCE de aktif (boşluk/flaş yok)
         IsSettingsLocked = true;
-        var verified = await BiometricService.VerifyAsync(
-            "Ayarlara girmek için Windows Hello ile doğrulayın");
-        IsSettingsLocked = !verified;
-        if (!verified)
-            SttTestLog.WriteWarning("✗ Doğrulama yapılmadı — sayfa kilitli kaldı");
+        ResetPinGate();
+
+        if (LockMethod == AppLockMethod.WindowsHello)
+        {
+            SttTestLog.Write("🔒 Ayarlar kilitli — Windows Hello doğrulaması isteniyor");
+            var verified = await BiometricService.VerifyAsync(
+                "Ayarlara girmek için Windows Hello ile doğrulayın");
+            if (verified)
+            {
+                AppLockService.MarkUnlocked();
+                IsSettingsLocked = false;
+                SttTestLog.WriteSuccess("✓ Doğrulama başarılı — sayfa açıldı");
+            }
+            else
+            {
+                SttTestLog.WriteWarning("✗ Doğrulama yapılmadı — sayfa kilitli kaldı");
+            }
+        }
+        else
+        {
+            // PIN yöntemi: overlay'deki form kullanıcıyı bekler
+            SttTestLog.Write("🔒 Ayarlar kilitli — PIN isteniyor");
+        }
+    }
+
+    private void ResetPinGate()
+    {
+        SettingsPinEntry = string.Empty;
+        PinErrorText = string.Empty;
+        HasPinError = false;
     }
 
     [RelayCommand]
@@ -547,7 +634,7 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
         if (value != null)
         {
             _stt.SwitchProvider(value);
-            _keyRevealed = !IsBiometricLockEnabled;
+            _keyRevealed = !IsLockEnabled;
             ProviderApiKey = _keyRevealed ? CloudTranscribers.GetStoredApiKey(value.Id) : string.Empty;
             ProviderRegion = CloudTranscribers.GetStoredRegion(value.Id);
             if (string.IsNullOrEmpty(ProviderRegion) && !string.IsNullOrEmpty(value.DefaultRegion))
@@ -662,12 +749,12 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
             return;
         }
 
-        // Biyometrik kilit açıksa önce Windows Hello doğrulaması iste — onaylanınca
-        // anahtarı da GÖSTER (kilit açılınca ProviderApiKey boş kalmasın — bug)
+        // Kilit açıksa önce aktif yöntemle (PIN modalı veya Windows Hello) doğrulama
+        // iste — onaylanınca anahtarı da GÖSTER (kilit açılınca ProviderApiKey boş kalmasın)
         if (IsKeyLocked)
         {
-            var verified = await BiometricService.VerifyAsync(
-                $"{p.DisplayName} bağlantısını test etmek için Windows Hello ile doğrulayın");
+            var verified = await VerifyActiveMethodAsync(
+                $"{p.DisplayName} bağlantısını test etmek için kimliğinizi doğrulayın");
             if (!verified)
             {
                 ProviderStatusText = "Doğrulama yapılmadığı için test iptal edildi.";
@@ -911,19 +998,50 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
         }
         catch { }
         BiometricStatusText = IsBiometricAvailable
-            ? "Parmak izi / yüz / PIN ile API anahtarını koru."
-            : "Windows Hello kullanılamıyor (kurulu değil veya bu sürümde desteklenmiyor). Anahtarlar yine de Windows Vault'ta şifreli.";
+            ? "Parmak izi / yüz / Windows PIN ile doğrulama kullanılabilir."
+            : "Windows Hello kullanılamıyor (kurulu değil veya unpackaged sürümde erişilemiyor) — PIN kilidi kullanabilirsin.";
 
-        // Kullanılabilirlik yoksa kilit zorla kapatılır (anahtar görünür kalır)
-        if (!IsBiometricAvailable && IsBiometricLockEnabled)
+        // Seçili yöntem Hello ama kullanılamıyor → PIN'e düş (PIN varsa) yoksa kapat
+        if (!IsBiometricAvailable && LockMethod == AppLockMethod.WindowsHello)
         {
-            IsBiometricLockEnabled = false;
-            Preferences.Default.Set("stt_biometric_lock", false);
-            _keyRevealed = true;
-            if (SelectedSpeechProvider is { Id: not "offline" })
-                ProviderApiKey = CloudTranscribers.GetStoredApiKey(SelectedSpeechProvider.Id);
+            if (AppLockService.IsPinSet)
+            {
+                LockMethod = AppLockMethod.Pin;
+                SttTestLog.WriteWarning("⚠ Windows Hello kullanılamıyor — kilit PIN'e düşürüldü");
+            }
+            else
+            {
+                LockMethod = AppLockMethod.None;
+                _keyRevealed = true;
+                if (SelectedSpeechProvider is { Id: not "offline" })
+                    ProviderApiKey = CloudTranscribers.GetStoredApiKey(SelectedSpeechProvider.Id);
+                SttTestLog.WriteWarning("⚠ Windows Hello kullanılamıyor — kilit kapatıldı");
+            }
         }
         RefreshKeyLockState();
+        OnPropertyChanged(nameof(CanUseHello));
+    }
+
+    /// <summary>GÜVENLİK bölümü durum metinlerini tazele.</summary>
+    private void RefreshSecurityStatus()
+    {
+        LockStatusText = LockMethod switch
+        {
+            AppLockMethod.Pin => IsPinSet
+                ? "PIN koruması aktif. Ayarlar sekmesine girişte PIN sorulur."
+                : "PIN henüz ayarlanmadı — 'PIN Oluştur' ile kur.",
+            AppLockMethod.WindowsHello => "Windows Hello aktif. Ayarlar sekmesine girişte biyometrik doğrulama istenir.",
+            _ => "Kilit kapalı. API anahtarları yalnızca Windows Vault şifrelemesiyle korunur."
+        };
+        PinStatusText = IsPinSet
+            ? "✓ PIN ayarlandı — değiştirmek için butona bas."
+            : "PIN ayarlanmadı — ayarlar kilidi için 4-8 haneli PIN kur.";
+        OnPropertyChanged(nameof(IsLockEnabled));
+        OnPropertyChanged(nameof(IsPinMethod));
+        OnPropertyChanged(nameof(IsHelloMethod));
+        OnPropertyChanged(nameof(LockGateSubtitle));
+        OnPropertyChanged(nameof(UnlockKeyButtonText));
+        OnPropertyChanged(nameof(KeyLockHintText));
     }
 
     private void RefreshKeyLockState()
@@ -931,21 +1049,167 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
         var p = SelectedSpeechProvider;
         var hasKey = p != null && p.Id != "offline" &&
                      !string.IsNullOrWhiteSpace(CloudTranscribers.GetStoredApiKey(p.Id));
-        IsKeyLocked = IsBiometricLockEnabled && hasKey && !_keyRevealed;
+        IsKeyLocked = IsLockEnabled && hasKey && !_keyRevealed;
     }
 
-    /// <summary>Kilit overlay'indeki buton: Windows Hello ile sayfayı aç.</summary>
+    /// <summary>Kilit overlay'indeki açma butonu: PIN doğrular veya Hello ister.</summary>
     [RelayCommand]
     private async Task UnlockSettingsAsync()
     {
+        if (LockMethod == AppLockMethod.WindowsHello)
+        {
+            var verified = await BiometricService.VerifyAsync(
+                "Ayarlara girmek için Windows Hello ile doğrulayın");
+            if (verified)
+            {
+                AppLockService.MarkUnlocked();
+                IsSettingsLocked = false;
+                SttTestLog.WriteSuccess("✓ Doğrulama başarılı — sayfa açıldı");
+                SoundEffectService.Play(SoundEffectService.SoundKind.Success);
+            }
+            return;
+        }
+
+        // PIN doğrulama
+        var pin = SettingsPinEntry?.Trim() ?? string.Empty;
+        if (pin.Length == 0)
+        {
+            PinErrorText = "PIN girin.";
+            HasPinError = true;
+            return;
+        }
+        if (!AppLockService.VerifyPin(pin))
+        {
+            SettingsPinEntry = string.Empty;
+            PinErrorText = "PIN hatalı — tekrar deneyin.";
+            HasPinError = true;
+            return;
+        }
+        AppLockService.MarkUnlocked();
+        IsSettingsLocked = false;
+        ResetPinGate();
+        SttTestLog.WriteSuccess("✓ PIN doğrulandı — sayfa açıldı");
+        SoundEffectService.Play(SoundEffectService.SoundKind.Success);
+    }
+
+    /// <summary>PIN formundaki fallback butonu: aktif yöntem PIN olsa bile Windows Hello ile aç.</summary>
+    [RelayCommand]
+    private async Task UnlockSettingsWithHelloAsync()
+    {
+        if (!IsBiometricAvailable)
+            return;
         var verified = await BiometricService.VerifyAsync(
             "Ayarlara girmek için Windows Hello ile doğrulayın");
         if (verified)
         {
+            AppLockService.MarkUnlocked();
             IsSettingsLocked = false;
-            SttTestLog.WriteSuccess("✓ Doğrulama başarılı — sayfa açıldı");
+            ResetPinGate();
+            SttTestLog.WriteSuccess("✓ Windows Hello ile sayfa açıldı");
             SoundEffectService.Play(SoundEffectService.SoundKind.Success);
         }
+    }
+
+    /// <summary>Unutulan PIN için kilidi sıfırla (API anahtarı koruması kapanır).</summary>
+    [RelayCommand]
+    private async Task ResetLockAsync()
+    {
+        var ok = await Shell.Current.DisplayAlert("Kilidi sıfırla",
+            "Kilit kaldırılacak ve PIN silinecek. API anahtarları korumasız kalır. Devam edilsin mi?",
+            "Sıfırla", "Vazgeç");
+        if (!ok)
+            return;
+
+        AppLockService.DisableLock();
+        LockMethod = AppLockMethod.None;
+        IsPinSet = false;
+        IsSettingsLocked = false;
+        ResetPinGate();
+        _keyRevealed = true;
+        if (SelectedSpeechProvider is { Id: not "offline" })
+            ProviderApiKey = CloudTranscribers.GetStoredApiKey(SelectedSpeechProvider.Id);
+        RefreshKeyLockState();
+        RefreshSecurityStatus();
+        SoundEffectService.Play(SoundEffectService.SoundKind.Delete);
+        SttTestLog.WriteWarning("⚠ Kilit sıfırlandı — artık sorulmayacak");
+    }
+
+    /// <summary>GÜVENLİK bölümünden kilit yöntemini değiştir (Kapalı / PIN / Windows Hello).</summary>
+    [RelayCommand]
+    private async Task SetLockMethodAsync(AppLockMethod method)
+    {
+        if (method == LockMethod)
+            return;
+
+        if (method == AppLockMethod.WindowsHello)
+        {
+            if (!IsBiometricAvailable)
+            {
+                await Shell.Current.DisplayAlert("Windows Hello kullanılamıyor",
+                    "Bu cihazda Windows Hello kurulu değil veya bu sürümde erişilemiyor. PIN kilidi kullanabilirsin.",
+                    "Tamam");
+                return;
+            }
+            var ok = await BiometricService.VerifyAsync(
+                "Windows Hello kilidini etkinleştirmek için kimliğinizi doğrulayın");
+            if (!ok)
+                return;
+        }
+
+        if (method == AppLockMethod.Pin && !IsPinSet)
+        {
+            // PIN önce kurulur — şifre ayarlayıcı modalı; vazgeçilirse yöntem değişmez
+            var set = await OpenPinSetupCoreAsync(isChanging: false);
+            if (!set)
+                return;
+            IsPinSet = AppLockService.IsPinSet;
+        }
+
+        var wasEnabled = IsLockEnabled;
+        LockMethod = method;
+
+        // Kilit kapatılırken anahtar görünür olur; açılırken gizlenir
+        if (wasEnabled && method == AppLockMethod.None)
+        {
+            _keyRevealed = true;
+            if (SelectedSpeechProvider is { Id: not "offline" })
+                ProviderApiKey = CloudTranscribers.GetStoredApiKey(SelectedSpeechProvider.Id);
+        }
+        else if (!wasEnabled && method != AppLockMethod.None)
+        {
+            _keyRevealed = false;
+            ProviderApiKey = string.Empty;
+        }
+        RefreshKeyLockState();
+        RefreshSecurityStatus();
+        SoundEffectService.Play(SoundEffectService.SoundKind.Success);
+        SttTestLog.Write($"🔒 Kilit yöntemi: {method}");
+    }
+
+    /// <summary>"PIN Oluştur / Değiştir" butonu — şifre ayarlayıcı modalı.</summary>
+    [RelayCommand]
+    private async Task OpenPinSetupAsync()
+    {
+        var ok = await OpenPinSetupCoreAsync(isChanging: IsPinSet);
+        if (!ok)
+            return;
+
+        IsPinSet = AppLockService.IsPinSet;
+        // SetPin yöntemi PIN'e çevirir — VM ile senkronla
+        LockMethod = AppLockService.Method;
+        RefreshSecurityStatus();
+        SttTestLog.WriteSuccess("✓ PIN kaydedildi");
+    }
+
+    private async Task<bool> OpenPinSetupCoreAsync(bool isChanging)
+    {
+        var page = Shell.Current?.CurrentPage;
+        if (page == null)
+            return false;
+
+        var popup = new PinSetupPopup(isChanging);
+        await page.ShowPopupAsync(popup);
+        return await popup.ResultTask;
     }
 
     /// <summary>Canlı konsolu temizler.</summary>
@@ -1009,54 +1273,35 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void ToggleApiKeyVisibility() => IsApiKeyMasked = !IsApiKeyMasked;
 
-    /// <summary>Ayarlar sayfasındaki Windows Hello anahtarını açar (Switch Toggled).</summary>
-    public async Task SetBiometricLockAsync(bool enable)
+    /// <summary>
+    /// Aktif kilit yöntemiyle doğrula: PIN → PIN modalı, Windows Hello → biyometri.
+    /// Kilit kapalıysa doğrudan true (doğrulama gerekmez).
+    /// </summary>
+    private async Task<bool> VerifyActiveMethodAsync(string purpose)
     {
-        if (enable == IsBiometricLockEnabled)
-            return;
-
-        if (enable)
+        if (LockMethod == AppLockMethod.Pin)
         {
-            if (!IsBiometricAvailable)
-            {
-                IsBiometricLockEnabled = false;
-                return;
-            }
-            var ok = await BiometricService.VerifyAsync(
-                "Windows Hello kilidini etkinleştirmek için kimliğinizi doğrulayın");
-            if (!ok)
-            {
-                IsBiometricLockEnabled = false;
-                return;
-            }
-            IsBiometricLockEnabled = true;
-            _keyRevealed = false;
-            ProviderApiKey = string.Empty; // ekrandaki anahtarı gizle
+            var page = Shell.Current?.CurrentPage;
+            if (page == null)
+                return false;
+            var popup = new PinVerifyPopup(purpose);
+            await page.ShowPopupAsync(popup);
+            return await popup.ResultTask;
         }
-        else
-        {
-            IsBiometricLockEnabled = false;
-            _keyRevealed = true;
-            if (SelectedSpeechProvider is { Id: not "offline" })
-                ProviderApiKey = CloudTranscribers.GetStoredApiKey(SelectedSpeechProvider.Id);
-        }
-
-        Preferences.Default.Set("stt_biometric_lock", IsBiometricLockEnabled);
-        RefreshKeyLockState();
-        SoundEffectService.Play(IsBiometricLockEnabled
-            ? SoundEffectService.SoundKind.Success
-            : SoundEffectService.SoundKind.Click);
+        if (LockMethod == AppLockMethod.WindowsHello)
+            return await BiometricService.VerifyAsync(purpose);
+        return true;
     }
 
-    /// <summary>Kilitli anahtarı Windows Hello doğrulamasıyla açıp gösterir.</summary>
+    /// <summary>Kilitli anahtarı aktif yöntemle (PIN modalı veya Windows Hello) açıp gösterir.</summary>
     [RelayCommand]
     private async Task UnlockApiKeyAsync()
     {
-        if (!IsBiometricLockEnabled)
+        if (!IsLockEnabled)
             return;
 
-        var ok = await BiometricService.VerifyAsync(
-            "API anahtarını görüntülemek için Windows Hello ile doğrulayın");
+        var ok = await VerifyActiveMethodAsync(
+            "API anahtarını görüntülemek için kimliğinizi doğrulayın");
         if (!ok)
             return;
 

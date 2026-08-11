@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<toolkit:Popup xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+               xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+               xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+               xmlns:views="clr-namespace:TodoVoiceMaui.Views"
+               x:Class="TodoVoiceMaui.Views.PinVerifyPopup"
+               x:DataType="views:PinVerifyViewModel"
+               Color="#99000000"
+               CanBeDismissedByTappingOutsideOfPopup="True">
+
+    <Border WidthRequest="360"
+            StrokeThickness="1"
+            StrokeShape="RoundRectangle 24"
+            Padding="20,18"
+            Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}">
+        <Border.Background>
+            <AppThemeBinding Light="{StaticResource GlassSurfaceLight}" Dark="{StaticResource GlassSurfaceDark}" />
+        </Border.Background>
+        <Border.Shadow>
+            <Shadow Brush="{AppThemeBinding Light={StaticResource ShadowLg}, Dark={StaticResource DarkShadowLg}}"
+                    Radius="28" Opacity="0.55" Offset="0,10" />
+        </Border.Shadow>
+
+        <VerticalStackLayout Spacing="12">
+
+            <!-- BAŞLIK -->
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                <Border WidthRequest="42" HeightRequest="42"
+                        StrokeThickness="0" StrokeShape="RoundRectangle 21"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}"
+                        VerticalOptions="Center">
+                    <Label Text="&#xE72E;" FontFamily="Segoe Fluent Icons" FontSize="20"
+                           TextColor="{AppThemeBinding Light={StaticResource AccentContrast}, Dark={StaticResource DarkBackground}}"
+                           HorizontalOptions="Center" VerticalOptions="Center" />
+                </Border>
+                <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
+                    <Label Text="KİLİT DOĞRULAMA" Style="{StaticResource MicroLabel}"
+                           TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
+                    <Label Text="PIN GİRİN" FontFamily="SoraSemiBold" FontSize="16"
+                           TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource DarkTextPrimary}}" />
+                </VerticalStackLayout>
+                <Button Grid.Column="2" Text="&#xE711;" FontFamily="Segoe Fluent Icons" FontSize="14"
+                        Command="{Binding CancelCommand}"
+                        BackgroundColor="Transparent" BorderWidth="0"
+                        TextColor="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}"
+                        WidthRequest="36" HeightRequest="36" Padding="0" CornerRadius="18"
+                        VerticalOptions="Center" />
+            </Grid>
+
+            <Label Text="{Binding PurposeText}" Style="{StaticResource CaptionText}"
+                   HorizontalTextAlignment="Center" LineBreakMode="WordWrap"
+                   TextColor="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}" />
+
+            <Frame BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource DarkSurface}}"
+                   CornerRadius="14" Padding="0" HasShadow="False">
+                <Grid ColumnDefinitions="*,Auto">
+                    <Entry Text="{Binding Pin}" Placeholder="PIN"
+                           Keyboard="Numeric" IsPassword="{Binding IsMasked}" MaxLength="8"
+                           Style="{StaticResource SearchEntry}" Margin="14,0"
+                           HorizontalTextAlignment="Center" FontSize="22"
+                           VerticalOptions="Center" />
+                    <Button Grid.Column="1" Text="&#xE7B3;" FontFamily="Segoe Fluent Icons" FontSize="14"
+                            Command="{Binding ToggleMaskCommand}"
+                            BackgroundColor="Transparent" BorderWidth="0"
+                            TextColor="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}"
+                            WidthRequest="40" HeightRequest="40" Padding="0" CornerRadius="20"
+                            VerticalOptions="Center" />
+                </Grid>
+            </Frame>
+
+            <Label Text="{Binding ErrorText}" Style="{StaticResource CaptionText}"
+                   IsVisible="{Binding HasError}" FontAttributes="Bold"
+                   HorizontalTextAlignment="Center"
+                   TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource Danger}}" />
+
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                <Button Grid.Column="0" Text="Vazgeç" Command="{Binding CancelCommand}"
+                        Style="{StaticResource GhostButton}" HeightRequest="42" CornerRadius="21" />
+                <Button Grid.Column="1" Text="Doğrula" Command="{Binding VerifyCommand}"
+                        HeightRequest="42" CornerRadius="21" />
+            </Grid>
+        </VerticalStackLayout>
+    </Border>
+</toolkit:Popup>

@@ -169,9 +169,13 @@ Araştırma bulguları ve yapılabilir aksiyonlar:
       model asla silinmez.
 
 ### Kilit + Canlı Konsol (UYGULANDI)
-- [x] **Ayarlar girişinde kilit ekranı:** biyometrik kilit açıkken Ayarlar'a girişte
-      Windows Hello doğrulaması (overlay, ilk kareden aktif).
-- [x] **API anahtarı gizle/göster** (göz butonu; biyometrik kilitliyken gizli).
+- [x] **Uygulama kilidi (GÜVENLİK — PIN / Windows Hello):** kilit yöntemi seçici
+      (Kapalı / PIN / Windows Hello), **şifre ayarlayıcı modalı** (`PinSetupPopup`
+      — PIN kur/değiştir, tuzlu SHA-256 özet), `PinVerifyPopup` (PIN doğrulama),
+      "Ayarlar sekmesine geçerken kilidi sor" anahtarı, kilit overlay'inde PIN
+      formu + Windows Hello fallback + "Kiliti sıfırla". PIN kapısındaki Hello
+      fallback ayrı komutla çalışır (`UnlockSettingsWithHello`).
+- [x] **API anahtarı gizle/göster** (göz butonu; kilit aktifken gizli).
 - [x] **Canlı STT konsolu:** `SttTestLog` — bağlantı testleri/indirme/çevrimdışı
       transkripsiyon satırları Ayarlar + Model modalında canlı akar; otomatik
       kaydırma, Temizle, 40K karakter sınırı, MainThread marshal, app.log'a düşer.

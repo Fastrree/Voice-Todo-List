@@ -37,12 +37,20 @@ git'te kalır). Geçmiş TUTMAZ — sadece bugünü anlatır.
   (`WindowsCredentialStore` — advapi32 CredWrite/CredRead/CredDelete P/Invoke,
   blob OS tarafından şifreli, unpackaged'ta çalışır). DPAPI-in-Preferences fallback;
   eski `enc:`/düz metin kayıtları okumada Vault'a GÖÇ eder (tek yönlü).
-  **Biyometrik kilit (Windows Hello):** "Windows Hello ile kilitle" açıkken API
-  anahtarı gizli kalır — görüntüleme ve bağlantı testi UserConsentVerifier
-  (parmak izi/yüz/PIN) doğrulaması ister; kullanılamıyorsa dürüst durum gösterilir.
-  Kilit açıkken **Ayarlar sayfasına girişte kilit overlay'i** gösterilir ve Windows
-  Hello doğrulaması istenir (ilk kareden itibaren aktif — flaş yok). API anahtarı
-  alanında **gizle/göster (göz) butonu** vardır (biyometrik kilitliyken gizli).
+  **Uygulama kilidi (GÜVENLİK — PIN / Windows Hello):** Ayarlar'da GÜVENLİK
+  bölümü: kilit yöntemi Kapalı / PIN / Windows Hello (AppLockMethod, kalıcı).
+  **PIN:** şifre ayarlayıcı modalı (`PinSetupPopup` — kur: yeni+tekrar; değiştir:
+  mevcut doğrulamalı), 4-8 hane, tuzlu SHA-256 özet olarak Preferences'ta saklanır
+  (düz metin yazılmaz; `AppLockService` — sabit zamanlı karşılaştırma).
+  **Windows Hello:** `BiometricService` (UserConsentVerifier — parmak izi/yüz/PIN),
+  unpackaged'ta kullanılamıyorsa PIN'e düşer. Kilit aktifken API anahtarı gizli
+  kalır — görüntüleme ve bağlantı testi aktif yöntemle doğrulama ister (PIN →
+  `PinVerifyPopup`, Hello → biyometri). "Ayarlar sekmesine geçerken kilidi sor"
+  anahtarı açıkken Ayarlar girişinde kilit overlay'i gösterilir (ilk kareden aktif,
+  flaş yok); PIN formu + Windows Hello fallback + "Kiliti sıfırla" içerir. Oturum
+  içinde bir kez açılınca tekrar sorulmaz (`MarkUnlocked` — uygulama yeniden
+  başlayana dek). API anahtarı alanında **gizle/göster (göz) butonu** vardır
+  (kilitliyken gizli).
 - **Canlı konsol (STT):** `SttTestLog` statik logger'ı — bağlantı testleri, indirme
   ve çevrimdışı transkripsiyon satırları Ayarlar'daki koyu terminal kutusunda ve
   Model Yönetimi modalında CANLI ve RENKLİ akar (`→ istek` mavi / `✓ başarı` yeşil /

@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<toolkit:Popup xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+               xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+               xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+               xmlns:views="clr-namespace:TodoVoiceMaui.Views"
+               x:Class="TodoVoiceMaui.Views.PinSetupPopup"
+               x:DataType="views:PinSetupViewModel"
+               Color="#99000000"
+               CanBeDismissedByTappingOutsideOfPopup="True">
+
+    <Border WidthRequest="420"
+            StrokeThickness="1"
+            StrokeShape="RoundRectangle 24"
+            Padding="20,18"
+            Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}">
+        <Border.Background>
+            <AppThemeBinding Light="{StaticResource GlassSurfaceLight}" Dark="{StaticResource GlassSurfaceDark}" />
+        </Border.Background>
+        <Border.Shadow>
+            <Shadow Brush="{AppThemeBinding Light={StaticResource ShadowLg}, Dark={StaticResource DarkShadowLg}}"
+                    Radius="28" Opacity="0.55" Offset="0,10" />
+        </Border.Shadow>
+
+        <VerticalStackLayout Spacing="12">
+
+            <!-- BAŞLIK -->
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                <Border WidthRequest="42" HeightRequest="42"
+                        StrokeThickness="0" StrokeShape="RoundRectangle 21"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}"
+                        VerticalOptions="Center">
+                    <Label Text="&#xE72E;" FontFamily="Segoe Fluent Icons" FontSize="20"
+                           TextColor="{AppThemeBinding Light={StaticResource AccentContrast}, Dark={StaticResource DarkBackground}}"
+                           HorizontalOptions="Center" VerticalOptions="Center" />
+                </Border>
+                <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
+                    <Label Text="ŞİFRE AYARLAYICI" Style="{StaticResource MicroLabel}"
+                           TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
+                    <Label Text="{Binding TitleText}" FontFamily="SoraSemiBold" FontSize="16"
+                           TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource DarkTextPrimary}}" />
+                    <Label Text="{Binding SubtitleText}" Style="{StaticResource CaptionText}"
+                           TextColor="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}" />
+                </VerticalStackLayout>
+                <Button Grid.Column="2" Text="&#xE711;" FontFamily="Segoe Fluent Icons" FontSize="14"
+                        Command="{Binding CancelCommand}"
+                        BackgroundColor="Transparent" BorderWidth="0"
+                        TextColor="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}"
+                        WidthRequest="36" HeightRequest="36" Padding="0" CornerRadius="18"
+                        VerticalOptions="Center" />
+            </Grid>
+
+            <!-- Mevcut PIN (yalnız değiştirirken) -->
+            <VerticalStackLayout Spacing="4" IsVisible="{Binding IsChanging}">
+                <Label Text="Mevcut PIN" Style="{StaticResource CaptionText}" />
+                <Frame BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource DarkSurface}}"
+                       CornerRadius="12" Padding="0" HasShadow="False">
+                    <Entry Text="{Binding CurrentPin}" Placeholder="Mevcut PIN"
+                           Keyboard="Numeric" IsPassword="{Binding IsMasked}" MaxLength="8"
+                           Style="{StaticResource SearchEntry}" Margin="12,0"
+                           HorizontalTextAlignment="Center" FontSize="18" />
+                </Frame>
+            </VerticalStackLayout>
+
+            <!-- Yeni PIN -->
+            <VerticalStackLayout Spacing="4">
+                <Label Text="Yeni PIN" Style="{StaticResource CaptionText}" />
+                <Frame BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource DarkSurface}}"
+                       CornerRadius="12" Padding="0" HasShadow="False">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Entry Text="{Binding NewPin}" Placeholder="4-8 haneli rakam"
+                               Keyboard="Numeric" IsPassword="{Binding IsMasked}" MaxLength="8"
+                               Style="{StaticResource SearchEntry}" Margin="12,0"
+                               HorizontalTextAlignment="Center" FontSize="18"
+                               VerticalOptions="Center" />
+                        <Button Grid.Column="1" Text="&#xE7B3;" FontFamily="Segoe Fluent Icons" FontSize="14"
+                                Command="{Binding ToggleMaskCommand}"
+                                BackgroundColor="Transparent" BorderWidth="0"
+                                TextColor="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}"
+                                WidthRequest="40" HeightRequest="40" Padding="0" CornerRadius="20"
+                                VerticalOptions="Center" />
+                    </Grid>
+                </Frame>
+            </VerticalStackLayout>
+
+            <!-- PIN tekrar -->
+            <VerticalStackLayout Spacing="4">
+                <Label Text="Yeni PIN (tekrar)" Style="{StaticResource CaptionText}" />
+                <Frame BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource DarkSurface}}"
+                       CornerRadius="12" Padding="0" HasShadow="False">
+                    <Entry Text="{Binding ConfirmPin}" Placeholder="PIN'i tekrar gir"
+                           Keyboard="Numeric" IsPassword="{Binding IsMasked}" MaxLength="8"
+                           Style="{StaticResource SearchEntry}" Margin="12,0"
+                           HorizontalTextAlignment="Center" FontSize="18" />
+                </Frame>
+            </VerticalStackLayout>
+
+            <!-- Hata -->
+            <Label Text="{Binding ErrorText}" Style="{StaticResource CaptionText}"
+                   IsVisible="{Binding HasError}" FontAttributes="Bold"
+                   HorizontalTextAlignment="Center" LineBreakMode="WordWrap"
+                   TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource Danger}}" />
+
+            <!-- AKSİYONLAR -->
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                <Button Grid.Column="0" Text="Vazgeç" Command="{Binding CancelCommand}"
+                        Style="{StaticResource GhostButton}" HeightRequest="42" CornerRadius="21" />
+                <Button Grid.Column="1" Text="Kaydet" Command="{Binding SaveCommand}"
+                        HeightRequest="42" CornerRadius="21" />
+            </Grid>
+
+            <Label Text="PIN yalnızca bu cihazda, tuzlu özet (SHA-256) olarak saklanır — düz metin asla yazılmaz."
+                   Style="{StaticResource CaptionText}" HorizontalOptions="Center"
+                   HorizontalTextAlignment="Center" LineBreakMode="WordWrap"
+                   TextColor="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}" />
+        </VerticalStackLayout>
+    </Border>
+</toolkit:Popup>
