@@ -49,6 +49,9 @@ public partial class SettingsPage : ContentPage
 
             var sttIndex = _viewModel.SttModels.ToList().FindIndex(m => m.Id == _viewModel.SelectedSttModel?.Id);
             if (sttIndex >= 0) SttModelPicker.SelectedIndex = sttIndex;
+
+            var providerIndex = _viewModel.SpeechProviders.ToList().FindIndex(p => p.Id == _viewModel.SelectedSpeechProvider?.Id);
+            if (providerIndex >= 0) SpeechProviderPicker.SelectedIndex = providerIndex;
         }
         finally
         {
@@ -63,6 +66,16 @@ public partial class SettingsPage : ContentPage
         if (sender is Picker picker && picker.SelectedIndex >= 0)
         {
             _viewModel.SelectedSttModel = _viewModel.SttModels[picker.SelectedIndex];
+        }
+    }
+
+    private void OnSpeechProviderPickerChanged(object? sender, EventArgs e)
+    {
+        if (_isSyncingPickers) return;
+
+        if (sender is Picker picker && picker.SelectedIndex >= 0)
+        {
+            _viewModel.SelectedSpeechProvider = _viewModel.SpeechProviders[picker.SelectedIndex];
         }
     }
 

@@ -92,7 +92,7 @@ farklı bir hikâyeyle kullanabilir.
 | MVVM | CommunityToolkit.Mvvm 8.3.2 (`[ObservableProperty]`, `[RelayCommand]`) | Az boilerplate, source generator |
 | UI toolkit | CommunityToolkit.Maui 9.1.0 | Hazır konvertör / behavior desteği |
 | Ses | Plugin.Maui.Audio 3.0.1 | Kayıt + oynatma, `IAudioPlayer.Duration/CurrentPosition` `double?` (saniye) |
-| Transkripsiyon | **Whisper.net** (whisper.cpp, çevrimdışı, MIT) | Kullanıcı seçimli model (tiny 75MB → large-v3 2,9GB, varsayılan small-q5_1 ~190MB); kayıt → çevir akışı. Windows `SpeechRecognizer` unpackaged'ta çalışmaz (ADR-016) |
+| Transkripsiyon | **Whisper.net** (çevrimdışı, MIT) + **bulut STT seçenekleri** | 4 katmanlı yerel model (190MB→3,1GB) + OpenAI/Groq/Deepgram/ElevenLabs (API anahtarı ile, `ISpeechTranscriber`); kayıt → çevir akışı. Windows `SpeechRecognizer` unpackaged'ta çalışmaz (ADR-016) |
 | Local DB | sqlite-net-pcl 1.9.172 | Basit, thread-safe, offline |
 | Backend | Supabase (Auth, Postgres, Storage, Edge Functions) | Hosted + RLS + storage |
 | HTTP | `System.Net.Http.HttpClient` | **Supabase SDK iki kere URL prefix'liyor (bug); doğrudan HttpClient kullanıyoruz** |
@@ -190,17 +190,16 @@ eder, kendi türetmez. Visual language (Liquid Glass + motion) bu state'in
 Uygulandı (B2): `Core/Domain/Entities/Todo.cs`, `Models/TodoDto.cs`,
 `Models/TodoListItem.cs`. `Models/Todo.cs` kaldırıldı.
 
-### ADR-016: Unpackaged'ta Windows SpeechRecognizer YASAK → çevrimdışı Whisper
+### ADR-016: Unpackaged'ta Windows SpeechRecognizer YASAK → Whisper + bulut STT
 `Windows.Media.SpeechRecognition.SpeechRecognizer` WinRT paket kimliği gerektirir.
 Uygulama unpackaged WinUI 3 (`WindowsPackageType=None`) olduğundan, SpeechRecognizer
-her koşulda `0x800455A0 Internal Speech Error` ile başarısız olur (app.log'da kanıtlandı;
-dil seçimi ve mikrofon izni bu hatayı çözmez). Çözüm: **Whisper.net** (whisper.cpp
-bindings, MIT, ücretsiz, çevrimdışı, paket kimliği gerektirmez) + seçilebilir
-Whisper modeli (varsayılan `small-q5_1` ~190 MB; Ayarlar → Ses Tanıma'dan tiny/base/
-small/medium/large-v3-turbo/large-v3 seçilir — `WhisperModelCatalog`, Preferences
-`stt_model`). Türkçe doğruluğu Windows yerel tanımayı aşar; ilk kullanımda seçili
-model indirilir, sonra önbellekte. Bulut STT (OpenAI/Google/Azure) ücretsiz olmadığı
-için elendi.
+her koşulda `0x800455A0 Internal Speech Error` ile başarısız olur (app.log'da kanıtlandı).
+Çözüm: **Whisper.net** (whisper.cpp, MIT, çevrimdışı) — 4 katmanlı yerel model
+(Maximum 3,1GB `large-v3` Türkçe dahil 680.000+ saat veriyle eğitildi) + kullanıcı
+seçimli **bulut STT kaynakları**: OpenAI/Groq/Deepgram/ElevenLabs (API anahtarı ile,
+`ISpeechTranscriber` soyutlaması — ADR-012 seam'i). Bulut başarısızsa otomatik
+çevrimdışı fallback. Google/Azure/AssemblyAI/Fireworks/Cloudflare/Soniox katalogda
+"yakında".
 
 ### ADR-015: Voice Core domain-agnostik
 `Core/Application/Voice` içinde uygulama (ör. Todo) kavramı geçmez.
@@ -288,18 +287,20 @@ Migration: `MigrateAsync` PRAGMA + `ALTER TABLE` ile `reminder_at`, `is_deleted`
 - `PlaybackPosition` / `PlaybackDuration` (`double?` saniye, `TimeSpan` çevrimi)
 - `PlaybackPositionUpdated` event'i ile canlı progress
 
-### SpeechToTextService (çevrimdışı Whisper — kaydet → çevir)
+### SpeechToTextService (kaynak yönlendirmeli — kaydet → çevir)
 - `IsAvailable` — Windows'ta her zaman true (whisper.cpp native pakette gelir)
-- `SelectedModel` / `SwitchModelAsync` — Ayarlar'dan seçilen modeli indirir; eski
+- `SelectedProvider` / `SwitchProvider` — Ayarlar'dan kaynak seçilir (çevrimdışı veya
+  bulut); seçim Preferences `stt_provider` (varsayılan `offline`)
+- `TranscribeFileAsync(wavPath)` — seçili kaynak bulut + anahtar tanımlıysa bulut
+  dener; boş metin VEYA hata → **otomatik çevrimdışı fallback** (`TranscribeOfflineAsync`)
+- `SelectedModel` / `SwitchModelAsync` — çevrimdışı 4 katmandan modeli indirir; eski
   model yalnızca yeni model HAZIR olunca temizlenir, geçiş başarısızsa geri alınır.
   Factory `_factoryLock` altında dispose edilir; transkripsiyon aynı kilit içinde
   çalışır (yarış yok). Seçim Preferences `stt_model` (varsayılan small-q5_1).
-- `EnsureModelAsync` — seçili modeli (yoksa) HuggingFace'ten indirir, uygulama
-  veri klasöründe önbelleğe alır; `IsModelReady` seçili modele göre sıfırlanır
-- `TranscribeFileAsync(wavPath)` — WAV → 16kHz mono float (`WavAudioReader`) →
-  Whisper (`WithLanguage("tr")` + `WithPrompt(TurkishVocabulary.InitialPrompt)`,
-  segment event handler) → metin → `TurkishVocabulary.Correct()` (özel isim düzeltme)
-- `IsModelReady` / `IsDownloading` / `ModelDownloadProgress` / `StatusMessage` — durum
+- Bulut sağlayıcılar `ISpeechTranscriber` sözleşmesiyle (`CloudTranscribers`):
+  OpenAI + Groq aynı OpenAI-compatible sınıf (farklı base URL), Deepgram raw WAV,
+  ElevenLabs Scribe v2 multipart. Anahtarlar Preferences `stt_apikey_{id}`
+- `TestProviderConnectionAsync` — Ayarlar'daki "Bağlantıyı Test Et" (HTTP 2xx = geçerli)
 - Akış (TodoListPageViewModel): `StartSpeechToTextAsync` → `AudioService` ile kayıt →
   `StopSpeechToTextAsync` → `TranscribeFileAsync` → `VoiceCommandParser` → görev
 - Klasik "konuşurken canlı metin" (ContinuousRecognitionSession) bu kurulumda yok;

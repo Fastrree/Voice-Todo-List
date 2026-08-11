@@ -28,7 +28,11 @@ namespace TodoVoiceMaui.Services;
 public class SpeechToTextService : INotifyPropertyChanged
 {
     private const string ModelPreferenceKey = "stt_model";
+    private const string ProviderPreferenceKey = "stt_provider";
     private const long MinModelSizeBytes = 1_000_000; // indirilmiş/bozuk dosya koruması
+
+    // Bulut sağlayıcılar (tek örnek — DI'sız, anahtarlar Preferences'tan okunur)
+    private readonly IReadOnlyDictionary<string, ISpeechTranscriber> _cloudTranscribers;
 
     private bool _isAvailable;
     private bool _isModelReady;
@@ -41,11 +45,22 @@ public class SpeechToTextService : INotifyPropertyChanged
     private WhisperFactory? _factory;
     private readonly object _factoryLock = new();
     private WhisperModelInfo _selectedModel;
+    private SpeechProviderInfo _selectedProvider;
 
     public SpeechToTextService()
     {
-        var saved = Preferences.Default.Get(ModelPreferenceKey, WhisperModelCatalog.DefaultId);
-        _selectedModel = WhisperModelCatalog.GetById(saved);
+        var savedModel = Preferences.Default.Get(ModelPreferenceKey, WhisperModelCatalog.DefaultId);
+        _selectedModel = WhisperModelCatalog.GetById(savedModel);
+        var savedProvider = Preferences.Default.Get(ProviderPreferenceKey, SpeechProviderCatalog.DefaultId);
+        _selectedProvider = SpeechProviderCatalog.GetById(savedProvider);
+
+        _cloudTranscribers = new Dictionary<string, ISpeechTranscriber>
+        {
+            ["openai"] = new OpenAiCompatibleTranscriber("openai", "https://api.openai.com/v1", "gpt-4o-mini-transcribe"),
+            ["groq"] = new OpenAiCompatibleTranscriber("groq", "https://api.groq.com/openai/v1", "whisper-large-v3-turbo"),
+            ["deepgram"] = new DeepgramTranscriber(),
+            ["elevenlabs"] = new ElevenLabsTranscriber()
+        };
 
 #if WINDOWS
         EnsureNativeLibrary();
@@ -55,7 +70,7 @@ public class SpeechToTextService : INotifyPropertyChanged
         IsModelReady = IsModelFileReady(SelectedModel);
         StatusMessage = IsModelReady ? "Hazır" : "Henüz indirilmedi";
 
-        Log($"STT init: available={IsAvailable} model={SelectedModel.Id} modelReady={IsModelReady} modelPath={ModelPath}");
+        Log($"STT init: available={IsAvailable} model={SelectedModel.Id} provider={SelectedProvider.Id} modelReady={IsModelReady} modelPath={ModelPath}");
 #else
         _isAvailable = false;
 #endif
@@ -100,6 +115,38 @@ public class SpeechToTextService : INotifyPropertyChanged
 
     /// <summary>Şu an seçili model (Ayarlar'da gösterilir).</summary>
     public WhisperModelInfo SelectedModel => _selectedModel;
+
+    /// <summary>Şu an seçili transkripsiyon kaynağı (çevrimdışı/bulut).</summary>
+    public SpeechProviderInfo SelectedProvider => _selectedProvider;
+
+    /// <summary>Bulut sağlayıcı anahtarını kaydeder/okur (katalog id'sine göre).</summary>
+    public void SetProviderApiKey(string providerId, string key)
+    {
+        CloudTranscribers.SaveApiKey(providerId, key);
+        OnPropertyChanged(nameof(SelectedProvider));
+    }
+
+    public bool IsProviderConfigured(SpeechProviderInfo provider) =>
+        provider.Id == "offline" ||
+        (_cloudTranscribers.TryGetValue(provider.Id, out var t) && t.IsConfigured);
+
+    /// <summary>Sağlayıcı değiştirir (Ayarlar). Aynı sağlayıcıda yazım/log atlanır.</summary>
+    public void SwitchProvider(SpeechProviderInfo provider)
+    {
+        if (provider.Id == _selectedProvider.Id)
+            return;
+
+        _selectedProvider = provider;
+        Preferences.Default.Set(ProviderPreferenceKey, provider.Id);
+        OnPropertyChanged(nameof(SelectedProvider));
+        Log($"STT provider switched: {provider.Id}");
+    }
+
+    /// <summary>Bağlantı testi (yalnız bulut sağlayıcılar için).</summary>
+    public Task<bool> TestProviderConnectionAsync(string providerId) =>
+        _cloudTranscribers.TryGetValue(providerId, out var t)
+            ? t.TestConnectionAsync()
+            : Task.FromResult(false);
 
     /// <summary>Seçili modelin diskteki yolu.</summary>
     public string ModelPath => Path.Combine(FileSystem.AppDataDirectory, "models", SelectedModel.FileName);
@@ -264,10 +311,43 @@ public class SpeechToTextService : INotifyPropertyChanged
     }
 
     /// <summary>
-    /// WAV dosyasını transkript eder. Model hazır değilse önce indirir.
+    /// WAV dosyasını transkript eder. Seçili kaynak bulut + anahtar tanımlıysa bulut
+    /// kullanılır; bulut hatası/anahtar yoksa otomatik olarak çevrimdışı Whisper'a
+    /// düşer (fallback) — kullanıcı hiçbir zaman çalışamaz durumda kalmaz.
     /// Sonuç boş/başarısızsa null döner.
     /// </summary>
     public async Task<string?> TranscribeFileAsync(string wavPath)
+    {
+#if WINDOWS
+        // 1) Seçili kaynak bulutsa ve anahtar tanımlıysa önce bulutu dene
+        if (SelectedProvider.Id != "offline" &&
+            _cloudTranscribers.TryGetValue(SelectedProvider.Id, out var transcriber) &&
+            transcriber.IsConfigured)
+        {
+            try
+            {
+                var cloudText = await transcriber.TranscribeAsync(wavPath);
+                if (!string.IsNullOrWhiteSpace(cloudText))
+                {
+                    Log($"STT cloud OK: provider={SelectedProvider.Id}");
+                    return TurkishVocabulary.Correct(cloudText);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log($"STT cloud failed ({SelectedProvider.Id}), offline fallback: {ex.Message}");
+            }
+        }
+
+        // 2) Çevrimdışı Whisper (her zaman kullanılabilir)
+        return await TranscribeOfflineAsync(wavPath);
+#else
+        return null;
+#endif
+    }
+
+    /// <summary>Çevrimdışı Whisper transkripsiyonu — mevcut kanıtlanmış yol.</summary>
+    public async Task<string?> TranscribeOfflineAsync(string wavPath)
     {
 #if WINDOWS
         if (!await EnsureModelAsync())

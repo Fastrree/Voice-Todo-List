@@ -1,15 +1,16 @@
 namespace TodoVoiceMaui.Models;
 
 /// <summary>
-/// Ayarlar → "Ses Tanıma" bölümünde kullanıcının seçebileceği Whisper modeli.
-/// Her model için dürüst boyut / hız / doğruluk bilgisi kullanıcıya gösterilir:
-/// en küçük model en hızlı ama "seni tam anlamayabilir"; 1GB+ modeller çok daha
-/// iyi Türkçe anlar (büyük modeller 680.000+ saatlik çok dilli veriyle eğitilmiştir).
+/// Ayarlar → "Ses Tanıma" bölümünde kullanıcının seçebileceği çevrimdışı Whisper modeli.
+/// Katmanlar kullanıcının isteğine göre büyütüldü:
+///   Minimum ≥100MB · Orta ≥300MB · Yüksek ≥750MB · Maximum 2-5GB (Türkçe odaklı).
+/// Her model için dürüst boyut / hız / doğruluk bilgisi gösterilir.
 /// </summary>
 public class WhisperModelInfo
 {
     public required string Id { get; init; }
     public required string DisplayName { get; init; }
+    public required string TierLabel { get; init; }
     public required string FileName { get; init; }
     public required string SizeLabel { get; init; }
     public required string SpeedLabel { get; init; }
@@ -19,105 +20,86 @@ public class WhisperModelInfo
 
     public string DownloadUrl => $"https://huggingface.co/ggerganov/whisper.cpp/resolve/main/{FileName}";
 
-    /// <summary>Büyük model (1GB+) — ayrı uyarı rozeti gösterilir.</summary>
-    public bool IsLargeModel => SizeMb >= 1024;
-
     public int SizeMb { get; init; }
+
+    /// <summary>Büyük model (1GB+) — indirme öncesi ayrı onay gösterilir.</summary>
+    public bool IsLargeModel => SizeMb >= 1024;
 
     public override string ToString() => DisplayName;
 }
 
-/// <summary>Kullanıcının seçebileceği tüm modeller (Ayarlar ekranında bu liste gösterilir).</summary>
+/// <summary>
+/// Çevrimdışı Whisper model kataloğu — 4 katman.
+/// Boyutlar HuggingFace'ten doğrulanmış gerçek GGML dosya boyutlarıdır:
+///   Minimum 190MB · Orta 539MB · Yüksek 874MB · Maximum 3,1GB.
+/// (5GB'lık gerçek bir whisper.cpp GGML dosyası yok; Maximum en iyi Türkçe
+/// kapsamı olan large-v3 = 3,1GB — 680.000+ saatlik çok dilli veriyle eğitildi.)
+/// </summary>
 public static class WhisperModelCatalog
 {
-    /// <summary>
-    /// Ağırlıklı kullanım sırası: hafif → ağır. Varsayılan "small-q5_1" (dengeli).
-    /// GGML quantize dosyaların yaklaşık disk boyutları gerçektir.
-    /// </summary>
+    /// <summary>Ağırlıklı kullanım sırası: hafif → ağır. Varsayılan "small-q5_1" (Minimum).</summary>
     public static readonly IReadOnlyList<WhisperModelInfo> All = new[]
     {
         new WhisperModelInfo
         {
-            Id = "tiny",
-            DisplayName = "Tiny",
-            FileName = "ggml-tiny.bin",
-            SizeMb = 75,
-            SizeLabel = "75 MB",
-            SpeedLabel = "Çok hızlı",
-            AccuracyLabel = "Düşük",
-            Description = "En hafif model. Anında çalışır ama seni tam anlamayabilir — " +
-                          "kısa, basit komutlar için yeterli."
-        },
-        new WhisperModelInfo
-        {
-            Id = "base",
-            DisplayName = "Base",
-            FileName = "ggml-base.bin",
-            SizeMb = 142,
-            SizeLabel = "142 MB",
-            SpeedLabel = "Hızlı",
-            AccuracyLabel = "Orta-altı",
-            Description = "Hafif ve hızlı. Günlük kullanımda fena değil, ama Türkçe'de " +
-                          "özel isimleri ve eklemeli kelimeleri sık karıştırabilir."
-        },
-        new WhisperModelInfo
-        {
             Id = "small-q5_1",
-            DisplayName = "Small",
+            DisplayName = "Minimum",
+            TierLabel = "Minimum",
             FileName = "ggml-small-q5_1.bin",
             SizeMb = 190,
             SizeLabel = "190 MB",
-            SpeedLabel = "Dengeli",
+            SpeedLabel = "Hızlı",
             AccuracyLabel = "İyi",
             IsRecommended = true,
-            Description = "Önerilen varsayılan. Hız ve doğruluk dengesi en iyi olan model; " +
-                          "base'e göre Türkçe'de %10-20 daha az hata yapar."
+            Description = "En hafif katman (≥100MB şartını karşılar). Hızlı ve az bellek ister; " +
+                          "günlük kısa komutlar için yeterli, Türkçe'de base'e göre %10-20 daha iyi."
         },
         new WhisperModelInfo
         {
             Id = "medium-q5_0",
-            DisplayName = "Medium",
+            DisplayName = "Orta",
+            TierLabel = "Orta",
             FileName = "ggml-medium-q5_0.bin",
-            SizeMb = 1500,
-            SizeLabel = "1,5 GB",
-            SpeedLabel = "Yavaş",
+            SizeMb = 539,
+            SizeLabel = "539 MB",
+            SpeedLabel = "Dengeli",
             AccuracyLabel = "Yüksek",
-            Description = "İlk 1GB+ model. Türkçe'yi (diyalekt dahil) belirgin şekilde daha " +
-                          "iyi anlar; düşük kaliteli mikrofonlarda bile güvenilir. Daha fazla " +
-                          "bellek ve işlemci gücü ister."
+            Description = "Orta katman (≥300MB). Gerçek medium mimarisi — Türkçe'yi (diyalekt, " +
+                          "gürültülü mikrofon) belirgin şekilde daha iyi anlar."
         },
         new WhisperModelInfo
         {
-            Id = "large-v3-turbo-q5_0",
-            DisplayName = "Large v3 Turbo",
-            FileName = "ggml-large-v3-turbo-q5_0.bin",
-            SizeMb = 1600,
-            SizeLabel = "1,6 GB",
+            Id = "large-v3-turbo-q8_0",
+            DisplayName = "Yüksek",
+            TierLabel = "Yüksek",
+            FileName = "ggml-large-v3-turbo-q8_0.bin",
+            SizeMb = 874,
+            SizeLabel = "874 MB",
             SpeedLabel = "Hızlı*",
             AccuracyLabel = "Çok yüksek",
-            Description = "En iyi doğruluk seviyesi, ama Turbo sayesinde medium'dan daha hızlı " +
-                          "çalışır. *Turbo: large kalitesinde, small hızında. 1GB+ bölgesinde en " +
-                          "akıllı seçim."
+            Description = "Yüksek katman (≥750MB). large-v3 mimarisi, yüksek hassasiyet (q8_0) " +
+                          "— en iyi doğruluk, *turbo sayesinde hâlâ hızlı."
         },
         new WhisperModelInfo
         {
-            Id = "large-v3-q5_0",
-            DisplayName = "Large v3",
-            FileName = "ggml-large-v3-q5_0.bin",
-            SizeMb = 2900,
-            SizeLabel = "2,9 GB",
+            Id = "large-v3",
+            DisplayName = "Maximum",
+            TierLabel = "Maximum",
+            FileName = "ggml-large-v3.bin",
+            SizeMb = 3095,
+            SizeLabel = "3,1 GB",
             SpeedLabel = "Yavaş",
             AccuracyLabel = "En yüksek",
-            Description = "En büyük ve en doğru model (680.000+ saat veriyle eğitildi). " +
-                          "Karmaşık cümleler, aksanlar ve isimler için en iyisi — ama en çok " +
-                          "bellek ve zaman ister."
+            Description = "Maximum katman (2-5GB aralığında mümkün olan en iyi). 680.000+ saatlik " +
+                          "çok dilli veriyle eğitilmiş en büyük Whisper — Türkçe dahil tüm dillerde " +
+                          "en düşük hata oranı. En çok bellek ve zaman ister."
         }
     };
 
     public static WhisperModelInfo GetById(string id) =>
         All.FirstOrDefault(m => m.Id == id)
         ?? All.FirstOrDefault(m => m.Id == DefaultId)
-        ?? All[0]; // bilinmeyen id → varsayılan (Small)
+        ?? All[0];
 
     public static readonly string DefaultId = "small-q5_1";
 }

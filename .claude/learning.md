@@ -16,16 +16,24 @@ git'te kalır). Geçmiş TUTMAZ — sadece bugünü anlatır.
 - Buton toggle'dır: dinlerken tekrar bas → durdur ve transkript et
 - `SpeechToTextService`: Whisper.net (whisper.cpp) — `TranscribeFileAsync` ile
   WAV → 16kHz mono → metin (ADR-016: unpackaged'ta Windows SpeechRecognizer çalışmaz)
-- **Model:** `ggml-small-q5_1.bin` (~190 MB, quantized small) — base'e göre Türkçe'de
-  %10-20 daha düşük WER; ilk kullanımda arka planda indirilir (App başlangıcı),
-  sonra önbellekte (`%LOCALAPPDATA%\TodoVoiceMaui\TodoVoiceMaui\Data\models\`)
-- **Model seçici (Ayarlar → Ses Tanıma):** kullanıcı 6 modelden birini seçebilir —
-  Tiny 75MB / Base 142MB / Small 190MB (varsayılan) / Medium 1,5GB / Large v3 Turbo
-  1,6GB / Large v3 2,9GB. Her modelin boyut/hız/doğruluk çipleri + dürüst açıklaması
-  gösterilir ("en küçük hızlıdır ama seni tam anlamayabilir"). Seçim Preferences
-  (`stt_model`) saklanır; büyük model (1GB+) indirilmeden önce onay sorulur.
-  Model geçişinde ESKİ model yalnızca YENİ model hazır olduktan sonra silinir
-  (çevrimdışı güvenlik); geçiş başarısız olursa seçim geri alınır.
+- **Model:** `ggml-small-q5_1.bin` (~190 MB, quantized small) — ilk kullanımda arka
+  planda indirilir (App başlangıcı), sonra önbellekte
+  (`%LOCALAPPDATA%\TodoVoiceMaui\TodoVoiceMaui\Data\models\`)
+- **Model kataloğu — 4 katman (Ayarlar → Ses Tanıma):** Minimum 190MB (small-q5_1,
+  varsayılan) / Orta 539MB (medium-q5_0) / Yüksek 874MB (large-v3-turbo-q8_0) /
+  Maximum 3,1GB (large-v3). Her modelin boyut/hız/doğruluk çipleri + dürüst açıklaması
+  gösterilir. Seçim Preferences (`stt_model`) saklanır; 1GB+ model indirilmeden önce
+  onay sorulur. Model geçişinde ESKİ model yalnızca YENİ model hazır olduktan sonra
+  silinir; geçiş başarısız olursa seçim geri alınır.
+- **Transkripsiyon KAYNAĞI seçici (bulut destek):** Ayarlar'da kaynak seçilir —
+  Çevrimdışı Whisper (anahtar yok, varsayılan) veya bulut: OpenAI
+  (gpt-4o-mini-transcribe), Groq (whisper-large-v3-turbo), Deepgram (Nova-3),
+  ElevenLabs (Scribe v2). Katalogda ayrıca Google/Azure/AssemblyAI/Fireworks/
+  Cloudflare/Soniox "yakında" olarak listelenir. API anahtarları Preferences
+  (`stt_apikey_{id}`) saklanır; Ayarlar'da "Bağlantıyı Test Et" ile doğrulanır.
+  **Fallback:** bulut başarısız/anahtar yoksa otomatik çevrimdışı Whisper'a düşülür.
+  `TurkishVocabulary.Correct()` tüm kaynaklarda çalışır; prompt önyüklemesi bulut
+  API'lerinin prompt/keyterm alanlarına da yazılır.
 - **Decode önyükleme:** `WithPrompt(TurkishVocabulary.InitialPrompt)` — ünlü
   şirket/kişi isimleri whisper token seçimine yönlendirilir.
 - **Özel isim otomatik düzeltme:** `TurkishVocabulary.Correct()` transkripsiyon

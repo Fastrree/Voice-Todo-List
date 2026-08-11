@@ -112,5 +112,35 @@ yeniden tasarla.** Aşağıdaki gereksinimler bağlayıcıdır:
 - [ ] Chunked Whisper ile "konuşurken canlı metin" (streaming transkripsiyon)
 - [ ] Düşük güven eşiği politikası (konuşmasız girdide yanlış metin önleme)
 - [ ] Doğal dil ile görev ayrıştırma (tarih, öncelik, etiket çıkarma)
+
+---
+
+## 4. Türkçe STT Eğitim Yolu (araştırma sonuçları — 2026-08)
+
+Kullanıcı isteği: çevrimdışı tarafı Türkçe'de daha iyi eğitmek + bulut seçenekleri.
+Araştırma bulguları ve yapılabilir aksiyonlar:
+
+### Bulut sağlayıcı kataloğu (geniş)
+- **Uygulandı:** Çevrimdışı (4 katman) + OpenAI (gpt-4o-mini-transcribe) + Groq
+  (whisper-large-v3-turbo) + Deepgram (Nova-3) + ElevenLabs (Scribe v2).
+- **Katalogda, yakında:** Google Chirp 3, Azure AI Speech, AssemblyAI Universal-2,
+  Fireworks, Cloudflare, Soniox (Türkçe uzmanı). Her biri tek `ISpeechTranscriber`
+  sınıfıyla aktifleşir (desen: `CloudTranscribers`).
+
+### Türkçe fine-tune → GGML yolu
+- **Hazır Türkçe GGML model YOK** (araştırıldı). Mevcutlar PyTorch/CT2:
+  - `emre/whisper-medium-turkish-2` (HF, 19 beğeni — en popüler Türkçe medium fine-tune)
+  - `erenfazlioglu/whisper-small-turkish-tr-best`
+- **Dönüşüm:** whisper.cpp repo'sundaki `convert-pt-to-ggml.py` / `convert-h5-to-ggml.py`
+  ile PyTorch checkpoint → GGML. Dönüşen dosya `WhisperModelCatalog`'a "Türkçe Maximum"
+  katmanı olarak eklenebilir (HF'a yüklenip URL'i katalogda tutulur).
+- **Dataset'ler (eğitim için):** Common Voice TR (~300+ saat, açık), Google Fleurs TR
+  (~12 saat), NST Türkçe (Ankara Üni., 4000+ saat — lisanslı), MedASR-TR (medikal).
+- **Pratik bugün:** Maximum katmanı = `ggml-large-v3` (3,1GB, 680.000+ saat çok dilli
+  veriyle eğitildi — Türkçe dahil) + `TurkishVocabulary` sözlüğü.
+
+### Güvenlik notu
+- Bulut API anahtarları Preferences'ta düz metin saklanır (desktop takas). İyileştirme:
+  DPAPI (`System.Security.Cryptography.ProtectedData`, CurrentUser) ile şifreleme.
 - [ ] Windows App SDK upgrade (WinAppSDK 1.7+, WASDK tooling)
 - [ ] CI/CD (GitHub Actions build + publish)

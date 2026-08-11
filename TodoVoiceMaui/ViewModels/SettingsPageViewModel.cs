@@ -74,7 +74,35 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private string sttInstalledInfo = string.Empty;
 
+    // ---- Transkripsiyon kaynağı (çevrimdışı / bulut) ----
+
+    [ObservableProperty]
+    private SpeechProviderInfo? selectedSpeechProvider;
+
+    [ObservableProperty]
+    private string providerApiKey = string.Empty;
+
+    [ObservableProperty]
+    private string providerStatusText = string.Empty;
+
+    [ObservableProperty]
+    private bool isProviderTesting;
+
+    public IReadOnlyList<SpeechProviderInfo> SpeechProviders { get; } =
+        SpeechProviderCatalog.All.Where(p => p.Id == "offline" || p.IsImplemented).ToList();
+
     public IReadOnlyList<WhisperModelInfo> SttModels { get; } = WhisperModelCatalog.All;
+
+    /// <summary>Model seçici yalnızca çevrimdışı kaynak seçiliyken gösterilir.</summary>
+    public bool IsOfflineProvider => SelectedSpeechProvider?.Id == "offline";
+
+    /// <summary>API anahtarı alanı yalnızca bulut sağlayıcıda gösterilir.</summary>
+    public bool IsApiKeyVisible => SelectedSpeechProvider is { RequiresApiKey: true };
+
+    /// <summary>Seçili sağlayıcının katalog açıklaması (detay kartı).</summary>
+    public string ProviderDetailText =>
+        SelectedSpeechProvider == null ? string.Empty :
+        $"{SelectedSpeechProvider.ModelLabel} · {SelectedSpeechProvider.CostLabel}\n{SelectedSpeechProvider.Description}";
 
     public SettingsPageViewModel(SyncService syncService, ITodoStore todoStore, SpeechToTextService stt)
     {
@@ -88,6 +116,9 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
         // STT model durumunu canlı tut (indirme ilerlemesi arayüze yansır)
         _stt.PropertyChanged += OnSttPropertyChanged;
         SelectedSttModel = _stt.SelectedModel;
+        SelectedSpeechProvider = _stt.SelectedProvider;
+        OnPropertyChanged(nameof(IsOfflineProvider));
+        OnPropertyChanged(nameof(IsApiKeyVisible));
     }
 
     public async Task InitializeAsync()
@@ -332,6 +363,79 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
     partial void OnSelectedSttModelChanged(WhisperModelInfo? value)
     {
         RefreshSttStatus();
+    }
+
+    /// <summary>Sağlayıcı değiştiğinde: kaynağı uygula + anahtarı yükle + görünürlükleri tazele.</summary>
+    partial void OnSelectedSpeechProviderChanged(SpeechProviderInfo? value)
+    {
+        if (value != null)
+        {
+            _stt.SwitchProvider(value);
+            ProviderApiKey = CloudTranscribers.GetStoredApiKey(value.Id);
+        }
+        RefreshProviderStatus();
+        OnPropertyChanged(nameof(IsOfflineProvider));
+        OnPropertyChanged(nameof(IsApiKeyVisible));
+        OnPropertyChanged(nameof(ProviderDetailText));
+    }
+
+    private void RefreshProviderStatus()
+    {
+        var p = SelectedSpeechProvider;
+        if (p == null)
+            return;
+
+        ProviderStatusText = p.Id == "offline"
+            ? "Çevrimdışı — anahtar gerekmez, her zaman çalışır"
+            : p.RequiresApiKey && string.IsNullOrWhiteSpace(ProviderApiKey)
+                ? "API anahtarı girilmedi — bu kaynağı seçsen bile çevrimdışı Whisper kullanılır"
+                : "Anahtar kayıtlı. 'Bağlantıyı Test Et' ile doğrulayabilirsin";
+    }
+
+    [RelayCommand]
+    private void SaveProviderApiKey()
+    {
+        if (SelectedSpeechProvider is { Id: not "offline" })
+        {
+            _stt.SetProviderApiKey(SelectedSpeechProvider.Id, ProviderApiKey);
+            SoundEffectService.Play(SoundEffectService.SoundKind.Success);
+            RefreshProviderStatus();
+        }
+    }
+
+    [RelayCommand]
+    private async Task TestProviderConnectionAsync()
+    {
+        var p = SelectedSpeechProvider;
+        if (p == null || p.Id == "offline")
+            return;
+
+        if (string.IsNullOrWhiteSpace(ProviderApiKey))
+        {
+            await Shell.Current.DisplayAlert("Anahtar gerekli",
+                $"{p.DisplayName} için API anahtarını önce girip kaydedin.", "Tamam");
+            return;
+        }
+
+        IsProviderTesting = true;
+        ProviderStatusText = "Bağlantı test ediliyor…";
+        try
+        {
+            var ok = await _stt.TestProviderConnectionAsync(p.Id);
+            ProviderStatusText = ok
+                ? $"{p.DisplayName} bağlantısı başarılı ✓ — artık bu kaynak kullanılacak"
+                : $"{p.DisplayName} bağlantısı başarısız. Anahtarı kontrol edin.";
+            if (ok)
+                SoundEffectService.Play(SoundEffectService.SoundKind.Success);
+        }
+        catch (Exception ex)
+        {
+            ProviderStatusText = $"Test hatası: {ex.Message}";
+        }
+        finally
+        {
+            IsProviderTesting = false;
+        }
     }
 
     private void RefreshSttStatus()
