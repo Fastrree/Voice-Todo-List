@@ -52,6 +52,16 @@ git'te kalır). Geçmiş TUTMAZ — sadece bugünü anlatır.
 - Ayarlar sayfasında tema seçimi; kaydedilip uygulanır
 - Güven: `HIGH` — build doğrulandı, tema geçişi kodda tanımlı
 
+### ✨ Arayüz cilası (animasyon + ses efektleri)
+- `AnimationService`: sayfa girişi fade+rise (easeOutQuint), kart/satır hover lift,
+  mikrofon nefes döngüsü (`BreathHandle` — dinlerken Görevler'deki 🎤 butonu nabız atar)
+- `SoundEffectService`: çalışma zamanında **sentezlenen** WAV tonları
+  (winmm `PlaySound` P/Invoke — asset yok, paket kimliği gerekmez): Click/Success/Error/
+  Delete/MicStart/MicStop. Görev oluşunca başarı tonu, mikrofona basınca nefes tonu vb.
+- Ayarlar → **"Ses efektleri"** anahtarı (Preferences: `enable_sounds`, cihazda saklanır)
+- Tüm butonlarda `Pressed` scale (0.92–0.97) + `PointerOver` durumları (Styles.xaml)
+- Güven: `HIGH` — build 0 hata, açık + koyu temada runtime doğrulandı, `app.log` temiz
+
 ### 📴 Local-first veri + senkronizasyon
 - Tüm yazma önce SQLite, sonra Supabase
 - `SyncService` 4 adım sync (profil → ses → todo push → todo pull)

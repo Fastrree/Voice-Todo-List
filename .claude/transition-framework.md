@@ -299,12 +299,17 @@ Tier Reduced: prefers-reduced-motion → animasyon yok; yalnız opacity toggle (
 
 ## 9. Uygulama Sırası (mühendislik süreci)
 
+> Durum (2026-08-11): aşağıdaki adımların **5 ve 6'sı tamamlandı**
+> (`AnimationService.cs` + `SoundEffectService.cs` çalışıyor; tüm sayfalarda giriş
+> animasyonu, kart/buton hover + press, mikrofon nefes döngüsü ve anlamlı ses
+> efektleri var — Ayarlar → "Ses efektleri" ile kapatılabilir).
+
 1. `TransitionService` (orchestrator) + `Appear/Exit` yardımcıları + tier detection
 2. SystemBackdrop entegrasyonu (Mica→Acrylic→fallback) + cam panel simülasyonu
 3. Karşılama storyboard (splash → onboarding → ana ekran)
 4. Sayfa geçişleri + Shell tab davranışı
-5. Mikro-etkileşimler (hover/press/ripple/checkbox/onay sesleri)
-6. Ses efektleri (AudioService üzerinden, hafif, opsiyonel — settings'te kapatılabilir)
+5. ✅ **Mikro-etkileşimler** (hover/press/ripple/checkbox/onay sesleri) — 2026-08-11
+6. ✅ **Ses efektleri** (AudioService üzerinden, hafif, opsiyonel — settings'te kapatılabilir)
 7. Reduced motion + performans katmanları
 8. Regression guard + build + `app.log` boş + çökme testi (elle)
 
@@ -338,10 +343,10 @@ Tier Reduced: prefers-reduced-motion → animasyon yok; yalnız opacity toggle (
 
 ```
 TodoVoiceMaui/Services/
-├── AnimationService.cs          # tier detection + easing + fade/rise helper
+├── AnimationService.cs          # ✅ MEVCUT — fade/rise, lift, BreathHandle (nefes döngüsü)
 ├── TransitionService.cs         # karşılama storyboard, sayfa geçişleri
 ├── BackdropService.cs           # Mica → Acrylic → fallback system backdrop
-├── SoundEffectService.cs        # mikro/karşılama ses efektleri (opsiyonel, ayar)
+├── SoundEffectService.cs        # ✅ MEVCUT — sentezlenmiş WAV tonları (winmm P/Invoke, asset yok)
 TodoVoiceMaui/Views/Onboarding/
 ├── OnboardingPage.xaml(.cs)     # 3 ekranlı karşılama
 TodoVoiceMaui/Controls/
