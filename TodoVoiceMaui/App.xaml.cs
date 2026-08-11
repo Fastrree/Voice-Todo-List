@@ -15,6 +15,9 @@ public partial class App : Application
 		_syncService = syncService;
 		_reminderService = reminderService;
 
+		// Arayüz ses efektleri tercihi (Ayarlar → Ses efektleri)
+		SoundEffectService.Enabled = Preferences.Default.Get("enable_sounds", true);
+
 		// Dev aracı: `--theme=dark|light|system` ile tema zorlanabilir (tema doğrulaması için).
 		// Argüman yoksa kayıtlı tercih uygulanır.
 		var args = Environment.GetCommandLineArgs();

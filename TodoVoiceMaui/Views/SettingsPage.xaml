@@ -37,7 +37,7 @@
             </Grid>
 
             <!-- İÇERİK -->
-            <ScrollView Grid.Row="1" VerticalScrollBarVisibility="Never">
+            <ScrollView x:Name="SettingsScroll" Grid.Row="1" VerticalScrollBarVisibility="Never">
                 <VerticalStackLayout Spacing="10">
 
                     <!-- PROFİL -->
@@ -118,6 +118,11 @@
                             <Grid ColumnDefinitions="*,Auto">
                                 <Label Text="Otomatik senkron" Style="{StaticResource BodyText}" VerticalOptions="Center" />
                                 <Switch Grid.Column="1" IsToggled="{Binding AutoSync}"
+                                        OnColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Text="Ses efektleri" Style="{StaticResource BodyText}" VerticalOptions="Center" />
+                                <Switch Grid.Column="1" IsToggled="{Binding EnableSoundEffects}"
                                         OnColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
                             </Grid>
                             <Button Text="Tercihleri Kaydet" Command="{Binding SavePreferencesCommand}"

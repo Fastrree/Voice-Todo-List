@@ -186,6 +186,7 @@ public partial class TodoListPageViewModel : ObservableObject
             if (success)
             {
                 NewTodoTitle = string.Empty;
+                SoundEffectService.Play(SoundEffectService.SoundKind.Success);
                 await LoadTodosAsync();
             }
             else
@@ -210,7 +211,8 @@ public partial class TodoListPageViewModel : ObservableObject
         {
             await _syncService.UpdateTodoAsync(todo.Id, new { completed = !todo.Completed });
             todo.Completed = !todo.Completed;
-            
+            SoundEffectService.Play(SoundEffectService.SoundKind.Click);
+
             ApplyFilter();
         }
         catch (Exception ex)
@@ -230,6 +232,7 @@ public partial class TodoListPageViewModel : ObservableObject
             {
                 await _syncService.DeleteTodoAsync(todo.Id);
                 Todos.Remove(todo);
+                SoundEffectService.Play(SoundEffectService.SoundKind.Delete);
                 ApplyFilter();
             }
             catch (Exception ex)
@@ -272,6 +275,7 @@ public partial class TodoListPageViewModel : ObservableObject
         {
             VoiceFlowState = VoiceFlowState.Listening;
             LiveTranscript = "Dinliyor...";
+            SoundEffectService.Play(SoundEffectService.SoundKind.MicStart);
 
             // Kayıt (AudioService) → durdurulunca Whisper ile metne çevrilecek
             var started = await _audioService.StartRecordingAsync();
@@ -306,6 +310,8 @@ public partial class TodoListPageViewModel : ObservableObject
                 LiveTranscript = string.Empty;
                 return;
             }
+
+            SoundEffectService.Play(SoundEffectService.SoundKind.MicStop);
 
             VoiceFlowState = VoiceFlowState.Processing;
             LiveTranscript = "Ses tanınıyor...";
@@ -409,6 +415,7 @@ public partial class TodoListPageViewModel : ObservableObject
                 VoiceFlowState = VoiceFlowState.Recognized;
                 NewTodoTitle = string.Empty;
                 LiveTranscript = text;
+                SoundEffectService.Play(SoundEffectService.SoundKind.Success);
                 await LoadTodosAsync();
             }
             else

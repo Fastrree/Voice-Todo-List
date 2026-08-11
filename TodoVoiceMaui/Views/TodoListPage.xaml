@@ -55,7 +55,7 @@
               RowDefinitions="Auto,Auto,Auto,*,Auto,Auto">
 
             <!-- BAŞLIK + senkron durumu -->
-            <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="12" Padding="0,0,0,10">
+            <Grid x:Name="HeaderGrid" Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="12" Padding="0,0,0,10">
                 <VerticalStackLayout Spacing="1">
                     <Label Text="GÖREVLER"
                            Style="{StaticResource MicroLabel}"
@@ -88,7 +88,7 @@
             </Grid>
 
             <!-- ARAMA -->
-            <Grid Grid.Row="1" Padding="0,0,0,8">
+            <Grid x:Name="SearchBox" Grid.Row="1" Padding="0,0,0,8">
                 <Border Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}"
                         StrokeThickness="1"
                         StrokeShape="RoundRectangle 16">
@@ -112,7 +112,7 @@
             </Grid>
 
             <!-- FİLTRELER -->
-            <ScrollView Grid.Row="2"
+            <ScrollView x:Name="FiltersScroll" Grid.Row="2"
                         Orientation="Horizontal"
                         HorizontalScrollBarVisibility="Never"
                         Margin="0,0,0,8">
@@ -157,7 +157,7 @@
             </ScrollView>
 
             <!-- LİSTE · doğal scroll -->
-            <RefreshView Grid.Row="3"
+            <RefreshView x:Name="TodosRefresh" Grid.Row="3"
                          Command="{Binding RefreshCommand}"
                          IsRefreshing="{Binding IsLoading}">
 
@@ -202,6 +202,7 @@
                                 <Border.GestureRecognizers>
                                     <TapGestureRecognizer Command="{Binding Source={x:Reference TodosCollection}, Path=BindingContext.OpenTodoDetailCommand}"
                                                           CommandParameter="{Binding .}" />
+                                    <PointerGestureRecognizer PointerEntered="OnRowPointerEntered" PointerExited="OnRowPointerExited" />
                                 </Border.GestureRecognizers>
                                 <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="10">
                                     <CheckBox Grid.Column="0" IsChecked="{Binding Completed}" VerticalOptions="Start">
@@ -253,7 +254,7 @@
             </RefreshView>
 
             <!-- SES DURUMU · yalnızca voice flow aktifken (kayıt/çeviri ilerlemesi) -->
-            <Border Grid.Row="4"
+            <Border x:Name="VoiceStatus" Grid.Row="4"
                     IsVisible="{Binding IsVoiceFlowActive}"
                     Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}"
                     StrokeThickness="1"
@@ -276,7 +277,7 @@
             </Border>
 
             <!-- ALT BAR · ekleme (sabit) -->
-            <Border Grid.Row="5"
+            <Border x:Name="BottomBar" Grid.Row="5"
                     Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}"
                     StrokeThickness="1"
                     StrokeShape="RoundRectangle 20"
@@ -295,7 +296,7 @@
                                Style="{StaticResource SearchEntry}"
                                Margin="12,0" />
                     </Border>
-                    <Button Grid.Column="1"
+                    <Button x:Name="MicButton" Grid.Column="1"
                             Text="&#xE91F;"
                             FontFamily="Segoe Fluent Icons"
                             Command="{Binding StartSpeechToTextCommand}"

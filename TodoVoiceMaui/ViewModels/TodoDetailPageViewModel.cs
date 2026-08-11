@@ -142,6 +142,7 @@ public partial class TodoDetailPageViewModel : ObservableObject
     private void StartEditing()
     {
         IsEditing = true;
+        SoundEffectService.Play(SoundEffectService.SoundKind.Click);
     }
 
     [RelayCommand]
@@ -180,7 +181,8 @@ public partial class TodoDetailPageViewModel : ObservableObject
                 Todo.UpdatedAt = DateTime.UtcNow;
 
                 IsEditing = false;
-                
+                SoundEffectService.Play(SoundEffectService.SoundKind.Success);
+
                 await Shell.Current.DisplayAlert("Başarılı", "Değişiklikler kaydedildi.", "Tamam");
             }
             else
@@ -222,6 +224,7 @@ public partial class TodoDetailPageViewModel : ObservableObject
 
                 if (success)
                 {
+                    SoundEffectService.Play(SoundEffectService.SoundKind.Delete);
                     await Shell.Current.GoToAsync("..");
                 }
                 else
@@ -249,11 +252,16 @@ public partial class TodoDetailPageViewModel : ObservableObject
             {
                 var filePath = await _audioService.StopRecordingAsync();
                 _pendingVoiceFilePath = filePath;
+                SoundEffectService.Play(SoundEffectService.SoundKind.MicStop);
             }
             else
             {
                 var started = await _audioService.StartRecordingAsync();
-                if (!started)
+                if (started)
+                {
+                    SoundEffectService.Play(SoundEffectService.SoundKind.MicStart);
+                }
+                else
                 {
                     await Shell.Current.DisplayAlert("Hata", "Ses kaydı başlatılamadı. Mikrofon iznini kontrol edin.", "Tamam");
                 }
@@ -302,6 +310,7 @@ public partial class TodoDetailPageViewModel : ObservableObject
                     }
 
                     ClearRecording();
+                    SoundEffectService.Play(SoundEffectService.SoundKind.Success);
                     await Shell.Current.DisplayAlert("Başarılı", "Ses kaydı kaydedildi.", "Tamam");
                 }
                 else
@@ -357,6 +366,7 @@ public partial class TodoDetailPageViewModel : ObservableObject
                     var started = await _audioService.PlayRecordingFromUrlAsync(recording.FileUrl);
                     if (started)
                     {
+                        SoundEffectService.Play(SoundEffectService.SoundKind.Click);
                         recording.PlaybackProgress = 0;
                         recording.IsPlaying = true;
                         CurrentlyPlaying = recording;
@@ -386,6 +396,7 @@ public partial class TodoDetailPageViewModel : ObservableObject
                 // Note: In a full implementation, you would call a delete edge function
                 // For now, we'll just remove from the UI
                 VoiceRecordings.Remove(recording);
+                SoundEffectService.Play(SoundEffectService.SoundKind.Delete);
 
                 await Shell.Current.DisplayAlert("Başarılı", "Ses kaydı silindi.", "Tamam");
             }

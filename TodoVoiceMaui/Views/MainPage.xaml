@@ -119,7 +119,8 @@
             <BoxView Grid.Row="1" Color="Transparent" />
 
             <!-- HERO · voice-first kimlik kompozisyonu -->
-            <VerticalStackLayout Grid.Row="2"
+            <VerticalStackLayout x:Name="HeroSection"
+                                 Grid.Row="2"
                                  Spacing="0"
                                  HorizontalOptions="Center">
 
@@ -136,7 +137,7 @@
                        Margin="0,4,0,0" />
 
                 <!-- MIC · tek bold element -->
-                <Grid WidthRequest="72" HeightRequest="72"
+                <Grid x:Name="MicRingGrid" WidthRequest="72" HeightRequest="72"
                       Margin="0,18,0,0"
                       HorizontalOptions="Center">
 
@@ -199,25 +200,36 @@
             <BoxView Grid.Row="3" Color="Transparent" />
 
             <!-- ALT BÖLGE · istatistikler + CTA -->
-            <VerticalStackLayout Grid.Row="4" Spacing="10">
+            <VerticalStackLayout x:Name="StatsSection" Grid.Row="4" Spacing="10">
 
                 <!-- istatistikler · 3'lü tintli cam kart -->
                 <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
 
                     <!-- görev · indigo tint -->
-                    <Border Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}"
+                    <Border x:Name="StatCardTodos"
+                            Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}"
                             StrokeThickness="1"
                             StrokeShape="RoundRectangle 16">
                         <Border.Background>
                             <AppThemeBinding Light="{StaticResource GlassTintIndigoLight}" Dark="{StaticResource GlassTintIndigoDark}" />
                         </Border.Background>
+                        <Border.GestureRecognizers>
+                            <PointerGestureRecognizer PointerEntered="OnStatPointerEntered" PointerExited="OnStatPointerExited" />
+                        </Border.GestureRecognizers>
                         <Grid RowDefinitions="Auto,*">
                             <BoxView HeightRequest="1.5" Margin="12,0,12,0" VerticalOptions="Start">
                                 <BoxView.Background>
                                     <AppThemeBinding Light="{StaticResource GlassSpecularLight}" Dark="{StaticResource GlassSpecularDark}" />
                                 </BoxView.Background>
                             </BoxView>
-                            <VerticalStackLayout Grid.Row="1" Spacing="0" HorizontalOptions="Center" Padding="10,6,10,8">
+                            <VerticalStackLayout Grid.Row="1" Spacing="2" HorizontalOptions="Center" Padding="10,9,10,10">
+                                <Border WidthRequest="30" HeightRequest="30" StrokeThickness="0"
+                                        StrokeShape="RoundRectangle 999" HorizontalOptions="Center"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource DarkAccentSoft}}">
+                                    <Label Text="&#xE823;" FontFamily="Segoe Fluent Icons" FontSize="13"
+                                           TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}"
+                                           HorizontalOptions="Center" VerticalOptions="Center" />
+                                </Border>
                                 <Label Text="{Binding TotalTodos}"
                                        Style="{StaticResource SubtitleMedium}"
                                        FontSize="18" LineHeight="1.2"
@@ -231,20 +243,30 @@
                     </Border>
 
                     <!-- tamam · yeşil tint -->
-                    <Border Grid.Column="1"
+                    <Border x:Name="StatCardDone" Grid.Column="1"
                             Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}"
                             StrokeThickness="1"
                             StrokeShape="RoundRectangle 16">
                         <Border.Background>
                             <AppThemeBinding Light="{StaticResource GlassTintGreenLight}" Dark="{StaticResource GlassTintGreenDark}" />
                         </Border.Background>
+                        <Border.GestureRecognizers>
+                            <PointerGestureRecognizer PointerEntered="OnStatPointerEntered" PointerExited="OnStatPointerExited" />
+                        </Border.GestureRecognizers>
                         <Grid RowDefinitions="Auto,*">
                             <BoxView HeightRequest="1.5" Margin="12,0,12,0" VerticalOptions="Start">
                                 <BoxView.Background>
                                     <AppThemeBinding Light="{StaticResource GlassSpecularLight}" Dark="{StaticResource GlassSpecularDark}" />
                                 </BoxView.Background>
                             </BoxView>
-                            <VerticalStackLayout Grid.Row="1" Spacing="0" HorizontalOptions="Center" Padding="10,6,10,8">
+                            <VerticalStackLayout Grid.Row="1" Spacing="2" HorizontalOptions="Center" Padding="10,9,10,10">
+                                <Border WidthRequest="30" HeightRequest="30" StrokeThickness="0"
+                                        StrokeShape="RoundRectangle 999" HorizontalOptions="Center"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource VoiceReadySoft}, Dark={StaticResource DarkVoiceReadySoft}}">
+                                    <Label Text="&#xE73E;" FontFamily="Segoe Fluent Icons" FontSize="13"
+                                           TextColor="{AppThemeBinding Light={StaticResource Success}, Dark={StaticResource DarkSuccess}}"
+                                           HorizontalOptions="Center" VerticalOptions="Center" />
+                                </Border>
                                 <Label Text="{Binding CompletedTodos}"
                                        Style="{StaticResource SubtitleMedium}"
                                        FontSize="18" LineHeight="1.2"
@@ -258,20 +280,30 @@
                     </Border>
 
                     <!-- sesli · turkuaz tint -->
-                    <Border Grid.Column="2"
+                    <Border x:Name="StatCardVoice" Grid.Column="2"
                             Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}"
                             StrokeThickness="1"
                             StrokeShape="RoundRectangle 16">
                         <Border.Background>
                             <AppThemeBinding Light="{StaticResource GlassTintTealLight}" Dark="{StaticResource GlassTintTealDark}" />
                         </Border.Background>
+                        <Border.GestureRecognizers>
+                            <PointerGestureRecognizer PointerEntered="OnStatPointerEntered" PointerExited="OnStatPointerExited" />
+                        </Border.GestureRecognizers>
                         <Grid RowDefinitions="Auto,*">
                             <BoxView HeightRequest="1.5" Margin="12,0,12,0" VerticalOptions="Start">
                                 <BoxView.Background>
                                     <AppThemeBinding Light="{StaticResource GlassSpecularLight}" Dark="{StaticResource GlassSpecularDark}" />
                                 </BoxView.Background>
                             </BoxView>
-                            <VerticalStackLayout Grid.Row="1" Spacing="0" HorizontalOptions="Center" Padding="10,6,10,8">
+                            <VerticalStackLayout Grid.Row="1" Spacing="2" HorizontalOptions="Center" Padding="10,9,10,10">
+                                <Border WidthRequest="30" HeightRequest="30" StrokeThickness="0"
+                                        StrokeShape="RoundRectangle 999" HorizontalOptions="Center"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource SecondarySoft}, Dark={StaticResource DarkSecondarySoft}}">
+                                    <Label Text="&#xE91F;" FontFamily="Segoe Fluent Icons" FontSize="13"
+                                           TextColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource DarkSecondary}}"
+                                           HorizontalOptions="Center" VerticalOptions="Center" />
+                                </Border>
                                 <Label Text="{Binding VoiceTodos}"
                                        Style="{StaticResource SubtitleMedium}"
                                        FontSize="18" LineHeight="1.2"

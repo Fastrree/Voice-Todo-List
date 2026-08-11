@@ -58,7 +58,7 @@
             </Grid>
 
             <!-- İÇERİK -->
-            <ScrollView Grid.Row="1" VerticalScrollBarVisibility="Never">
+            <ScrollView x:Name="DetailScroll" Grid.Row="1" VerticalScrollBarVisibility="Never">
                 <VerticalStackLayout Spacing="10">
 
                     <!-- BİLGİ -->

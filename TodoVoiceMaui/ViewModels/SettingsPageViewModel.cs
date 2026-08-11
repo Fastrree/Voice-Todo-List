@@ -39,6 +39,9 @@ public partial class SettingsPageViewModel : ObservableObject
     private bool autoSync = true;
 
     [ObservableProperty]
+    private bool enableSoundEffects = true;
+
+    [ObservableProperty]
     private string defaultPriority = "medium";
 
     [ObservableProperty]
@@ -93,6 +96,10 @@ public partial class SettingsPageViewModel : ObservableObject
                     AutoSync = UserProfile.Preferences?.AutoSync ?? true;
                     DefaultPriority = UserProfile.Preferences?.DefaultPriority ?? "medium";
                 }
+
+                // Ses efektleri tercihi cihazda saklanır (profil alanı değil)
+                EnableSoundEffects = Preferences.Default.Get("enable_sounds", true);
+                SoundEffectService.Enabled = EnableSoundEffects;
             }
         }
         catch (Exception ex)
@@ -135,6 +142,7 @@ public partial class SettingsPageViewModel : ObservableObject
             if (updatedProfile != null)
             {
                 UserProfile = updatedProfile;
+                SoundEffectService.Play(SoundEffectService.SoundKind.Success);
                 await Shell.Current.DisplayAlert("Başarılı", "Profil güncellendi.", "Tamam");
             }
         }
@@ -171,6 +179,12 @@ public partial class SettingsPageViewModel : ObservableObject
             {
                 ThemeService.SaveTheme(SelectedTheme);
                 ThemeService.ApplyTheme(SelectedTheme);
+
+                // Ses efektleri anında uygulanır + cihazda saklanır
+                Preferences.Default.Set("enable_sounds", EnableSoundEffects);
+                SoundEffectService.Enabled = EnableSoundEffects;
+                SoundEffectService.Play(SoundEffectService.SoundKind.Success);
+
                 await Shell.Current.DisplayAlert("Başarılı", "Tercihler kaydedildi.", "Tamam");
             }
         }
@@ -193,6 +207,7 @@ public partial class SettingsPageViewModel : ObservableObject
             
             if (success)
             {
+                SoundEffectService.Play(SoundEffectService.SoundKind.Success);
                 await Shell.Current.DisplayAlert("Başarılı", "Senkronizasyon tamamlandı.", "Tamam");
                 await LoadUserStatsAsync();
             }

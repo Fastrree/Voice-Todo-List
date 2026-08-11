@@ -1,3 +1,4 @@
+using TodoVoiceMaui.Services;
 using TodoVoiceMaui.ViewModels;
 
 namespace TodoVoiceMaui.Views;
@@ -5,6 +6,7 @@ namespace TodoVoiceMaui.Views;
 public partial class LoginPage : ContentPage
 {
     private readonly LoginPageViewModel _viewModel;
+    private bool _hasAnimated;
 
     public LoginPage(LoginPageViewModel viewModel)
     {
@@ -41,8 +43,14 @@ public partial class LoginPage : ContentPage
         }
     }
 
-    protected override void OnAppearing()
+    protected override async void OnAppearing()
     {
         base.OnAppearing();
+        if (!_hasAnimated)
+        {
+            _hasAnimated = true;
+            if (LoginContainer != null)
+                await AnimationService.FadeSlideInAsync(LoginContainer, 0, 450, 24);
+        }
     }
 }

@@ -59,12 +59,14 @@ public partial class MainPageViewModel : ObservableObject
     [RelayCommand]
     private async Task NavigateToTodosAsync()
     {
+        SoundEffectService.Play(SoundEffectService.SoundKind.Click);
         await Shell.Current.GoToAsync("//todos");
     }
 
     [RelayCommand]
     private async Task NavigateToSettingsAsync()
     {
+        SoundEffectService.Play(SoundEffectService.SoundKind.Click);
         await Shell.Current.GoToAsync("//settings");
     }
 

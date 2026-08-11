@@ -38,7 +38,7 @@
         </BoxView>
 
         <!-- MERKEZ: login kartı (pencere sabit genişlikte → tam genişlik) -->
-        <Grid RowDefinitions="*,Auto,*"
+        <Grid x:Name="LoginContainer" RowDefinitions="*,Auto,*"
               Padding="32,0">
 
             <!-- ÜST: marka -->

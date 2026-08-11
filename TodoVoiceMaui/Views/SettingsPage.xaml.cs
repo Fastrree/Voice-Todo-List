@@ -1,12 +1,12 @@
 using TodoVoiceMaui.Services;
 using TodoVoiceMaui.ViewModels;
-
 namespace TodoVoiceMaui.Views;
 
 public partial class SettingsPage : ContentPage
 {
     private readonly SettingsPageViewModel _viewModel;
     private bool _isSyncingPickers;
+    private bool _hasAnimated;
 
     public SettingsPage(SettingsPageViewModel viewModel)
     {
@@ -20,6 +20,12 @@ public partial class SettingsPage : ContentPage
         base.OnAppearing();
         await _viewModel.InitializeAsync();
         SyncPickerSelections();
+        if (!_hasAnimated)
+        {
+            _hasAnimated = true;
+            if (SettingsScroll != null)
+                await AnimationService.FadeSlideInAsync(SettingsScroll, 0, 380, 18);
+        }
     }
 
     private void SyncPickerSelections()
