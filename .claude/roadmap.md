@@ -83,7 +83,13 @@ yeniden tasarla.** Aşağıdaki gereksinimler bağlayıcıdır:
 - [x] Sesli görev oluşturma akışı (canlı transkripsiyon, toggle, otomatik ekleme)
 - [x] **Çevrimdışı Whisper ses tanıma** (ADR-016) — Windows SpeechRecognizer unpackaged'ta
       çalışmıyordu (0x800455A0); Whisper.net (whisper.cpp, MIT) ile değiştirildi.
-      ggml-base modeli ilk kullanımda indirilir, sonra önbellekte. Kaydet → çevir → görev.
+      Kaydet → çevir → görev.
+- [x] **Model seçici (Ayarlar → Ses Tanıma)** — tiny/base/small/medium/large-v3-turbo/
+      large-v3 (75MB → 2,9GB); boyut/hız/doğruluk detayları + 1GB+ onayı + güvenli geçiş
+      (eski model yeni hazır olana dek korunur). Preferences `stt_model`.
+- [x] **Türkçe sözlük genişletmesi** — ~250 tek + ~160 ifade (Türk şirketleri, bankalar,
+      markalar, medya, spor kulüpleri, şehirler, ünlüler) + Türkçe iyelik eki desteği
+      ("Google'dan") + yanlış pozitif karalistesi (56/56 test).
 - [x] Ses kaydı + oynatma (WAV, progress, silme)
 - [x] İstatistik dashboard
 - [x] Filtre & sıralama
@@ -105,7 +111,6 @@ yeniden tasarla.** Aşağıdaki gereksinimler bağlayıcıdır:
 - [ ] Sistem geneli kısayol (global hotkey)
 - [ ] Chunked Whisper ile "konuşurken canlı metin" (streaming transkripsiyon)
 - [ ] Düşük güven eşiği politikası (konuşmasız girdide yanlış metin önleme)
-- [ ] Model seçenekleri (tiny/base/small) — Ayarlar'dan değiştirilebilir
 - [ ] Doğal dil ile görev ayrıştırma (tarih, öncelik, etiket çıkarma)
 - [ ] Windows App SDK upgrade (WinAppSDK 1.7+, WASDK tooling)
 - [ ] CI/CD (GitHub Actions build + publish)

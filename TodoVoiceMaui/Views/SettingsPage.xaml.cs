@@ -28,6 +28,13 @@ public partial class SettingsPage : ContentPage
         }
     }
 
+    protected override void OnDisappearing()
+    {
+        base.OnDisappearing();
+        // Singleton servislere abone olan transient ViewModel — sızıntıyı önle
+        _viewModel.Dispose();
+    }
+
     private void SyncPickerSelections()
     {
         // Profilden yüklenen değerleri Picker'lara yansıt (kayıtlı tema doğru görünsün)
@@ -39,10 +46,23 @@ public partial class SettingsPage : ContentPage
 
             var themeIndex = _viewModel.ThemeOptions.FindIndex(o => o.Key == _viewModel.SelectedTheme);
             if (themeIndex >= 0) ThemePicker.SelectedIndex = themeIndex;
+
+            var sttIndex = _viewModel.SttModels.ToList().FindIndex(m => m.Id == _viewModel.SelectedSttModel?.Id);
+            if (sttIndex >= 0) SttModelPicker.SelectedIndex = sttIndex;
         }
         finally
         {
             _isSyncingPickers = false;
+        }
+    }
+
+    private void OnSttModelPickerChanged(object? sender, EventArgs e)
+    {
+        if (_isSyncingPickers) return;
+
+        if (sender is Picker picker && picker.SelectedIndex >= 0)
+        {
+            _viewModel.SelectedSttModel = _viewModel.SttModels[picker.SelectedIndex];
         }
     }
 

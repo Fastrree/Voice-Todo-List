@@ -130,6 +130,91 @@
                         </VerticalStackLayout>
                     </Border>
 
+                    <!-- SES TANIMA -->
+                    <Border Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}"
+                            StrokeThickness="1"
+                            StrokeShape="RoundRectangle 20"
+                            Padding="14,12">
+                        <Border.Background>
+                            <AppThemeBinding Light="{StaticResource GlassSurfaceLight}" Dark="{StaticResource GlassSurfaceDark}" />
+                        </Border.Background>
+                        <VerticalStackLayout Spacing="8">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <VerticalStackLayout Spacing="0">
+                                    <Label Text="SES TANIMA" Style="{StaticResource MicroLabel}" />
+                                    <Label Text="Whisper modeli" Style="{StaticResource BodyText}" FontAttributes="Bold" />
+                                </VerticalStackLayout>
+                                <Label Grid.Column="1" Text="&#xE8F1;" FontFamily="Segoe Fluent Icons" FontSize="18"
+                                       VerticalOptions="Center"
+                                       TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
+                            </Grid>
+
+                            <!-- Model seçici -->
+                            <Frame BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource DarkSurface}}"
+                                   CornerRadius="12" Padding="0" HasShadow="False">
+                                <Picker x:Name="SttModelPicker" Title="Model" ItemsSource="{Binding SttModels}"
+                                        ItemDisplayBinding="{Binding DisplayName}" SelectedIndex="0"
+                                        SelectedIndexChanged="OnSttModelPickerChanged"
+                                        Style="{StaticResource InlinePicker}" />
+                            </Frame>
+
+                            <!-- Seçili modelin detay kartı -->
+                            <Border Stroke="{AppThemeBinding Light={StaticResource BorderDefault}, Dark={StaticResource DarkBorderDefault}}"
+                                    StrokeThickness="1"
+                                    StrokeShape="RoundRectangle 14"
+                                    Padding="12,10"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceMuted}, Dark={StaticResource DarkSurfaceMuted}}">
+                                <VerticalStackLayout Spacing="6">
+                                    <Grid ColumnDefinitions="Auto,Auto,Auto,*" ColumnSpacing="6">
+                                        <Border Stroke="Transparent" StrokeThickness="0" StrokeShape="RoundRectangle 8"
+                                                Padding="8,3"
+                                                BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource DarkAccentSoft}}">
+                                            <Label Text="{Binding SelectedSttModel.SizeLabel}" Style="{StaticResource CaptionText}"
+                                                   FontAttributes="Bold"
+                                                   TextColor="{AppThemeBinding Light={StaticResource AccentDark}, Dark={StaticResource DarkAccent}}" />
+                                        </Border>
+                                        <Border Grid.Column="1" Stroke="Transparent" StrokeThickness="0" StrokeShape="RoundRectangle 8"
+                                                Padding="8,3"
+                                                BackgroundColor="{AppThemeBinding Light={StaticResource SecondarySoft}, Dark={StaticResource DarkSecondarySoft}}">
+                                            <Label Text="{Binding SelectedSttModel.SpeedLabel}" Style="{StaticResource CaptionText}"
+                                                   FontAttributes="Bold"
+                                                   TextColor="{AppThemeBinding Light={StaticResource SecondaryDark}, Dark={StaticResource DarkSecondary}}" />
+                                        </Border>
+                                        <Border Grid.Column="2" Stroke="Transparent" StrokeThickness="0" StrokeShape="RoundRectangle 8"
+                                                Padding="8,3"
+                                                BackgroundColor="{AppThemeBinding Light={StaticResource VoiceReadySoft}, Dark={StaticResource DarkVoiceReadySoft}}">
+                                            <Label Text="{Binding SelectedSttModel.AccuracyLabel}" Style="{StaticResource CaptionText}"
+                                                   FontAttributes="Bold"
+                                                   TextColor="{AppThemeBinding Light={StaticResource VoiceReady}, Dark={StaticResource DarkSuccess}}" />
+                                        </Border>
+                                    </Grid>
+
+                                    <Label Text="{Binding SelectedSttModel.Description}"
+                                           Style="{StaticResource CaptionText}"
+                                           LineBreakMode="WordWrap" />
+
+                                    <Label Text="{Binding SttInstalledInfo}" Style="{StaticResource CaptionText}"
+                                           FontAttributes="Bold"
+                                           TextColor="{AppThemeBinding Light={StaticResource SecondaryDark}, Dark={StaticResource DarkSecondary}}" />
+                                </VerticalStackLayout>
+                            </Border>
+
+                            <!-- İndirme durumu -->
+                            <Grid IsVisible="{Binding IsSttDownloading}">
+                                <ProgressBar Progress="{Binding SttDownloadProgress}" HeightRequest="4"
+                                             ProgressColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
+                            </Grid>
+                            <Label Text="{Binding SttStatusText}" Style="{StaticResource CaptionText}"
+                                   IsVisible="{Binding IsSttDownloading}" />
+
+                            <Button Text="Bu Modeli İndir ve Kullan" Command="{Binding SwitchSttModelCommand}"
+                                    HeightRequest="40" CornerRadius="20" />
+                            <Label Text="Büyük modeller (1GB+) Türkçe'yi çok daha iyi anlar; küçük modeller hızlıdır ama seni tam anlayamayabilir. Seçim kaydedilir, bir sonraki kayıtta geçerli olur."
+                                   Style="{StaticResource CaptionText}" LineBreakMode="WordWrap"
+                                   TextColor="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}" />
+                        </VerticalStackLayout>
+                    </Border>
+
                     <!-- SENKRONİZASYON -->
                     <Border Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}"
                             StrokeThickness="1"

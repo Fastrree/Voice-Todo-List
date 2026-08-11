@@ -16,18 +16,28 @@ git'te kalır). Geçmiş TUTMAZ — sadece bugünü anlatır.
 - Buton toggle'dır: dinlerken tekrar bas → durdur ve transkript et
 - `SpeechToTextService`: Whisper.net (whisper.cpp) — `TranscribeFileAsync` ile
   WAV → 16kHz mono → metin (ADR-016: unpackaged'ta Windows SpeechRecognizer çalışmaz)
-- **Model:** `ggml-small-q5_1.bin` (~181 MB, quantized small) — base'e göre Türkçe'de
+- **Model:** `ggml-small-q5_1.bin` (~190 MB, quantized small) — base'e göre Türkçe'de
   %10-20 daha düşük WER; ilk kullanımda arka planda indirilir (App başlangıcı),
   sonra önbellekte (`%LOCALAPPDATA%\TodoVoiceMaui\TodoVoiceMaui\Data\models\`)
-  Eski ggml-base önbelleği geçişte otomatik temizlenir.
+- **Model seçici (Ayarlar → Ses Tanıma):** kullanıcı 6 modelden birini seçebilir —
+  Tiny 75MB / Base 142MB / Small 190MB (varsayılan) / Medium 1,5GB / Large v3 Turbo
+  1,6GB / Large v3 2,9GB. Her modelin boyut/hız/doğruluk çipleri + dürüst açıklaması
+  gösterilir ("en küçük hızlıdır ama seni tam anlamayabilir"). Seçim Preferences
+  (`stt_model`) saklanır; büyük model (1GB+) indirilmeden önce onay sorulur.
+  Model geçişinde ESKİ model yalnızca YENİ model hazır olduktan sonra silinir
+  (çevrimdışı güvenlik); geçiş başarısız olursa seçim geri alınır.
 - **Decode önyükleme:** `WithPrompt(TurkishVocabulary.InitialPrompt)` — ünlü
   şirket/kişi isimleri whisper token seçimine yönlendirilir.
 - **Özel isim otomatik düzeltme:** `TurkishVocabulary.Correct()` transkripsiyon
-  sonrası çalışır — Türkçe normalize + Levenshtein bulanık eşleştirme ile
-  "goolgle"→Google, "is bankasi"→İş Bankası, "elon mask"→Elon Musk (konsol testi: 19/19).
+  sonrası çalışır — ~250 tek + ~160 çok kelimeli Türkçe özel isim sözlüğü
+  (Türk şirketleri/bankalar/markalar/medya/spor kulüpleri/şehirler/ünlüler),
+  Türkçe normalize + Levenshtein bulanık eşleştirme + **Türkçe iyelik eki desteği**
+  ("Google'dan"→Google, "Trendyol'a"→Trendyol) + yanlış pozitif karalistesi.
+  "goolgle"→Google, "is bankasi"→İş Bankası, "elon mask"→Elon Musk
+  (konsol testi: 56/56 — iyelik ekleri + yanlış pozitif korumaları dahil).
 - Dinlerken `VoiceFlowState=Listening`; işlenirken "Ses tanınıyor..." gösterilir
 - Güven: `HIGH` — pipeline konsol testi + canlı akış kullanıcı testi; düzeltme katmanı
-  19 senaryoluk test setiyle doğrulandı
+  56 senaryoluk test setiyle doğrulandı
 
 ### 🔁 Ses kaydı + oynatma (göreve not)
 - `AudioService` WAV kaydı (16-bit 44.1kHz), durdur, base64 upload
@@ -91,8 +101,9 @@ git'te kalır). Geçmiş TUTMAZ — sadece bugünü anlatır.
 
 - **Konuşurken canlı metin (streaming) yok:** Whisper tek atış (kaydet → çevir)
   çalışır; "konuşurken anlık metin" deneyimi için chunked whisper gerekir (roadmap).
-- **İlk kullanım model indirmesi:** ggml-base ~142 MB; çevrimdışıyken indirilemez,
-  hata mesajı gösterilir, uygulama çökmez.
+- **İlk kullanım / model değişimi indirmesi:** seçili model (varsayılan Small ~190 MB;
+  1GB+ modeller için onay istenir); çevrimdışıyken indirilemez, hata mesajı gösterilir,
+  uygulama çökmez ve mevcut model korunur.
 - **Konuşmasız girdide** Whisper yanlış metin üretebilir (ör. "[...müzik çalıyor...]");
   düşük güven eşiği politikası roadmap'te.
 - **Android / iOS / macOS hedefleri**: csproj'da yalnız Windows TFM aktif.

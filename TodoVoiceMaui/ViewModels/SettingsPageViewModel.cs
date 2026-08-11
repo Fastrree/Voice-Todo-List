@@ -6,10 +6,11 @@ using TodoVoiceMaui.Views;
 
 namespace TodoVoiceMaui.ViewModels;
 
-public partial class SettingsPageViewModel : ObservableObject
+public partial class SettingsPageViewModel : ObservableObject, IDisposable
 {
     private readonly SyncService _syncService;
     private readonly ITodoStore _todoStore;
+    private readonly SpeechToTextService _stt;
 
     [ObservableProperty]
     private UserProfile? userProfile;
@@ -56,13 +57,37 @@ public partial class SettingsPageViewModel : ObservableObject
     [ObservableProperty]
     private bool isOnline = true;
 
-    public SettingsPageViewModel(SyncService syncService, ITodoStore todoStore)
+    // ---- Ses Tanıma (STT) bölümü ----
+
+    [ObservableProperty]
+    private WhisperModelInfo? selectedSttModel;
+
+    [ObservableProperty]
+    private bool isSttDownloading;
+
+    [ObservableProperty]
+    private double sttDownloadProgress;
+
+    [ObservableProperty]
+    private string sttStatusText = string.Empty;
+
+    [ObservableProperty]
+    private string sttInstalledInfo = string.Empty;
+
+    public IReadOnlyList<WhisperModelInfo> SttModels { get; } = WhisperModelCatalog.All;
+
+    public SettingsPageViewModel(SyncService syncService, ITodoStore todoStore, SpeechToTextService stt)
     {
         _syncService = syncService;
         _todoStore = todoStore;
+        _stt = stt;
 
         // Subscribe to sync service
         _syncService.PropertyChanged += OnSyncServicePropertyChanged;
+
+        // STT model durumunu canlı tut (indirme ilerlemesi arayüze yansır)
+        _stt.PropertyChanged += OnSttPropertyChanged;
+        SelectedSttModel = _stt.SelectedModel;
     }
 
     public async Task InitializeAsync()
@@ -70,6 +95,7 @@ public partial class SettingsPageViewModel : ObservableObject
         await LoadUserProfileAsync();
         await LoadUserStatsAsync();
         LoadSyncInfo();
+        RefreshSttStatus();
     }
 
     [RelayCommand]
@@ -298,6 +324,132 @@ public partial class SettingsPageViewModel : ObservableObject
     private void OnSyncServicePropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         LoadSyncInfo();
+    }
+
+    // ---- Ses Tanıma yardımcıları ----
+
+    /// <summary>Seçili model bilgisi değiştiğinde (Picker) durum metnini tazele.</summary>
+    partial void OnSelectedSttModelChanged(WhisperModelInfo? value)
+    {
+        RefreshSttStatus();
+    }
+
+    private void RefreshSttStatus()
+    {
+        var model = SelectedSttModel;
+        if (model == null)
+            return;
+
+        IsSttDownloading = _stt.IsDownloading;
+        SttDownloadProgress = _stt.ModelDownloadProgress;
+
+        // Kurulu model diskte mi?
+        var isInstalled = model.Id == _stt.SelectedModel.Id && _stt.IsModelReady;
+        SttInstalledInfo = isInstalled
+            ? $"Kurulu · {FormatBytes(_stt.SelectedModelSizeOnDisk)}"
+            : model.Id == _stt.SelectedModel.Id
+                ? "Bu model seçili ama henüz indirilmedi"
+                : "İndirilmemiş";
+
+        SttStatusText = _stt.IsDownloading
+            ? $"İndiriliyor: {model.DisplayName}… %{(int)(SttDownloadProgress * 100)}"
+            : _stt.IsModelReady
+                ? "Ses tanıma hazır — model kullanıma açık"
+                : "İndirme başarısız oldu. İnterneti kontrol edip tekrar deneyin.";
+    }
+
+    private void OnSttPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(SpeechToTextService.IsDownloading)
+            or nameof(SpeechToTextService.ModelDownloadProgress)
+            or nameof(SpeechToTextService.IsModelReady))
+        {
+            RefreshSttStatus();
+        }
+    }
+
+    /// <summary>
+    /// Singleton servislere (SyncService, SpeechToTextService) abone olan transient
+    /// ViewModel her gezinmede yeniden oluşur — abonelikler çözülmezse singleton
+    /// önceki VM örneklerini bellekte tutar. Sayfa kapanınca çözülür.
+    /// </summary>
+    public void Dispose()
+    {
+        _syncService.PropertyChanged -= OnSyncServicePropertyChanged;
+        _stt.PropertyChanged -= OnSttPropertyChanged;
+        GC.SuppressFinalize(this);
+    }
+
+    [RelayCommand]
+    private async Task SwitchSttModelAsync()
+    {
+        var model = SelectedSttModel;
+        if (model == null)
+            return;
+
+        if (_stt.IsDownloading)
+        {
+            await Shell.Current.DisplayAlert("İndirme sürüyor",
+                "Başka bir model indiriliyor. Bittiğinde tekrar deneyin.", "Tamam");
+            return;
+        }
+
+        var alreadyInstalled = model.Id == _stt.SelectedModel.Id && _stt.IsModelReady;
+        if (alreadyInstalled)
+        {
+            SoundEffectService.Play(SoundEffectService.SoundKind.Success);
+            await Shell.Current.DisplayAlert("Zaten kurulu", $"{model.DisplayName} modeli zaten hazır.", "Tamam");
+            return;
+        }
+
+        // Büyük model (1GB+) için kullanıcı onayı
+        if (model.IsLargeModel)
+        {
+            var ok = await Shell.Current.DisplayAlert(
+                "Büyük indirme",
+                $"{model.DisplayName} modeli {model.SizeLabel}. Bu indirme birkaç dakika sürebilir " +
+                $"ve {model.SizeLabel} disk alanı kaplar. Devam edilsin mi?",
+                "İndir", "Vazgeç");
+            if (!ok)
+                return;
+        }
+
+        try
+        {
+            IsSttDownloading = true;
+            SoundEffectService.Play(SoundEffectService.SoundKind.MicStart);
+
+            var success = await _stt.SwitchModelAsync(model);
+            if (success)
+            {
+                SoundEffectService.Play(SoundEffectService.SoundKind.Success);
+                await Shell.Current.DisplayAlert("Tamam",
+                    $"{model.DisplayName} modeli hazır. Artık daha iyi ses tanıma kullanılacak.", "Tamam");
+            }
+            else
+            {
+                await Shell.Current.DisplayAlert("Hata",
+                    "Model indirilemedi. İnternet bağlantınızı kontrol edip tekrar deneyin.", "Tamam");
+            }
+        }
+        catch (Exception ex)
+        {
+            await Shell.Current.DisplayAlert("Hata", $"Model değiştirilemedi: {ex.Message}", "Tamam");
+        }
+        finally
+        {
+            IsSttDownloading = false;
+            RefreshSttStatus();
+        }
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        if (bytes >= 1024L * 1024L * 1024L)
+            return $"{bytes / (1024.0 * 1024.0 * 1024.0):0.0} GB";
+        if (bytes >= 1024L * 1024L)
+            return $"{bytes / (1024.0 * 1024.0):0.0} MB";
+        return $"{bytes / 1024.0:0} KB";
     }
 
     // Language options
