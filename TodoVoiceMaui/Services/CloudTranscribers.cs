@@ -12,12 +12,40 @@ namespace TodoVoiceMaui.Services;
 public static class CloudTranscribers
 {
     public const string ApiKeyPreferencePrefix = "stt_apikey_";
+    private const string EncryptedPrefix = "enc:";
 
-    public static string GetStoredApiKey(string providerId) =>
-        Preferences.Default.Get(ApiKeyPreferencePrefix + providerId, string.Empty);
+    /// <summary>
+    /// Anahtarı çözer. Eski sürümlerde düz metin saklanmış olabilir ("enc:" öneki
+    /// yok) — göç uyumluluğu için o da okunur; bir sonraki kayıtta şifrelenir.
+    /// </summary>
+    public static string GetStoredApiKey(string providerId)
+    {
+        var raw = Preferences.Default.Get(ApiKeyPreferencePrefix + providerId, string.Empty);
+        if (string.IsNullOrEmpty(raw))
+            return string.Empty;
+        if (raw.StartsWith(EncryptedPrefix, StringComparison.Ordinal))
+            return SecureKeyStore.Unprotect(raw.Substring(EncryptedPrefix.Length)) ?? string.Empty;
+        return raw; // legacy düz metin
+    }
 
-    public static void SaveApiKey(string providerId, string key) =>
-        Preferences.Default.Set(ApiKeyPreferencePrefix + providerId, (key ?? string.Empty).Trim());
+    /// <summary>Anahtarı DPAPI ile şifreleyip saklar (Windows). Şifreleme çökerse düz metin fallback.</summary>
+    public static void SaveApiKey(string providerId, string key)
+    {
+        var trimmed = (key ?? string.Empty).Trim();
+        string stored;
+        if (string.IsNullOrEmpty(trimmed))
+        {
+            stored = string.Empty;
+        }
+        else
+        {
+            var encrypted = SecureKeyStore.Protect(trimmed);
+            // DİKKAT: Protect null dönerse ÖNEKSİZ düz metin sakla — "enc:" önekli düz metin
+            // okumada Unprotect'e gider, base64 parse hatasıyla anahtar boşalır (bug).
+            stored = encrypted != null ? EncryptedPrefix + encrypted : trimmed;
+        }
+        Preferences.Default.Set(ApiKeyPreferencePrefix + providerId, stored);
+    }
 }
 
 /// <summary>OpenAI-compatible /audio/transcriptions uç noktası (OpenAI + Groq + Fireworks...).</summary>
@@ -138,6 +166,84 @@ public sealed class DeepgramTranscriber : ISpeechTranscriber
                 return alt[0].TryGetProperty("transcript", out var tr) ? tr.GetString() : null;
         }
         return null;
+    }
+
+    public Task<bool> TestConnectionAsync() => Task.Run(async () =>
+    {
+        try
+        {
+            var text = await TranscribeAsync(OpenAiCompatibleTranscriber.TestWavPath());
+            return text != null; // 2xx + boş metin = geçerli anahtar
+        }
+        catch
+        {
+            return false;
+        }
+    });
+}
+
+/// <summary>
+/// AssemblyAI Universal-2 — 3 adımlı REST: yükle → transkript iste → sonucu bekle.
+/// Ses önce /v2/upload ile geçici URL'ye yüklenir, sonra transkribe edilir.
+/// </summary>
+public sealed class AssemblyAiTranscriber : ISpeechTranscriber
+{
+    private const string BaseUrl = "https://api.assemblyai.com/v2";
+
+    public string ProviderId => "assemblyai";
+    public bool RequiresApiKey => true;
+    public bool IsConfigured => !string.IsNullOrWhiteSpace(CloudTranscribers.GetStoredApiKey(ProviderId));
+
+    public async Task<string?> TranscribeAsync(string wavPath)
+    {
+        var key = CloudTranscribers.GetStoredApiKey(ProviderId);
+        if (string.IsNullOrWhiteSpace(key))
+            return null;
+
+        using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(2) };
+        client.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", key);
+
+        // 1) Yükle
+        var bytes = await File.ReadAllBytesAsync(wavPath);
+        using (var uploadContent = new ByteArrayContent(bytes))
+        {
+            uploadContent.Headers.ContentType = new MediaTypeHeaderValue("audio/wav");
+            using var uploadResp = await client.PostAsync($"{BaseUrl}/upload", uploadContent);
+            uploadResp.EnsureSuccessStatusCode();
+            var uploadJson = await uploadResp.Content.ReadAsStringAsync();
+            var audioUrl = JsonDocument.Parse(uploadJson).RootElement.GetProperty("upload_url").GetString();
+
+            // 2) Transkript iste
+            var payload = JsonSerializer.Serialize(new
+            {
+                audio_url = audioUrl,
+                language_code = "tr",
+                punctuate = true,
+                format_text = true
+            });
+            using var reqContent = new StringContent(payload, Encoding.UTF8, "application/json");
+            using var reqResp = await client.PostAsync($"{BaseUrl}/transcript", reqContent);
+            reqResp.EnsureSuccessStatusCode();
+            var reqJson = await reqResp.Content.ReadAsStringAsync();
+            var id = JsonDocument.Parse(reqJson).RootElement.GetProperty("id").GetString()!;
+
+            // 3) Sonucu bekle (poll)
+            var deadline = DateTime.UtcNow.AddMinutes(2);
+            while (DateTime.UtcNow < deadline)
+            {
+                await Task.Delay(1000);
+                using var pollResp = await client.GetAsync($"{BaseUrl}/transcript/{id}");
+                pollResp.EnsureSuccessStatusCode();
+                var pollJson = await pollResp.Content.ReadAsStringAsync();
+                using var doc = JsonDocument.Parse(pollJson);
+                var status = doc.RootElement.GetProperty("status").GetString();
+                if (status == "completed")
+                    return doc.RootElement.TryGetProperty("text", out var t) ? t.GetString() : null;
+                if (status == "error")
+                    return null;
+            }
+            return null;
+        }
     }
 
     public Task<bool> TestConnectionAsync() => Task.Run(async () =>

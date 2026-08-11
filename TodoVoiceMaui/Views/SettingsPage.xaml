@@ -253,10 +253,28 @@
                                        IsVisible="{Binding IsSttDownloading}" />
 
                                 <Button Text="Bu Modeli İndir ve Kullan" Command="{Binding SwitchSttModelCommand}"
-                                        HeightRequest="40" CornerRadius="20" />
+                                        HeightRequest="40" CornerRadius="20"
+                                        IsVisible="{Binding IsSttDownloading, Converter={StaticResource InverseBoolConverter}}" />
+
+                                <!-- İndirme sürerken: buton yeşil ilerleme çubuğuna dönüşür; tıkla → detay modalı -->
+                                <Border IsVisible="{Binding IsSttDownloading}"
+                                        StrokeThickness="0" StrokeShape="RoundRectangle 20" HeightRequest="40"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceMuted}, Dark={StaticResource DarkSurfaceMuted}}">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding ShowDownloadDetailsCommand}" />
+                                    </Border.GestureRecognizers>
+                                    <Grid Padding="14,0">
+                                        <ProgressBar Progress="{Binding SttDownloadProgress}" HeightRequest="7"
+                                                     VerticalOptions="Center"
+                                                     ProgressColor="{AppThemeBinding Light={StaticResource Success}, Dark={StaticResource DarkSuccess}}" />
+                                        <Label Text="{Binding SttDownloadInlineText}" Style="{StaticResource CaptionText}"
+                                               FontAttributes="Bold" HorizontalOptions="Center" VerticalOptions="Center"
+                                               TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource DarkTextPrimary}}" />
+                                    </Grid>
+                                </Border>
                             </VerticalStackLayout>
 
-                            <Label Text="Katalog geniş: Çevrimdışı 4 katman (190MB→3,1GB) + OpenAI, Groq, ElevenLabs, Deepgram (anahtar ile) + Google, Azure, AssemblyAI, Fireworks, Cloudflare, Soniox (yakında). Bulut kaynak başarısız olursa otomatik çevrimdışı Whisper'a düşülür."
+                            <Label Text="Katalog geniş: Çevrimdışı 4 katman (190MB→3,1GB) + OpenAI, Groq, Deepgram, ElevenLabs, Fireworks, AssemblyAI (anahtar ile) + Google, Azure, Cloudflare, Soniox (yakında). Bulut kaynak başarısız olursa otomatik çevrimdışı Whisper'a düşülür. İndirme çubuğuna tıklayınca ayrıntılı modal açılır."
                                    Style="{StaticResource CaptionText}" LineBreakMode="WordWrap"
                                    TextColor="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}" />
                         </VerticalStackLayout>

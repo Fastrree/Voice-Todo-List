@@ -121,11 +121,12 @@ Kullanıcı isteği: çevrimdışı tarafı Türkçe'de daha iyi eğitmek + bulu
 Araştırma bulguları ve yapılabilir aksiyonlar:
 
 ### Bulut sağlayıcı kataloğu (geniş)
-- **Uygulandı:** Çevrimdışı (4 katman) + OpenAI (gpt-4o-mini-transcribe) + Groq
-  (whisper-large-v3-turbo) + Deepgram (Nova-3) + ElevenLabs (Scribe v2).
-- **Katalogda, yakında:** Google Chirp 3, Azure AI Speech, AssemblyAI Universal-2,
-  Fireworks, Cloudflare, Soniox (Türkçe uzmanı). Her biri tek `ISpeechTranscriber`
-  sınıfıyla aktifleşir (desen: `CloudTranscribers`).
+- **Uygulandı (6 kaynak):** Çevrimdışı (4 katman) + OpenAI (gpt-4o-mini-transcribe)
+  + Groq (whisper-large-v3-turbo) + Fireworks (whisper-v3) + Deepgram (Nova-3)
+  + ElevenLabs (Scribe v2) + AssemblyAI (Universal-2, upload→transcript→poll).
+- **Katalogda, yakında:** Google Chirp 3, Azure AI Speech, Cloudflare, Soniox
+  (Türkçe uzmanı). Her biri tek `ISpeechTranscriber` sınıfıyla aktifleşir
+  (desen: `CloudTranscribers`).
 
 ### Türkçe fine-tune → GGML yolu
 - **Hazır Türkçe GGML model YOK** (araştırıldı). Mevcutlar PyTorch/CT2:
@@ -139,8 +140,12 @@ Araştırma bulguları ve yapılabilir aksiyonlar:
 - **Pratik bugün:** Maximum katmanı = `ggml-large-v3` (3,1GB, 680.000+ saat çok dilli
   veriyle eğitildi — Türkçe dahil) + `TurkishVocabulary` sözlüğü.
 
-### Güvenlik notu
-- Bulut API anahtarları Preferences'ta düz metin saklanır (desktop takas). İyileştirme:
-  DPAPI (`System.Security.Cryptography.ProtectedData`, CurrentUser) ile şifreleme.
+### Güvenlik (UYGULANDI)
+- [x] API anahtarları **DPAPI** ile şifrelenir (`SecureKeyStore` — saf crypt32.dll
+  P/Invoke, NuGet'sız; anahtar kullanıcının Windows hesabına bağlanır). Preferences'ta
+  `enc:`+Base64; eski düz metin anahtarlar göç uyumluluğuyla okunur, yeniden kayıtta
+  şifrelenir.
+- [x] İndirme modalı güvenlik notu: indirilen içerik yalnızca Whisper ağırlıklarıdır
+  (kişisel veri/kod içermez), kaynak resmî HF deposu.
 - [ ] Windows App SDK upgrade (WinAppSDK 1.7+, WASDK tooling)
 - [ ] CI/CD (GitHub Actions build + publish)

@@ -92,7 +92,7 @@ farklı bir hikâyeyle kullanabilir.
 | MVVM | CommunityToolkit.Mvvm 8.3.2 (`[ObservableProperty]`, `[RelayCommand]`) | Az boilerplate, source generator |
 | UI toolkit | CommunityToolkit.Maui 9.1.0 | Hazır konvertör / behavior desteği |
 | Ses | Plugin.Maui.Audio 3.0.1 | Kayıt + oynatma, `IAudioPlayer.Duration/CurrentPosition` `double?` (saniye) |
-| Transkripsiyon | **Whisper.net** (çevrimdışı, MIT) + **bulut STT seçenekleri** | 4 katmanlı yerel model (190MB→3,1GB) + OpenAI/Groq/Deepgram/ElevenLabs (API anahtarı ile, `ISpeechTranscriber`); kayıt → çevir akışı. Windows `SpeechRecognizer` unpackaged'ta çalışmaz (ADR-016) |
+| Transkripsiyon | **Whisper.net** (çevrimdışı, MIT) + **bulut STT seçenekleri** | 4 katmanlı yerel model (190MB→3,1GB) + OpenAI/Groq/Fireworks/Deepgram/ElevenLabs/AssemblyAI (API anahtarı ile, `ISpeechTranscriber`, anahtarlar DPAPI şifreli); kayıt → çevir akışı. Windows `SpeechRecognizer` unpackaged'ta çalışmaz (ADR-016) |
 | Local DB | sqlite-net-pcl 1.9.172 | Basit, thread-safe, offline |
 | Backend | Supabase (Auth, Postgres, Storage, Edge Functions) | Hosted + RLS + storage |
 | HTTP | `System.Net.Http.HttpClient` | **Supabase SDK iki kere URL prefix'liyor (bug); doğrudan HttpClient kullanıyoruz** |
@@ -196,10 +196,12 @@ Uygulama unpackaged WinUI 3 (`WindowsPackageType=None`) olduğundan, SpeechRecog
 her koşulda `0x800455A0 Internal Speech Error` ile başarısız olur (app.log'da kanıtlandı).
 Çözüm: **Whisper.net** (whisper.cpp, MIT, çevrimdışı) — 4 katmanlı yerel model
 (Maximum 3,1GB `large-v3` Türkçe dahil 680.000+ saat veriyle eğitildi) + kullanıcı
-seçimli **bulut STT kaynakları**: OpenAI/Groq/Deepgram/ElevenLabs (API anahtarı ile,
-`ISpeechTranscriber` soyutlaması — ADR-012 seam'i). Bulut başarısızsa otomatik
-çevrimdışı fallback. Google/Azure/AssemblyAI/Fireworks/Cloudflare/Soniox katalogda
-"yakında".
+seçimli **bulut STT kaynakları** (API anahtarı ile, `ISpeechTranscriber` soyutlaması
+— ADR-012 seam'i): OpenAI, Groq, Fireworks, Deepgram, ElevenLabs, AssemblyAI
+(6 sağlayıcı implemente). Bulut başarısızsa otomatik çevrimdışı fallback.
+Google/Azure/Cloudflare/Soniox katalogda "yakında". API anahtarları **DPAPI ile
+şifrelenir** (`SecureKeyStore`, crypt32 P/Invoke, Preferences'ta `enc:`+Base64;
+eski düz metin anahtarlar göç uyumluluğuyla okunur).
 
 ### ADR-015: Voice Core domain-agnostik
 `Core/Application/Voice` içinde uygulama (ör. Todo) kavramı geçmez.
@@ -298,9 +300,21 @@ Migration: `MigrateAsync` PRAGMA + `ALTER TABLE` ile `reminder_at`, `is_deleted`
   Factory `_factoryLock` altında dispose edilir; transkripsiyon aynı kilit içinde
   çalışır (yarış yok). Seçim Preferences `stt_model` (varsayılan small-q5_1).
 - Bulut sağlayıcılar `ISpeechTranscriber` sözleşmesiyle (`CloudTranscribers`):
-  OpenAI + Groq aynı OpenAI-compatible sınıf (farklı base URL), Deepgram raw WAV,
-  ElevenLabs Scribe v2 multipart. Anahtarlar Preferences `stt_apikey_{id}`
+  OpenAI + Groq + Fireworks aynı OpenAI-compatible sınıf (farklı base URL), Deepgram
+  raw WAV, ElevenLabs Scribe v2 multipart (JSON `custom_words` dizisi), AssemblyAI
+  upload→transcript→poll akışı. **Anahtarlar DPAPI şifreli** (`SecureKeyStore` —
+  `CryptProtectData` P/Invoke, Preferences'ta `enc:`+Base64; okumada eski düz metin
+  göçü, yazmada her zaman şifreleme). `CloudTranscribers.GetStoredApiKey/StoreApiKey`
 - `TestProviderConnectionAsync` — Ayarlar'daki "Bağlantıyı Test Et" (HTTP 2xx = geçerli)
+- **İndirme takibi + iptal:** `EnsureModelAsync` içinde `CancellationTokenSource`;
+  byte/hız sayaçları (`ModelDownloadedBytes`, `ModelDownloadTotalBytes`,
+  `ModelDownloadSpeedBytesPerSecond`) UI'a PropertyChanged ile akar. İptal edilirse
+  kısmi `.part` dosyası temizlenir, `IsModelReady` önceki modele geri döner.
+- **DownloadProgressPopup** (CommunityToolkit Popup): indirme sırasında Settings'teki
+  buton yeşil ilerleme çubuğuna dönüşür; tıklanınca büyük yüzde + MB + hız + güvenlik
+  notu + iptal butonlu modal açılır. Modal kapansa da indirme arka planda sürer;
+  bitince popup kendini kapatır (IsSttDownloading=false izlenir, Closed'ta olay
+  sızıntısı yok).
 - Akış (TodoListPageViewModel): `StartSpeechToTextAsync` → `AudioService` ile kayıt →
   `StopSpeechToTextAsync` → `TranscribeFileAsync` → `VoiceCommandParser` → görev
 - Klasik "konuşurken canlı metin" (ContinuousRecognitionSession) bu kurulumda yok;
@@ -348,3 +362,9 @@ Seam abstraction'ları (uygulandı): `ITodoStore` (local), `IVoiceCommandParser`
 - Test token'ları repo DIŞINDA tutulur (`C:\temp\opencode\test-creds.txt`).
 - Mikrofon izni Windows tarafından istenir; unpackaged (`WindowsPackageType=None`)
   uygulamada OS privacy ayarı üzerinden çalışır.
+- **Bulut STT API anahtarları DPAPI ile şifrelenir** (`SecureKeyStore`:
+  `CryptProtectData/CryptUnprotectData` P/Invoke, `CRYPTPROTECT_UI_FORBIDDEN`,
+  çıktı `LocalFree` ile temizlenir). Preferences'ta yalnız `enc:`+Base64 tutulur;
+  `Protect` başarısızsa anahtar **düz metin kaydedilir ve okumada göçle geri alınır**
+  (şifreli önekli düz metin yazma hatası düzeltildi). Model indirmeleri yalnızca
+  HF'den ölçülen GGML dosyalarıdır (kod çalıştırılmaz — güvenli içerik).

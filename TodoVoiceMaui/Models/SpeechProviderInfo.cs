@@ -95,8 +95,8 @@ public static class SpeechProviderCatalog
             DisplayName = "AssemblyAI",
             ModelLabel = "Universal-2",
             CostLabel = "~$0.21/saat",
-            IsImplemented = false,
-            Description = "Yakında: Güçlü biçimlendirme ve noktalama, $50 başlangıç kredisi."
+            Description = "Güçlü biçimlendirme, noktalama ve büyük harf düzeltmesi. Türkçe eklemeli " +
+                          "yapıda başarılı. Yeni hesaba $50 kredi. Anahtar: assemblyai.com"
         },
         new SpeechProviderInfo
         {
@@ -104,8 +104,8 @@ public static class SpeechProviderCatalog
             DisplayName = "Fireworks AI",
             ModelLabel = "whisper-large-v3",
             CostLabel = "~$0.09/saat",
-            IsImplemented = false,
-            Description = "Yakında: OpenAI uyumlu API, optimize GPU üzerinde çok hızlı large-v3."
+            Description = "OpenAI uyumlu API üzerinde optimize GPU'larla çok hızlı large-v3. " +
+                          "Ucuz ve hızlı. Anahtar: fireworks.ai"
         },
         new SpeechProviderInfo
         {

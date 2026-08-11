@@ -27,13 +27,20 @@ git'te kalır). Geçmiş TUTMAZ — sadece bugünü anlatır.
   silinir; geçiş başarısız olursa seçim geri alınır.
 - **Transkripsiyon KAYNAĞI seçici (bulut destek):** Ayarlar'da kaynak seçilir —
   Çevrimdışı Whisper (anahtar yok, varsayılan) veya bulut: OpenAI
-  (gpt-4o-mini-transcribe), Groq (whisper-large-v3-turbo), Deepgram (Nova-3),
-  ElevenLabs (Scribe v2). Katalogda ayrıca Google/Azure/AssemblyAI/Fireworks/
-  Cloudflare/Soniox "yakında" olarak listelenir. API anahtarları Preferences
-  (`stt_apikey_{id}`) saklanır; Ayarlar'da "Bağlantıyı Test Et" ile doğrulanır.
-  **Fallback:** bulut başarısız/anahtar yoksa otomatik çevrimdışı Whisper'a düşülür.
-  `TurkishVocabulary.Correct()` tüm kaynaklarda çalışır; prompt önyüklemesi bulut
-  API'lerinin prompt/keyterm alanlarına da yazılır.
+  (gpt-4o-mini-transcribe), Groq (whisper-large-v3-turbo), Fireworks (whisper-v3),
+  Deepgram (Nova-3), ElevenLabs (Scribe v2), AssemblyAI (Universal-2). Katalogda
+  ayrıca Google/Azure/Cloudflare/Soniox "yakında" olarak listelenir.
+  **API anahtarları DPAPI ile şifrelenir** (`SecureKeyStore` — crypt32 P/Invoke,
+  Preferences'ta `enc:`+Base64; eski düz metin anahtarlar göç uyumluluğuyla okunur,
+  yeniden kayıtta şifrelenir). Ayarlar'da "Bağlantıyı Test Et" (HTTP 2xx = geçerli)
+  ile doğrulanır. **Fallback:** bulut başarısız/anahtar yoksa otomatik çevrimdışı
+  Whisper'a düşülür. `TurkishVocabulary.Correct()` tüm kaynaklarda çalışır; prompt
+  önyüklemesi bulut API'lerinin prompt/keyterm alanlarına da yazılır.
+- **İndirme deneyimi:** "İndir ve Kullan" butonu indirme sırasında **yeşil ilerleme
+  çubuğuna** dönüşür (% + indirilen/toplam MB içinde); tıklanınca **detaylı modal**
+  açılır (büyük yüzde, yeşil bar, miktar, anlık hız, güvenlik notu, iptal). İndirme
+  iptal edilebilir (`CancellationTokenSource`), kısmi `.part` temizlenir; modal
+  dışına tıklanınca arka planda devam eder, bitince kendini kapatır.
 - **Decode önyükleme:** `WithPrompt(TurkishVocabulary.InitialPrompt)` — ünlü
   şirket/kişi isimleri whisper token seçimine yönlendirilir.
 - **Özel isim otomatik düzeltme:** `TurkishVocabulary.Correct()` transkripsiyon

@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<toolkit:Popup xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+               xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+               xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+               xmlns:viewmodels="clr-namespace:TodoVoiceMaui.ViewModels"
+               x:Class="TodoVoiceMaui.Views.DownloadProgressPopup"
+               x:DataType="viewmodels:SettingsPageViewModel"
+               Color="#99000000"
+               CanBeDismissedByTappingOutsideOfPopup="True">
+
+    <Border WidthRequest="400"
+            StrokeThickness="1"
+            StrokeShape="RoundRectangle 24"
+            Padding="20,18"
+            Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}">
+        <Border.Background>
+            <AppThemeBinding Light="{StaticResource GlassSurfaceLight}" Dark="{StaticResource GlassSurfaceDark}" />
+        </Border.Background>
+        <Border.Shadow>
+            <Shadow Brush="{AppThemeBinding Light={StaticResource ShadowLg}, Dark={StaticResource DarkShadowLg}}"
+                    Radius="28" Opacity="0.55" Offset="0,10" />
+        </Border.Shadow>
+
+        <VerticalStackLayout Spacing="14">
+
+            <!-- BAŞLIK -->
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                <Border WidthRequest="42" HeightRequest="42"
+                        StrokeThickness="0" StrokeShape="RoundRectangle 21"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource Success}, Dark={StaticResource DarkSuccess}}"
+                        VerticalOptions="Center">
+                    <Label Text="&#xE896;" FontFamily="Segoe Fluent Icons" FontSize="20"
+                           TextColor="{AppThemeBinding Light={StaticResource AccentContrast}, Dark={StaticResource DarkBackground}}"
+                           HorizontalOptions="Center" VerticalOptions="Center" />
+                </Border>
+                <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
+                    <Label Text="İNDİRME SÜRÜYOR" Style="{StaticResource MicroLabel}"
+                           TextColor="{AppThemeBinding Light={StaticResource Success}, Dark={StaticResource DarkSuccess}}" />
+                    <Label Text="{Binding SelectedSttModel.DisplayName}" FontFamily="SoraSemiBold" FontSize="16"
+                           TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource DarkTextPrimary}}" />
+                    <Label Text="{Binding SttDownloadFileLabel}" Style="{StaticResource CaptionText}"
+                           TextColor="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}" />
+                </VerticalStackLayout>
+            </Grid>
+
+            <!-- BÜYÜK YÜZDE -->
+            <Label Text="{Binding SttDownloadPercent, StringFormat='{0}%'}"
+                   FontFamily="SoraBold" FontSize="46" HorizontalOptions="Center"
+                   TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
+
+            <!-- YEŞİL İLERLEME ÇUBUĞU -->
+            <ProgressBar Progress="{Binding SttDownloadProgress}" HeightRequest="10"
+                         ProgressColor="{AppThemeBinding Light={StaticResource Success}, Dark={StaticResource DarkSuccess}}" />
+
+            <!-- MİKTAR + HIZ -->
+            <Grid ColumnDefinitions="*,Auto">
+                <Label Text="{Binding SttDownloadAmountText}" Style="{StaticResource BodyText}"
+                       FontAttributes="Bold" HorizontalOptions="Start"
+                       TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource DarkTextPrimary}}" />
+                <Label Grid.Column="1" Text="{Binding SttDownloadSpeedText}" Style="{StaticResource BodyText}"
+                       HorizontalOptions="End"
+                       TextColor="{AppThemeBinding Light={StaticResource SecondaryDark}, Dark={StaticResource DarkSecondary}}" />
+            </Grid>
+
+            <!-- GÜVENLİK NOTU -->
+            <Border StrokeThickness="1"
+                    StrokeShape="RoundRectangle 14"
+                    Padding="12,10"
+                    Stroke="{AppThemeBinding Light={StaticResource BorderDefault}, Dark={StaticResource DarkBorderDefault}}"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource VoiceReadySoft}, Dark={StaticResource DarkVoiceReadySoft}}">
+                <VerticalStackLayout Spacing="4">
+                    <Label Text="&#xE72E; GÜVENLİ İNDİRME" FontFamily="SoraSemiBold" FontSize="12"
+                           TextColor="{AppThemeBinding Light={StaticResource Success}, Dark={StaticResource DarkSuccess}}" />
+                    <Label Style="{StaticResource CaptionText}"
+                           TextColor="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}"
+                           LineBreakMode="WordWrap"
+                           Text="İndirilen içerik yalnızca ses tanıma ağırlıklarıdır (Whisper model verisi) — kişisel veri, çalıştırılabilir kod veya betik içermez. Kaynak: resmî HuggingFace deposu (ggerganov/whisper.cpp)." />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- İPTAL -->
+            <Button Text="İndirmeyi İptal Et" Command="{Binding CancelSttDownloadCommand}"
+                    HeightRequest="42" CornerRadius="21"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DarkRecordingSoft}}"
+                    TextColor="{AppThemeBinding Light={StaticResource AccentContrast}, Dark={StaticResource Danger}}" />
+            <Label Text="Arka planda devam etmek için modal dışına tıklayabilirsin."
+                   Style="{StaticResource CaptionText}" HorizontalOptions="Center"
+                   TextColor="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}" />
+        </VerticalStackLayout>
+    </Border>
+</toolkit:Popup>

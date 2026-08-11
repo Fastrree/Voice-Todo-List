@@ -1,3 +1,4 @@
+using CommunityToolkit.Maui.Views;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TodoVoiceMaui.Models;
@@ -73,6 +74,23 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     private string sttInstalledInfo = string.Empty;
+
+    // ---- İndirme detayları (yeşil çubuk + modal) ----
+
+    [ObservableProperty]
+    private int sttDownloadPercent;
+
+    [ObservableProperty]
+    private string sttDownloadAmountText = string.Empty;
+
+    [ObservableProperty]
+    private string sttDownloadSpeedText = string.Empty;
+
+    [ObservableProperty]
+    private string sttDownloadInlineText = string.Empty;
+
+    [ObservableProperty]
+    private string sttDownloadFileLabel = string.Empty;
 
     // ---- Transkripsiyon kaynağı (çevrimdışı / bulut) ----
 
@@ -446,17 +464,40 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
 
         IsSttDownloading = _stt.IsDownloading;
         SttDownloadProgress = _stt.ModelDownloadProgress;
+        SttDownloadPercent = (int)(SttDownloadProgress * 100);
 
-        // Kurulu model diskte mi?
-        var isInstalled = model.Id == _stt.SelectedModel.Id && _stt.IsModelReady;
-        SttInstalledInfo = isInstalled
-            ? $"Kurulu · {FormatBytes(_stt.SelectedModelSizeOnDisk)}"
-            : model.Id == _stt.SelectedModel.Id
-                ? "Bu model seçili ama henüz indirilmedi"
-                : "İndirilmemiş";
+        // İndirme detayları (modal + yeşil çubuk için)
+        var down = _stt.ModelDownloadedBytes;
+        var total = _stt.ModelDownloadTotalBytes;
+        SttDownloadAmountText = total > 0
+            ? $"{FormatBytes(down)} / {FormatBytes(total)}"
+            : FormatBytes(down);
+        SttDownloadSpeedText = _stt.ModelDownloadSpeedBytesPerSecond > 0
+            ? $"{FormatBytes((long)_stt.ModelDownloadSpeedBytesPerSecond)}/sn"
+            : string.Empty;
+        SttDownloadFileLabel = _stt.SelectedModel.FileName;
+        SttDownloadInlineText = total > 0
+            ? $"İndiriliyor %{SttDownloadPercent} · {FormatBytes(down)}/{FormatBytes(total)} · detay için tıkla"
+            : $"İndiriliyor %{SttDownloadPercent} · detay için tıkla";
+
+        // Kurulu model diskte mi? (İndirme sürerken disk stat ÇAĞRILMAZ — her 80KB
+        // chunk'ta binlerce gereksiz FileInfo sorgusu olmasın.)
+        if (IsSttDownloading)
+        {
+            SttInstalledInfo = "İndiriliyor…";
+        }
+        else
+        {
+            var isInstalled = model.Id == _stt.SelectedModel.Id && _stt.IsModelReady;
+            SttInstalledInfo = isInstalled
+                ? $"Kurulu · {FormatBytes(_stt.SelectedModelSizeOnDisk)}"
+                : model.Id == _stt.SelectedModel.Id
+                    ? "Bu model seçili ama henüz indirilmedi"
+                    : "İndirilmemiş";
+        }
 
         SttStatusText = _stt.IsDownloading
-            ? $"İndiriliyor: {model.DisplayName}… %{(int)(SttDownloadProgress * 100)}"
+            ? $"İndiriliyor: {model.DisplayName}… %{SttDownloadPercent}"
             : _stt.IsModelReady
                 ? "Ses tanıma hazır — model kullanıma açık"
                 : "İndirme başarısız oldu. İnterneti kontrol edip tekrar deneyin.";
@@ -466,10 +507,36 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
     {
         if (e.PropertyName is nameof(SpeechToTextService.IsDownloading)
             or nameof(SpeechToTextService.ModelDownloadProgress)
+            or nameof(SpeechToTextService.ModelDownloadedBytes)
+            or nameof(SpeechToTextService.ModelDownloadTotalBytes)
+            or nameof(SpeechToTextService.ModelDownloadSpeedBytesPerSecond)
             or nameof(SpeechToTextService.IsModelReady))
         {
             RefreshSttStatus();
         }
+    }
+
+    /// <summary>Yeşil ilerleme çubuğuna tıklayınca detaylı indirme modalını açar.</summary>
+    [RelayCommand]
+    private async Task ShowDownloadDetailsAsync()
+    {
+        if (!IsSttDownloading)
+            return;
+
+        var page = Shell.Current?.CurrentPage;
+        if (page == null)
+            return;
+
+        var popup = new DownloadProgressPopup(this);
+        await page.ShowPopupAsync(popup);
+    }
+
+    /// <summary>Modal içinden indirmeyi iptal eder.</summary>
+    [RelayCommand]
+    private void CancelSttDownload()
+    {
+        _stt.CancelModelDownload();
+        SoundEffectService.Play(SoundEffectService.SoundKind.Delete);
     }
 
     /// <summary>

@@ -38,7 +38,11 @@ public class SpeechToTextService : INotifyPropertyChanged
     private bool _isModelReady;
     private bool _isDownloading;
     private double _modelDownloadProgress;
+    private long _modelDownloadedBytes;
+    private long _modelDownloadTotalBytes;
+    private double _modelDownloadSpeedBytesPerSecond;
     private string _statusMessage = string.Empty;
+    private CancellationTokenSource? _downloadCts;
     // Uygulama ömrü boyunca singleton olarak tutulur (model bellekte ~200MB+);
     // bilinçli olarak dispose edilmez — process çıkışıyla temizlenir. Servis transient
     // yapılırsa bu alanın IDisposable ile temizlenmesi gerekir.
@@ -58,8 +62,10 @@ public class SpeechToTextService : INotifyPropertyChanged
         {
             ["openai"] = new OpenAiCompatibleTranscriber("openai", "https://api.openai.com/v1", "gpt-4o-mini-transcribe"),
             ["groq"] = new OpenAiCompatibleTranscriber("groq", "https://api.groq.com/openai/v1", "whisper-large-v3-turbo"),
+            ["fireworks"] = new OpenAiCompatibleTranscriber("fireworks", "https://api.fireworks.ai/inference/v1", "accounts/fireworks/models/whisper-v3"),
             ["deepgram"] = new DeepgramTranscriber(),
-            ["elevenlabs"] = new ElevenLabsTranscriber()
+            ["elevenlabs"] = new ElevenLabsTranscriber(),
+            ["assemblyai"] = new AssemblyAiTranscriber()
         };
 
 #if WINDOWS
@@ -102,6 +108,37 @@ public class SpeechToTextService : INotifyPropertyChanged
     {
         get => _modelDownloadProgress;
         private set => SetProperty(ref _modelDownloadProgress, value);
+    }
+
+    /// <summary>Şu ana kadar indirilen byte (modal detayı).</summary>
+    public long ModelDownloadedBytes
+    {
+        get => _modelDownloadedBytes;
+        private set => SetProperty(ref _modelDownloadedBytes, value);
+    }
+
+    /// <summary>Toplam indirme boyutu (byte; bilinmiyorsa 0).</summary>
+    public long ModelDownloadTotalBytes
+    {
+        get => _modelDownloadTotalBytes;
+        private set => SetProperty(ref _modelDownloadTotalBytes, value);
+    }
+
+    /// <summary>Anlık indirme hızı (byte/sn).</summary>
+    public double ModelDownloadSpeedBytesPerSecond
+    {
+        get => _modelDownloadSpeedBytesPerSecond;
+        private set => SetProperty(ref _modelDownloadSpeedBytesPerSecond, value);
+    }
+
+    /// <summary>İndirmeyi iptal eder (kısmi dosya temizlenir).</summary>
+    public void CancelModelDownload()
+    {
+        try
+        {
+            _downloadCts?.Cancel();
+        }
+        catch { }
     }
 
     /// <summary>Ayarlar ekranı için son durum mesajı ("Hazır", "İndiriliyor %45" ...).</summary>
@@ -234,7 +271,11 @@ public class SpeechToTextService : INotifyPropertyChanged
         {
             IsDownloading = true;
             ModelDownloadProgress = 0;
+            ModelDownloadedBytes = 0;
+            ModelDownloadTotalBytes = 0;
+            ModelDownloadSpeedBytesPerSecond = 0;
             StatusMessage = "Model indiriliyor…";
+            _downloadCts = new CancellationTokenSource();
 
             Directory.CreateDirectory(Path.GetDirectoryName(modelPath)!);
             var tempPath = modelPath + ".part";
@@ -249,22 +290,29 @@ public class SpeechToTextService : INotifyPropertyChanged
                 response.EnsureSuccessStatusCode();
 
                 var total = response.Content.Headers.ContentLength ?? 0L;
+                ModelDownloadTotalBytes = total;
                 using var source = await response.Content.ReadAsStreamAsync();
                 using var destination = File.Create(tempPath);
 
                 var buffer = new byte[81920];
                 long read = 0;
                 int bytesRead;
-                while ((bytesRead = await source.ReadAsync(buffer)) > 0)
+                var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+                while ((bytesRead = await source.ReadAsync(buffer, _downloadCts.Token)) > 0)
                 {
                     await destination.WriteAsync(buffer.AsMemory(0, bytesRead));
                     read += bytesRead;
+                    ModelDownloadedBytes = read;
                     if (total > 0)
                     {
                         ModelDownloadProgress = (double)read / total;
                         StatusMessage = $"Model indiriliyor %{(int)(ModelDownloadProgress * 100)}…";
                         ModelDownloadProgressChanged?.Invoke(this, ModelDownloadProgress);
                     }
+
+                    var elapsed = stopwatch.Elapsed.TotalSeconds;
+                    if (elapsed > 0.4)
+                        ModelDownloadSpeedBytesPerSecond = read / elapsed;
                 }
 
                 await destination.FlushAsync();
@@ -287,6 +335,19 @@ public class SpeechToTextService : INotifyPropertyChanged
             StatusMessage = "Hazır";
             return true;
         }
+        catch (OperationCanceledException)
+        {
+            Log($"STT model download cancelled: {model.Id}");
+            StatusMessage = "İndirme iptal edildi";
+            try
+            {
+                var tempPath = modelPath + ".part";
+                if (File.Exists(tempPath))
+                    File.Delete(tempPath);
+            }
+            catch { }
+            return false;
+        }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Whisper model download failed: {ex.Message}");
@@ -304,6 +365,9 @@ public class SpeechToTextService : INotifyPropertyChanged
         finally
         {
             IsDownloading = false;
+            _downloadCts?.Dispose();
+            _downloadCts = null;
+            ModelDownloadSpeedBytesPerSecond = 0;
         }
 #else
         return false;
