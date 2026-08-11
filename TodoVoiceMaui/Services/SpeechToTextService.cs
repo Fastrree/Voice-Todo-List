@@ -14,14 +14,18 @@ namespace TodoVoiceMaui.Services;
 /// (app.log'da kanıtlandı). Whisper tamamen yerel, ücretsiz (MIT) ve paket
 /// kimliği gerektirmez — ayrıca Türkçe doğruluğu çok daha yüksektir.
 ///
-/// Akış: Mikrofonla kayıt (AudioService) → WAV 16kHz mono → Whisper → metin.
-/// Model (ggml-base, ~142 MB, 96 dil) ilk kullanımda HuggingFace'ten indirilir
-/// ve uygulama veri klasöründe önbelleğe alınır.
+/// Akış: Mikrofonla kayıt (AudioService) → WAV 16kHz mono → Whisper → metin →
+/// TurkishVocabulary.Correct (özel isim otomatik düzeltme).
+/// Model: ggml-small-q5_1 (~181 MB, 96 dil, quantized small) — base'e göre
+/// Türkçe'de %10-20 daha düşük WER (eklemeli dil yapısında küçük model belirgin
+/// daha doğru); decode'a InitialPrompt ile bilinen şirket/kişi isimleri önyüklenir.
+/// İlk kullanımda HuggingFace'ten indirilir, uygulama veri klasöründe önbelleğe alınır.
 /// </summary>
 public class SpeechToTextService : INotifyPropertyChanged
 {
-    private const string ModelUrl = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin";
-    private const string ModelFileName = "ggml-base.bin";
+    private const string ModelUrl = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small-q5_1.bin";
+    private const string ModelFileName = "ggml-small-q5_1.bin";
+    private const string LegacyModelFileName = "ggml-base.bin";
     private const long MinModelSizeBytes = 1_000_000; // indirilmiş/bozuk dosya koruması
 
     private bool _isAvailable;
@@ -42,6 +46,12 @@ public class SpeechToTextService : INotifyPropertyChanged
         // Model dosyası gerektiğinde EnsureModelAsync ile indirilir.
         _isAvailable = true;
         IsModelReady = File.Exists(ModelPath) && new FileInfo(ModelPath).Length > MinModelSizeBytes;
+
+        // Eski ggml-base yalnızca yeni model ZATEN hazırsa temizlenir — çevrimdışı
+        // kullanıcı çalışan modelini kaybetmesin (indirme başarısız olursa base kalır).
+        if (IsModelReady)
+            TryDeleteLegacyModel();
+
         Log($"STT init: available={IsAvailable} modelReady={IsModelReady} modelPath={ModelPath}");
 #else
         _isAvailable = false;
@@ -146,6 +156,7 @@ public class SpeechToTextService : INotifyPropertyChanged
             }
 
             IsModelReady = true;
+            TryDeleteLegacyModel();
             return true;
         }
         catch (Exception ex)
@@ -190,10 +201,12 @@ public class SpeechToTextService : INotifyPropertyChanged
             var factory = GetFactory();
             var text = string.Empty;
 
-            // Whisper.net 1.9: Process senkron ve void — segmentler event handler ile gelir
+            // Whisper.net 1.9: Process senkron ve void — segmentler event handler ile gelir.
+            // WithPrompt: bilinen şirket/kişi isimleri decode'a önyüklenir (Türkçe doğruluğu artırır).
             using var processor = factory.CreateBuilder()
                 .WithLanguage("tr")
                 .WithThreads(Math.Max(2, Environment.ProcessorCount / 2))
+                .WithPrompt(TurkishVocabulary.InitialPrompt)
                 .WithSegmentEventHandler(segment =>
                 {
                     var part = segment.Text?.Trim();
@@ -205,7 +218,11 @@ public class SpeechToTextService : INotifyPropertyChanged
             processor.Process(samples);
             text = text.Trim();
 
-            return string.IsNullOrWhiteSpace(text) ? null : text;
+            if (string.IsNullOrWhiteSpace(text))
+                return null;
+
+            // Özel isimleri kanonik yazımla düzelt (Google, Türk Hava Yolları, Elon Musk...)
+            return TurkishVocabulary.Correct(text);
         });
 #else
         return null;
@@ -222,6 +239,18 @@ public class SpeechToTextService : INotifyPropertyChanged
                 DateTime.Now.ToString("HH:mm:ss") + " " + message + Environment.NewLine);
         }
         catch { }
+    }
+
+    /// <summary>Eski ggml-base önbelleğini temizle (yalnızca yeni model hazırken).</summary>
+    private static void TryDeleteLegacyModel()
+    {
+        try
+        {
+            var legacyPath = Path.Combine(FileSystem.AppDataDirectory, "models", LegacyModelFileName);
+            if (File.Exists(legacyPath))
+                File.Delete(legacyPath);
+        }
+        catch { /* best-effort */ }
     }
 
     private WhisperFactory GetFactory()

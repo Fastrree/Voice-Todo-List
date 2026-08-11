@@ -16,12 +16,18 @@ git'te kalır). Geçmiş TUTMAZ — sadece bugünü anlatır.
 - Buton toggle'dır: dinlerken tekrar bas → durdur ve transkript et
 - `SpeechToTextService`: Whisper.net (whisper.cpp) — `TranscribeFileAsync` ile
   WAV → 16kHz mono → metin (ADR-016: unpackaged'ta Windows SpeechRecognizer çalışmaz)
-- **İlk kullanım:** ggml-base modeli (~142 MB) arka planda indirilir (App başlangıcı);
-  sonra önbellekte (`%LOCALAPPDATA%\TodoVoiceMaui\TodoVoiceMaui\Data\models\ggml-base.bin`)
+- **Model:** `ggml-small-q5_1.bin` (~181 MB, quantized small) — base'e göre Türkçe'de
+  %10-20 daha düşük WER; ilk kullanımda arka planda indirilir (App başlangıcı),
+  sonra önbellekte (`%LOCALAPPDATA%\TodoVoiceMaui\TodoVoiceMaui\Data\models\`)
+  Eski ggml-base önbelleği geçişte otomatik temizlenir.
+- **Decode önyükleme:** `WithPrompt(TurkishVocabulary.InitialPrompt)` — ünlü
+  şirket/kişi isimleri whisper token seçimine yönlendirilir.
+- **Özel isim otomatik düzeltme:** `TurkishVocabulary.Correct()` transkripsiyon
+  sonrası çalışır — Türkçe normalize + Levenshtein bulanık eşleştirme ile
+  "goolgle"→Google, "is bankasi"→İş Bankası, "elon mask"→Elon Musk (konsol testi: 19/19).
 - Dinlerken `VoiceFlowState=Listening`; işlenirken "Ses tanınıyor..." gösterilir
-- Güven: `MEDIUM` — native pipeline konsol testiyle doğrulandı (model yükleme 1.7s,
-  WAV 44.1kHz stereo → 16kHz mono dönüşüm, segment event); canlı mikrofon akışı
-  kullanıcı tarafından test edilecek
+- Güven: `HIGH` — pipeline konsol testi + canlı akış kullanıcı testi; düzeltme katmanı
+  19 senaryoluk test setiyle doğrulandı
 
 ### 🔁 Ses kaydı + oynatma (göreve not)
 - `AudioService` WAV kaydı (16-bit 44.1kHz), durdur, base64 upload

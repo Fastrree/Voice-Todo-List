@@ -21,6 +21,7 @@ yeniden tasarla.** Aşağıdaki gereksinimler bağlayıcıdır:
 - Performans korunmalı (gereksiz animasyon/efekt olmamalı)
 - Apple benzeri akışkan (fluid) animasyonlar, açılış animasyonları
 - Ses efektleri (etkileşimlerde)
+- Türkçe özel isim sözlüğü (şirket/adam isimleri otomatik düzeltme — TurkishVocabulary)
 - Mikrofon izinleri + tüm yasal bilgilendirmeler (onay ekranı)
 - En profesyonel seviye
 - Referanslar (SADECE ilham, kopya değil): `C:\Users\sniya\Downloads\Compressed\front-end.md`,
