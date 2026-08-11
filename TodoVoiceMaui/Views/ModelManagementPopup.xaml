@@ -60,6 +60,40 @@
                         VerticalOptions="Center" />
             </Grid>
 
+            <!-- AKTİF İNDİRMELER ÖZET ŞERİDİ: her iş kendi mini çubuğu + iptal butonuyla -->
+            <VerticalStackLayout Spacing="6" IsVisible="{Binding HasActiveDownloads}">
+                <Label Text="AKTİF İNDİRMELER" Style="{StaticResource MicroLabel}"
+                       TextColor="{AppThemeBinding Light={StaticResource SecondaryDark}, Dark={StaticResource DarkSecondary}}" />
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding ActiveDownloadRows}" Spacing="4">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="views:ActiveDownloadRow">
+                            <Border Stroke="{AppThemeBinding Light={StaticResource BorderDefault}, Dark={StaticResource DarkBorderDefault}}"
+                                    StrokeThickness="1"
+                                    StrokeShape="RoundRectangle 12"
+                                    Padding="10,8"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource DarkSurface}}">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                    <VerticalStackLayout Spacing="4">
+                                        <Label Text="{Binding DisplayName}" FontFamily="SoraSemiBold" FontSize="12"
+                                               TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource DarkTextPrimary}}" />
+                                        <ProgressBar Progress="{Binding Progress}" HeightRequest="5"
+                                                     ProgressColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource DarkSecondary}}" />
+                                        <Label Text="{Binding ProgressText}" Style="{StaticResource CaptionText}" FontSize="9"
+                                               TextColor="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}" />
+                                    </VerticalStackLayout>
+                                    <Button Grid.Column="1" Text="&#xE711; İptal" FontSize="10"
+                                            HeightRequest="28" CornerRadius="14" Padding="10,0"
+                                            VerticalOptions="Center"
+                                            Command="{Binding CancelCommand}"
+                                            BackgroundColor="{AppThemeBinding Light={StaticResource RecordingSoft}, Dark={StaticResource DarkRecordingSoft}}"
+                                            TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource Danger}}" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+
             <!-- MODEL LİSTESİ -->
             <CollectionView ItemsSource="{Binding Rows}" HeightRequest="420" VerticalScrollBarVisibility="Never">
                 <CollectionView.ItemTemplate>
@@ -252,11 +286,18 @@
                 </Grid>
             </Border>
 
+            <!-- Disk temizliği: kullanılmayan kurulu modelleri tek tıkla sil -->
+            <Button Text="&#xE74D; Kullanılmayan Modelleri Sil"
+                    Command="{Binding DeleteUnusedModelsCommand}"
+                    HeightRequest="36" CornerRadius="18" FontSize="12"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource RecordingSoft}, Dark={StaticResource DarkRecordingSoft}}"
+                    TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource Danger}}" />
+
             <!-- DİP NOT -->
             <Label Style="{StaticResource CaptionText}"
                    TextColor="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}"
                    LineBreakMode="WordWrap"
-                   Text="Aktif model silinemez (önce başka modele geç). İndirme sırasında iptal edilebilir; kısmi dosya otomatik temizlenir. RAM/WER değerleri tahminîdir." />
+                   Text="Aktif model silinemez (önce başka modele geç). İndirme sırasında iptal edilebilir; kısmi dosya otomatik temizlenir. 'Kullanılmayanları Sil' aktif model ve en küçük kurulu modeli korur. RAM/WER değerleri tahminîdir." />
         </VerticalStackLayout>
     </Border>
 </toolkit:Popup>

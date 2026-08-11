@@ -357,6 +357,29 @@
                                                 FontSize="11" VerticalOptions="Center" />
                                     </Grid>
 
+                                    <!-- SON 7 GÜN ÇUBUK GRAFİĞİ (soldan sağa: 7 gün önce → Bugün) -->
+                                    <HorizontalStackLayout Spacing="12" HorizontalOptions="Center"
+                                                           BindableLayout.ItemsSource="{Binding UsageChartRows}">
+                                        <BindableLayout.ItemTemplate>
+                                            <DataTemplate x:DataType="viewmodels:UsageChartRow">
+                                                <VerticalStackLayout Spacing="2" WidthRequest="30">
+                                                    <Grid HeightRequest="90">
+                                                        <BoxView HeightRequest="{Binding BarHeight}" WidthRequest="18"
+                                                                 CornerRadius="4"
+                                                                 HorizontalOptions="Center" VerticalOptions="End"
+                                                                 Color="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
+                                                    </Grid>
+                                                    <Label Text="{Binding DayLabel}" FontSize="9"
+                                                           HorizontalTextAlignment="Center"
+                                                           TextColor="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}" />
+                                                    <Label Text="{Binding Count}" FontSize="9" FontAttributes="Bold"
+                                                           HorizontalTextAlignment="Center"
+                                                           TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource DarkTextPrimary}}" />
+                                                </VerticalStackLayout>
+                                            </DataTemplate>
+                                        </BindableLayout.ItemTemplate>
+                                    </HorizontalStackLayout>
+
                                     <VerticalStackLayout BindableLayout.ItemsSource="{Binding SttUsageRows}" Spacing="4">
                                         <BindableLayout.ItemTemplate>
                                             <DataTemplate x:DataType="viewmodels:SttUsageRow">

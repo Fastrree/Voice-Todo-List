@@ -70,6 +70,11 @@ public partial class ModelManagementViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private bool hasActiveDownloads;
 
+    /// <summary>Üstteki "AKTİF İNDİRMELER" özet şeridi — her iş kendi mini çubuğu + iptaliyle.</summary>
+    public ObservableCollection<ActiveDownloadRow> ActiveDownloadRows { get; } = new();
+
+    private readonly Dictionary<string, ActiveDownloadRow> _activeRowCache = new();
+
     private readonly List<SttLogEntry> _consoleLines = new();
 
     private FormattedString _testConsoleFormatted = new();
@@ -253,14 +258,75 @@ public partial class ModelManagementViewModel : ObservableObject, IDisposable
             TotalDiskText = $"Toplam disk: {FormatBytes(_stt.ModelDirectoryTotalBytes)} · {Rows.Count} model";
         CurrentModelText = $"Aktif model: {_stt.SelectedModel.DisplayName}";
 
+        // Aktif indirmeler özet şeridi: satırları CANLI tut (koleksiyonu her chunk'ta
+        // yeniden kurma — CollectionChanged bildirim yağmuru olmasın; yalnız başlayan
+        // eklenir, biten çıkar, süren güncellenir).
+        var activeJobs = _stt.Downloads.Where(j => j.IsActive).ToList();
+        var activeIds = new HashSet<string>(activeJobs.Select(j => j.Model.Id));
+        foreach (var staleId in _activeRowCache.Keys.Where(id => !activeIds.Contains(id)).ToList())
+        {
+            if (_activeRowCache.Remove(staleId, out var staleRow))
+                ActiveDownloadRows.Remove(staleRow);
+        }
+        foreach (var job in activeJobs)
+        {
+            if (!_activeRowCache.TryGetValue(job.Model.Id, out var activeRow))
+            {
+                activeRow = new ActiveDownloadRow(_stt, job.Model);
+                _activeRowCache[job.Model.Id] = activeRow;
+                ActiveDownloadRows.Add(activeRow);
+            }
+            activeRow.Update(job);
+        }
+
         // Çoklu indirme göstergesi: kaç model aynı anda iniyor?
-        var active = _stt.Downloads.Count(j => j.IsActive);
+        var active = activeJobs.Count;
         HasActiveDownloads = active > 0;
         ActiveDownloadsText = active > 1
             ? $"{active} model aynı anda indiriliyor — her biri kendi çubuğunda"
             : active == 1
                 ? "1 model indiriliyor — ilerleme kendi satırında"
                 : string.Empty;
+    }
+
+    /// <summary>
+    /// Kullanılmayan kurulu modelleri tek tıkla siler. Korunanlar: aktif model +
+    /// en küçük kurulu model (çevrimdışı kullanıcı hafif bir çalışan modeli kaybetmesin).
+    /// </summary>
+    [RelayCommand]
+    private async Task DeleteUnusedModelsAsync()
+    {
+        var unused = _stt.GetUnusedModels();
+        if (unused.Count == 0)
+        {
+            await Shell.Current.DisplayAlert("Temizlenecek yok",
+                "Kullanılmayan kurulu model bulunmuyor. Aktif model ve en küçük kurulu model her zaman korunur.",
+                "Tamam");
+            return;
+        }
+
+        var names = string.Join(", ", unused.Select(m => $"{m.DisplayName} ({m.SizeLabel})"));
+        var totalMb = unused.Sum(m => m.SizeMb);
+        var ok = await Shell.Current.DisplayAlert("Kullanılmayan modelleri sil",
+            $"{names}\n\nToplam ~{totalMb:N0} MB disk boşalır.\n\n" +
+            "Aktif model ve en küçük kurulu model KORUNUR. Devam edilsin mi?",
+            "Sil", "Vazgeç");
+        if (!ok)
+            return;
+
+        var deleted = 0;
+        foreach (var m in unused)
+        {
+            if (_stt.DeleteModel(m))
+                deleted++;
+        }
+        SoundEffectService.Play(deleted > 0
+            ? SoundEffectService.SoundKind.Delete
+            : SoundEffectService.SoundKind.Error);
+        _settings.NotifyModelStateChanged();
+        RefreshAll();
+        if (deleted > 0)
+            await Shell.Current.DisplayAlert("Tamamlandı", $"{deleted} model silindi.", "Tamam");
     }
 
     [RelayCommand]
@@ -283,6 +349,41 @@ public partial class ModelManagementViewModel : ObservableObject, IDisposable
             return $"{bytes / (1024.0 * 1024.0):0.0} MB";
         return $"{bytes / 1024.0:0} KB";
     }
+}
+
+/// <summary>"AKTİF İNDİRMELER" şeridindeki tek indirme satırı — mini çubuk + iptal.</summary>
+public partial class ActiveDownloadRow : ObservableObject
+{
+    private readonly SpeechToTextService _stt;
+
+    public WhisperModelInfo Model { get; }
+
+    public string DisplayName => Model.DisplayName;
+    public string SizeLabel => Model.SizeLabel;
+
+    [ObservableProperty]
+    private double progress;
+
+    [ObservableProperty]
+    private string progressText = string.Empty;
+
+    public ActiveDownloadRow(SpeechToTextService stt, WhisperModelInfo model)
+    {
+        _stt = stt;
+        Model = model;
+    }
+
+    /// <summary>İşten gelen değerleri satıra yazar (yalnız değişen PropertyChanged tetiklenir).</summary>
+    public void Update(ModelDownloadJob job)
+    {
+        Progress = job.Progress;
+        ProgressText = $"İndiriliyor %{job.Progress * 100:0} · " +
+                       $"{ModelManagementViewModel.FormatBytes(job.DownloadedBytes)}/" +
+                       $"{ModelManagementViewModel.FormatBytes(job.TotalBytes)}";
+    }
+
+    [RelayCommand]
+    private void Cancel() => _stt.CancelModelDownload(Model);
 }
 
 /// <summary>Katalogdaki tek bir modelin popup satırı — durum + komutlar.</summary>

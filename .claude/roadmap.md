@@ -154,6 +154,19 @@ Araştırma bulguları ve yapılabilir aksiyonlar:
       sayılmaz (`trackStats:false`). "Sıfırla" butonu tüm veriyi temizler.
       Ses süresi WAV başlığından okunur (`WavAudioReader.GetDurationSeconds` — byteRate
       28. offset, dataSize 40. offset).
+- [x] **Son 7 gün çubuk grafiği:** başarılı transkripsiyonlar günlük sayılır
+      (`yyyyMMdd` anahtarı, 30 gün öncesi temizlenir); kartta 7 günlük mini bar
+      grafik (BoxView, maksimuma oranlı yükseklik, "Bugün" etiketli). Eski JSON
+      formatı okumada otomatik göç eder (istatistik kaybı yok).
+
+### Model Yönetimi (ek — UYGULANDI)
+- [x] **Aktif indirmeler özet şeridi:** modalda birden fazla model inerken üstte
+      her iş için mini ilerleme çubuğu + İptal butonu (satırlar canlı tutulur,
+      koleksiyon yeniden kurulmaz — chunk başına bildirim yağmuru yok).
+- [x] **"Kullanılmayan Modelleri Sil" butonu:** aktif model + en küçük KURULU model
+      korunur (çevrimdışı kullanıcı hafif çalışan modeli kaybetmesin); kalan kurulu
+      modeller tek onayla silinir (isim + ~MB özeti gösterilir). İndirmesi süren
+      model asla silinmez.
 
 ### Kilit + Canlı Konsol (UYGULANDI)
 - [x] **Ayarlar girişinde kilit ekranı:** biyometrik kilit açıkken Ayarlar'a girişte

@@ -79,8 +79,14 @@ git'te kalır). Geçmiş TUTMAZ — sadece bugünü anlatır.
 - **Kullanım istatistikleri:** her gerçek transkripsiyon denemesi sağlayıcı bazında
   kaydedilir (deneme/başarı/hata/toplam ses süresi/karakter/son kullanım) —
   `SttUsageStats` (JSON kalıcı, `Changed` event). Ayarlar'da KULLANIM İSTATİSTİKLERİ
-  kartı her sağlayıcıyı başarı oranı + süre + karakterle listeler; "Sıfırla" ile
-  temizlenir. Sessiz test transkripsiyonları sayılmaz (`trackStats:false`).
+  kartı her sağlayıcıyı başarı oranı + süre + karakterle listeler; **son 7 günün
+  başarılı transkripsiyon sayısı mini çubuk grafikle** gösterilir (günlük sayaç
+  `yyyyMMdd`, 30 gün eskiği temizlenir). Eski JSON formatı göçle korunur.
+  "Sıfırla" ile tümü temizlenir. Sessiz test transkripsiyonları sayılmaz
+  (`trackStats:false`).
+- **Aktif indirmeler şeridi + disk temizliği (Model Yönetimi):** birden fazla model
+  inerken üstte her iş için mini çubuk + İptal; altta **"Kullanılmayan Modelleri
+  Sil"** — aktif model ve en küçük KURULU model korunur, kalanlar tek onayla silinir.
 - **Model Yönetimi modalı:** 4 katman tek ekranda — her model için boyut/RAM/WER
   (tahminî)/dil/kuantizasyon/hız/öneri, kurulu durum + disk boyutu, toplam disk,
   indir (yeşil bar + iptal) ve **sil** (aktif model silinemez) + canlı konsol.

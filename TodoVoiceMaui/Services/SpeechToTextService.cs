@@ -337,6 +337,33 @@ public class SpeechToTextService : INotifyPropertyChanged
     }
 
     /// <summary>
+    /// Silinebilecek "kullanılmayan" modelleri döndürür. KORUNANLAR:
+    /// - Aktif (seçili) model — ses tanıma bozulmasın
+    /// - En küçük KURULU model — çevrimdışı kullanıcı her zaman hafif bir çalışan
+    ///   model bulundursun (disk temizliği sonrası da kullanılabilir kalır)
+    /// - İndirmesi süren modeller — yarım dosya silinmez
+    /// Sonuç: kullanıcı tek tıkla disk boşaltır; tekrar ihtiyaç olursa yeniden indirir.
+    /// </summary>
+    public IReadOnlyList<WhisperModelInfo> GetUnusedModels()
+    {
+        try
+        {
+            var installed = WhisperModelCatalog.All
+                .Where(m => m.Id != SelectedModel.Id && IsModelInstalled(m) && !IsModelDownloading(m))
+                .ToList();
+            if (installed.Count == 0)
+                return installed;
+
+            var keepSmallest = installed.OrderBy(m => m.SizeMb).First();
+            return installed.Where(x => x.Id != keepSmallest.Id).ToList();
+        }
+        catch
+        {
+            return new List<WhisperModelInfo>();
+        }
+    }
+
+    /// <summary>
     /// Model değiştirir: yeni modeli indirir, hazır olunca factory'yi sıfırlar,
     /// eski modeli temizler. Başarısız olursa eski model korunur (çevrimdışı güvenlik).
     /// </summary>

@@ -85,6 +85,9 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
 
     public ObservableCollection<SttUsageRow> SttUsageRows { get; } = new();
 
+    /// <summary>Son 7 günün başarılı transkripsiyon sayısı (mini çubuk grafik).</summary>
+    public ObservableCollection<UsageChartRow> UsageChartRows { get; } = new();
+
     [ObservableProperty]
     private bool hasSttUsage;
 
@@ -1083,7 +1086,7 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
         MainThread.BeginInvokeOnMainThread(RefreshUsageStats);
     }
 
-    /// <summary>Sağlayıcı başına kullanım satırlarını + özet metnini yeniden kurar.</summary>
+    /// <summary>Sağlayıcı başına kullanım satırlarını + özet metnini + 7 günlük grafiği kurar.</summary>
     private void RefreshUsageStats()
     {
         var all = SttUsageStats.GetAll();
@@ -1099,6 +1102,28 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
             ? $"Toplam {totalAttempts} transkripsiyon · {FormatDuration(totalSeconds)} ses · " +
               $"%{totalSuccesses * 100.0 / totalAttempts:0} başarı"
             : "Henüz transkripsiyon yapılmadı — kullandıkça burada birikir.";
+
+        // Son 7 gün çubuk grafiği (eski → yeni; Bugün vurgulu)
+        var daily = SttUsageStats.GetDailyCounts();
+        var today = DateTime.Today;
+        var days = Enumerable.Range(0, 7)
+            .Select(i => today.AddDays(-(6 - i)))
+            .ToList();
+        var maxCount = Math.Max(1, days.Max(d => daily.GetValueOrDefault(d.ToString("yyyyMMdd"), 0)));
+
+        UsageChartRows.Clear();
+        foreach (var day in days)
+        {
+            var count = daily.GetValueOrDefault(day.ToString("yyyyMMdd"), 0);
+            UsageChartRows.Add(new UsageChartRow
+            {
+                DayLabel = day == today ? "Bugün" : day.ToString("ddd"),
+                Count = count,
+                IsToday = day == today,
+                // Maksimum değer çubuğa %100 sığar; 0 olan güne görünür bir dip kalır
+                BarHeight = count > 0 ? Math.Max(6, 88.0 * count / maxCount) : 4
+            });
+        }
     }
 
     [RelayCommand]
@@ -1187,10 +1212,17 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
     // Computed properties
     public string SyncStatusText => IsOnline ? "Çevrimiçi" : "Çevrimdışı";
     public string LastSyncText => LastSyncTime > DateTime.MinValue ? $"Son senkron: {LastSyncTime:dd.MM.yyyy HH:mm}" : "Hiç senkronize edilmedi";
-}
+}    /// <summary>KULLANIM İSTATİSTİKLERİ kartındaki 7 günlük çubuk grafik öğesi.</summary>
+    public class UsageChartRow
+    {
+        public required string DayLabel { get; init; }
+        public required int Count { get; init; }
+        public required bool IsToday { get; init; }
+        public required double BarHeight { get; init; }
+    }
 
-/// <summary>Ayarlar → KULLANIM İSTATİSTİKLERİ kartındaki tek sağlayıcı satırı.</summary>
-public class SttUsageRow
+    /// <summary>Ayarlar → KULLANIM İSTATİSTİKLERİ kartındaki tek sağlayıcı satırı.</summary>
+    public class SttUsageRow
 {
     public required string ProviderName { get; init; }
     public required string DetailText { get; init; }
