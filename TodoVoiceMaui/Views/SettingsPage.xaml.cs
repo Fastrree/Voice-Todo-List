@@ -13,6 +13,20 @@ public partial class SettingsPage : ContentPage
         InitializeComponent();
         _viewModel = viewModel;
         BindingContext = _viewModel;
+        _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+    }
+
+    /// <summary>Canlı konsola yeni satır eklendiğinde en alta kaydır (terminal davranışı).</summary>
+    private async void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(SettingsPageViewModel.TestConsoleText) && TestConsoleScroll != null)
+        {
+            try
+            {
+                await TestConsoleScroll.ScrollToAsync(0, TestConsoleScroll.ContentSize.Height, false);
+            }
+            catch { }
+        }
     }
 
     protected override async void OnAppearing()

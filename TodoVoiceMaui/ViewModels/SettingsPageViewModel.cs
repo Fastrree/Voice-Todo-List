@@ -127,6 +127,18 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
 
     private bool _keyRevealed = true;
 
+    /// <summary>Ayarlar sayfası kilitli mi? (Biyometrik kilit açıkken girişte overlay gösterilir.)</summary>
+    [ObservableProperty]
+    private bool isSettingsLocked;
+
+    // ---- Canlı konsol + API anahtarı gizle/göster ----
+
+    [ObservableProperty]
+    private string testConsoleText = string.Empty;
+
+    [ObservableProperty]
+    private bool isApiKeyMasked = true;
+
     public IReadOnlyList<SpeechProviderInfo> SpeechProviders { get; } =
         SpeechProviderCatalog.All.Where(p => p.Id == "offline" || p.IsImplemented).ToList();
 
@@ -158,11 +170,31 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
         // STT model durumunu canlı tut (indirme ilerlemesi arayüze yansır)
         _stt.PropertyChanged += OnSttPropertyChanged;
         IsBiometricLockEnabled = Preferences.Default.Get("stt_biometric_lock", false);
+        // Kilit açıksa İLK KARE'den itibaren overlay görünsün (doğrulama öncesi boşluk yok)
+        IsSettingsLocked = IsBiometricLockEnabled;
+        SttTestLog.Line += OnTestLogLine;
         SelectedSttModel = _stt.SelectedModel;
         SelectedSpeechProvider = _stt.SelectedProvider;
         OnPropertyChanged(nameof(IsOfflineProvider));
         OnPropertyChanged(nameof(IsApiKeyVisible));
         OnPropertyChanged(nameof(IsRegionRequired));
+    }
+
+    /// <summary>
+    /// Canlı konsol: test/indirme satırlarını biriktir. Transkriberlar Task.Run
+    /// içinden log atabildiği için UI thread'ine marshal edilir (güvenli binding).
+    /// Bellek sınırlıdır: 40K karakteri aşınca eski satırlar düşer (sonsuz büyüme yok).
+    /// </summary>
+    private void OnTestLogLine(string line)
+    {
+        const int maxChars = 40_000;
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            var added = line.Length + 2;
+            TestConsoleText = TestConsoleText.Length + added > maxChars
+                ? TestConsoleText.Substring(TestConsoleText.Length + added - maxChars) + line + Environment.NewLine
+                : TestConsoleText + line + Environment.NewLine;
+        });
     }
 
     public async Task InitializeAsync()
@@ -172,6 +204,29 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
         LoadSyncInfo();
         RefreshSttStatus();
         await RefreshBiometricStateAsync();
+        await HandleEntryLockAsync();
+    }
+
+    /// <summary>
+    /// Biyometrik kilit açıksa Ayarlar'a girişte Windows Hello ister.
+    /// Kullanıcı onaylarsa sayfa açılır; iptal ederse kilit overlay'i kalır.
+    /// </summary>
+    private async Task HandleEntryLockAsync()
+    {
+        if (!IsBiometricLockEnabled || !IsBiometricAvailable)
+        {
+            IsSettingsLocked = false;
+            return;
+        }
+
+        SttTestLog.Write("🔒 Ayarlar kilitli — Windows Hello doğrulaması isteniyor");
+        // Kilit overlay'i doğrulamadan ÖNCE de aktif (boşluk/flaş yok)
+        IsSettingsLocked = true;
+        var verified = await BiometricService.VerifyAsync(
+            "Ayarlara girmek için Windows Hello ile doğrulayın");
+        IsSettingsLocked = !verified;
+        if (!verified)
+            SttTestLog.Write("✗ Doğrulama yapılmadı — sayfa kilitli kaldı");
     }
 
     [RelayCommand]
@@ -479,8 +534,58 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
     private async Task TestProviderConnectionAsync()
     {
         var p = SelectedSpeechProvider;
-        if (p == null || p.Id == "offline")
+        if (p == null)
             return;
+
+        TestConsoleText += $"──── Bağlantı testi: {p.DisplayName} ────" + Environment.NewLine;
+
+        // Çevrimdışı Whisper testi: seçili modelle GERÇEK transkripsiyon çalıştır
+        // (model yoksa önce indirilir — konsol satırlarıyla).
+        if (p.Id == "offline")
+        {
+            // Büyük model henüz indirilmemişse test büyük indirme başlatabilir → onay iste
+            if (!_stt.IsModelReady && _stt.SelectedModel.IsLargeModel)
+            {
+                var proceed = await Shell.Current.DisplayAlert(
+                    "Model indirilecek",
+                    $"Test için {_stt.SelectedModel.DisplayName} ({_stt.SelectedModel.SizeLabel}) indirilecek. " +
+                    $"Bu birkaç dakika sürebilir. Devam edilsin mi?",
+                    "İndir", "Vazgeç");
+                if (!proceed)
+                {
+                    SttTestLog.Write("✗ Test iptal edildi (büyük model indirmesi onaylanmadı)");
+                    return;
+                }
+            }
+
+            IsProviderTesting = true;
+            ProviderStatusText = "Çevrimdışı model test ediliyor…";
+            try
+            {
+                var testWav = OpenAiCompatibleTranscriber.TestWavPath();
+                SttTestLog.Write("Test WAV hazırlandı (0,2 sn sessizlik)");
+                var text = await _stt.TranscribeOfflineAsync(testWav);
+                var ok = text != null;
+                ProviderStatusText = ok
+                    ? $"Çevrimdışı model çalışıyor ✓ ({_stt.SelectedModel.DisplayName})"
+                    : "Çevrimdışı model sonuç üretmedi (sessiz test sesi normal).";
+                SttTestLog.Write(ok
+                    ? "✓ Çevrimdışı model testi başarılı"
+                    : "⚠ Çevrimdışı test boş sonuç (sessiz ses) — model çalışıyor olabilir");
+                if (ok)
+                    SoundEffectService.Play(SoundEffectService.SoundKind.Success);
+            }
+            catch (Exception ex)
+            {
+                SttTestLog.Write($"✗ Çevrimdışı test hatası: {ex.Message}");
+                ProviderStatusText = $"Test hatası: {ex.Message}";
+            }
+            finally
+            {
+                IsProviderTesting = false;
+            }
+            return;
+        }
 
         // Biyometrik kilit açıksa önce Windows Hello doğrulaması iste — onaylanınca
         // anahtarı da GÖSTER (kilit açılınca ProviderApiKey boş kalmasın — bug)
@@ -500,6 +605,7 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
 
         if (string.IsNullOrWhiteSpace(ProviderApiKey))
         {
+            SttTestLog.Write($"✗ API anahtarı girilmedi ({p.Id})");
             await Shell.Current.DisplayAlert("Anahtar gerekli",
                 $"{p.DisplayName} için API anahtarını önce girip kaydedin.", "Tamam");
             return;
@@ -513,11 +619,13 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
             ProviderStatusText = ok
                 ? $"{p.DisplayName} bağlantısı başarılı ✓ — artık bu kaynak kullanılacak"
                 : $"{p.DisplayName} bağlantısı başarısız. Anahtarı kontrol edin.";
+            SttTestLog.Write(ok ? "✓ Bağlantı testi başarılı" : "✗ Bağlantı testi başarısız");
             if (ok)
                 SoundEffectService.Play(SoundEffectService.SoundKind.Success);
         }
         catch (Exception ex)
         {
+            SttTestLog.Write($"✗ Test hatası: {ex.Message}");
             ProviderStatusText = $"Test hatası: {ex.Message}";
         }
         finally
@@ -714,6 +822,28 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
         IsKeyLocked = IsBiometricLockEnabled && hasKey && !_keyRevealed;
     }
 
+    /// <summary>Kilit overlay'indeki buton: Windows Hello ile sayfayı aç.</summary>
+    [RelayCommand]
+    private async Task UnlockSettingsAsync()
+    {
+        var verified = await BiometricService.VerifyAsync(
+            "Ayarlara girmek için Windows Hello ile doğrulayın");
+        if (verified)
+        {
+            IsSettingsLocked = false;
+            SttTestLog.Write("✓ Doğrulama başarılı — sayfa açıldı");
+            SoundEffectService.Play(SoundEffectService.SoundKind.Success);
+        }
+    }
+
+    /// <summary>Canlı konsolu temizler.</summary>
+    [RelayCommand]
+    private void ClearTestConsole() => TestConsoleText = string.Empty;
+
+    /// <summary>API anahtarı gizle/göster (göz butonu).</summary>
+    [RelayCommand]
+    private void ToggleApiKeyVisibility() => IsApiKeyMasked = !IsApiKeyMasked;
+
     /// <summary>Ayarlar sayfasındaki Windows Hello anahtarını açar (Switch Toggled).</summary>
     public async Task SetBiometricLockAsync(bool enable)
     {
@@ -780,6 +910,7 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
     {
         _syncService.PropertyChanged -= OnSyncServicePropertyChanged;
         _stt.PropertyChanged -= OnSttPropertyChanged;
+        SttTestLog.Line -= OnTestLogLine;
         GC.SuppressFinalize(this);
     }
 

@@ -180,6 +180,7 @@ public class SpeechToTextService : INotifyPropertyChanged
         Preferences.Default.Set(ProviderPreferenceKey, provider.Id);
         OnPropertyChanged(nameof(SelectedProvider));
         Log($"STT provider switched: {provider.Id}");
+        SttTestLog.Write($"Kaynak değişti: {provider.DisplayName}");
     }
 
     /// <summary>Bağlantı testi (yalnız bulut sağlayıcılar için).</summary>
@@ -378,6 +379,7 @@ public class SpeechToTextService : INotifyPropertyChanged
             ModelDownloadedBytes = 0;
             ModelDownloadTotalBytes = 0;
             ModelDownloadSpeedBytesPerSecond = 0;
+            SttTestLog.Write($"⬇ İndirme başladı: {model.DisplayName} ({model.SizeLabel}) — {model.DownloadUrl}");
             StatusMessage = "Model indiriliyor…";
             _downloadCts = new CancellationTokenSource();
 
@@ -431,17 +433,20 @@ public class SpeechToTextService : INotifyPropertyChanged
             {
                 File.Delete(modelPath);
                 Log($"STT model download failed: dosya çok küçük");
+                SttTestLog.Write("✗ İndirme başarısız: dosya çok küçük (muhtemelen bozuk/engellendi)");
                 StatusMessage = "İndirme başarısız";
                 return false;
             }
 
             IsModelReady = true;
             StatusMessage = "Hazır";
+            SttTestLog.Write($"✓ İndirme tamamlandı: {model.DisplayName} ({FormatBytes(new FileInfo(modelPath).Length)})");
             return true;
         }
         catch (OperationCanceledException)
         {
             Log($"STT model download cancelled: {model.Id}");
+            SttTestLog.Write($"✗ İndirme iptal edildi: {model.DisplayName} (kısmi dosya temizlendi)");
             StatusMessage = "İndirme iptal edildi";
             try
             {
@@ -492,19 +497,31 @@ public class SpeechToTextService : INotifyPropertyChanged
             _cloudTranscribers.TryGetValue(SelectedProvider.Id, out var transcriber) &&
             transcriber.IsConfigured)
         {
+            SttTestLog.Write($"Kaynak: {SelectedProvider.DisplayName} — bulut deneniyor");
             try
             {
                 var cloudText = await transcriber.TranscribeAsync(wavPath);
                 if (!string.IsNullOrWhiteSpace(cloudText))
                 {
                     Log($"STT cloud OK: provider={SelectedProvider.Id}");
+                    SttTestLog.Write($"✓ Bulut transkripsiyon tamam ({SelectedProvider.Id})");
                     return TurkishVocabulary.Correct(cloudText);
                 }
+                SttTestLog.Write("⚠ Bulut boş metin döndü — çevrimdışı deneniyor");
             }
             catch (Exception ex)
             {
                 Log($"STT cloud failed ({SelectedProvider.Id}), offline fallback: {ex.Message}");
+                SttTestLog.Write($"✗ Bulut hatası: {ex.Message} — çevrimdışı fallback");
             }
+        }
+        else if (SelectedProvider.Id != "offline")
+        {
+            SttTestLog.Write($"Kaynak {SelectedProvider.DisplayName} için anahtar yok — çevrimdışı kullanılıyor");
+        }
+        else
+        {
+            SttTestLog.Write($"Kaynak: Çevrimdışı Whisper ({SelectedModel.DisplayName})");
         }
 
         // 2) Çevrimdışı Whisper (her zaman kullanılabilir)
@@ -523,12 +540,17 @@ public class SpeechToTextService : INotifyPropertyChanged
 
         var samples = WavAudioReader.ReadMono16kHz(wavPath);
         if (samples == null || samples.Length == 0)
+        {
+            SttTestLog.Write("✗ WAV okunamadı veya boş");
             return null;
+        }
+        SttTestLog.Write($"WAV → 16kHz mono ({samples.Length / 16000.0:0.0} sn)");
 
         return await Task.Run(() =>
         {
             EnsureNativeLibrary();
             var text = string.Empty;
+            SttTestLog.Write($"Whisper işleniyor ({SelectedModel.DisplayName}, {SelectedModel.QuantizationLabel})…");
 
             // Factory'yi KİLİT altında al ve Process boyunca kilidi tut: SwitchModelAsync
             // aynı kilidi kullanarak dispose eder — transkripsiyon sürerken model
@@ -556,10 +578,15 @@ public class SpeechToTextService : INotifyPropertyChanged
             text = text.Trim();
 
             if (string.IsNullOrWhiteSpace(text))
+            {
+                SttTestLog.Write("⚠ Whisper boş sonuç (konuşma algılanamadı)");
                 return null;
+            }
 
             // Özel isimleri kanonik yazımla düzelt (Google, Türk Hava Yolları, Elon Musk...)
-            return TurkishVocabulary.Correct(text);
+            var corrected = TurkishVocabulary.Correct(text);
+            SttTestLog.Write($"✓ Metin: {CloudTranscribers.TrimText(corrected)}");
+            return corrected;
         });
 #else
         return null;
@@ -577,6 +604,15 @@ public class SpeechToTextService : INotifyPropertyChanged
         {
             return false;
         }
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        if (bytes >= 1024L * 1024L * 1024L)
+            return $"{bytes / (1024.0 * 1024.0 * 1024.0):0.0} GB";
+        if (bytes >= 1024L * 1024L)
+            return $"{bytes / (1024.0 * 1024.0):0.0} MB";
+        return $"{bytes / 1024.0:0} KB";
     }
 
 #if WINDOWS

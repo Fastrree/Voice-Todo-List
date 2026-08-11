@@ -40,6 +40,15 @@ git'te kalır). Geçmiş TUTMAZ — sadece bugünü anlatır.
   **Biyometrik kilit (Windows Hello):** "Windows Hello ile kilitle" açıkken API
   anahtarı gizli kalır — görüntüleme ve bağlantı testi UserConsentVerifier
   (parmak izi/yüz/PIN) doğrulaması ister; kullanılamıyorsa dürüst durum gösterilir.
+  Kilit açıkken **Ayarlar sayfasına girişte kilit overlay'i** gösterilir ve Windows
+  Hello doğrulaması istenir (ilk kareden itibaren aktif — flaş yok). API anahtarı
+  alanında **gizle/göster (göz) butonu** vardır (biyometrik kilitliyken gizli).
+- **Canlı konsol (STT):** `SttTestLog` statik logger'ı — bağlantı testleri, indirme
+  ve çevrimdışı transkripsiyon satırları Ayarlar'daki koyu terminal kutusunda ve
+  Model Yönetimi modalında CANLI akar (`→ istek / ← HTTP / ✓ metin / ✗ hata / ⬇ indirme`),
+  otomatik kaydırma + Temizle; aynı satırlar `app.log`'a yazılır. Thread güvenli
+  (MainThread marshal), bellek sınırlı (40K karakter). Çevrimdışı "Test" butonu
+  seçili modelle GERÇEK transkripsiyon çalıştırır (büyük model onaylı).
   Ayarlar'da "Bağlantıyı Test Et" (HTTP 2xx = geçerli) ile doğrulanır.
   **Fallback:** bulut başarısız/anahtar yoksa otomatik çevrimdışı Whisper'a düşülür.
   `TurkishVocabulary.Correct()` tüm kaynaklarda çalışır; prompt önyüklemesi bulut
@@ -51,8 +60,8 @@ git'te kalır). Geçmiş TUTMAZ — sadece bugünü anlatır.
   dışına tıklanınca arka planda devam eder, bitince kendini kapatır.
 - **Model Yönetimi modalı:** 4 katman tek ekranda — her model için boyut/RAM/WER
   (tahminî)/dil/kuantizasyon/hız/öneri, kurulu durum + disk boyutu, toplam disk,
-  indir (yeşil bar + iptal) ve **sil** (aktif model silinemez). Ayarlar detay kartı
-  da RAM/WER/kuantizasyon/öneri gösterir.
+  indir (yeşil bar + iptal) ve **sil** (aktif model silinemez) + canlı konsol.
+  Ayarlar detay kartı da RAM/WER/kuantizasyon/öneri gösterir.
 - **Decode önyükleme:** `WithPrompt(TurkishVocabulary.InitialPrompt)` — ünlü
   şirket/kişi isimleri whisper token seçimine yönlendirilir.
 - **Özel isim otomatik düzeltme:** `TurkishVocabulary.Correct()` transkripsiyon

@@ -25,7 +25,8 @@
         </Grid>
 
         <Grid Padding="24,14,24,12"
-              RowDefinitions="Auto,*">
+              RowDefinitions="Auto,*"
+              IsEnabled="{Binding IsSettingsLocked, Converter={StaticResource InverseBoolConverter}}">
 
             <!-- BAŞLIK -->
             <Grid Grid.Row="0" Padding="0,0,0,8">
@@ -179,8 +180,20 @@
                                 <Label Text="API Anahtarı" Style="{StaticResource CaptionText}" />
                                 <Frame BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource DarkSurface}}"
                                        CornerRadius="12" Padding="0" HasShadow="False">
-                                    <Entry Text="{Binding ProviderApiKey}" Placeholder="sk-... / API key" IsPassword="True"
-                                           Style="{StaticResource SearchEntry}" Margin="12,0" />
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <Entry Text="{Binding ProviderApiKey}"
+                                               IsPassword="{Binding IsApiKeyMasked}"
+                                               Placeholder="sk-... / API key"
+                                               Style="{StaticResource SearchEntry}" Margin="12,0"
+                                               VerticalOptions="Center" />
+                                        <Button Grid.Column="1" Text="&#xE7B3;" FontFamily="Segoe Fluent Icons" FontSize="14"
+                                                Command="{Binding ToggleApiKeyVisibilityCommand}"
+                                                IsVisible="{Binding IsKeyLocked, Converter={StaticResource InverseBoolConverter}}"
+                                                BackgroundColor="Transparent" BorderWidth="0"
+                                                TextColor="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}"
+                                                WidthRequest="40" HeightRequest="40" Padding="0" CornerRadius="20"
+                                                VerticalOptions="Center" />
+                                    </Grid>
                                 </Frame>
 
                                 <!-- Bölge (yalnız Azure) -->
@@ -322,6 +335,32 @@
                             <Label Text="Katalog: Çevrimdışı 4 katman (190MB→3,1GB) + OpenAI, Groq, Fireworks, Deepgram, ElevenLabs, AssemblyAI, Google (Chirp 2), Azure AI Speech (anahtar + bölge). Cloudflare, Soniox, Sestek yakında. Anahtarlar Windows Vault'ta şifreli; bulut başarısız olursa otomatik çevrimdışı Whisper'a düşülür. İndirme çubuğuna tıklayınca ayrıntılı modal açılır."
                                    Style="{StaticResource CaptionText}" LineBreakMode="WordWrap"
                                    TextColor="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}" />
+
+                            <!-- CANLI KONSOL: bağlantı testleri + indirme + çevrimdışı işlemler akar -->
+                            <Border StrokeThickness="1"
+                                    StrokeShape="RoundRectangle 14"
+                                    Padding="12,10"
+                                    Stroke="#1F2937"
+                                    BackgroundColor="#0B1220">
+                                <Grid RowDefinitions="Auto,*" RowSpacing="6">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <Label Text="&#xE756; CANLI KONSOL" FontFamily="SoraSemiBold" FontSize="11"
+                                               TextColor="#4ADE80" VerticalOptions="Center" />
+                                        <Button Grid.Column="1" Text="Temizle"
+                                                Command="{Binding ClearTestConsoleCommand}"
+                                                BackgroundColor="Transparent" BorderWidth="0"
+                                                TextColor="#9CA3AF" FontSize="11"
+                                                HeightRequest="24" Padding="6,0" CornerRadius="12" />
+                                    </Grid>
+                                    <ScrollView x:Name="TestConsoleScroll" Grid.Row="1" HeightRequest="120"
+                                                VerticalScrollBarVisibility="Never">
+                                        <Label Text="{Binding TestConsoleText}"
+                                               FontFamily="Consolas" FontSize="11"
+                                               TextColor="#4ADE80" LineBreakMode="WordWrap"
+                                               VerticalOptions="Start" />
+                                    </ScrollView>
+                                </Grid>
+                            </Border>
                         </VerticalStackLayout>
                     </Border>
 
@@ -373,6 +412,48 @@
                 </VerticalStackLayout>
             </ScrollView>
 
+        </Grid>
+
+        <!-- 🔒 KİLİT OVERLAY (biyometrik kilit açıkken Ayarlar'a girişte) -->
+        <Grid IsVisible="{Binding IsSettingsLocked}"
+              BackgroundColor="{AppThemeBinding Light=#E6F8FAFC, Dark=#E60A0A0F}">
+            <Border WidthRequest="360"
+                    StrokeThickness="1"
+                    StrokeShape="RoundRectangle 24"
+                    Padding="24,22"
+                    Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}"
+                    HorizontalOptions="Center" VerticalOptions="Center">
+                <Border.Background>
+                    <AppThemeBinding Light="{StaticResource GlassSurfaceLight}" Dark="{StaticResource GlassSurfaceDark}" />
+                </Border.Background>
+                <Border.Shadow>
+                    <Shadow Brush="{AppThemeBinding Light={StaticResource ShadowLg}, Dark={StaticResource DarkShadowLg}}"
+                            Radius="28" Opacity="0.55" Offset="0,10" />
+                </Border.Shadow>
+                <VerticalStackLayout Spacing="12" HorizontalOptions="Center" WidthRequest="300">
+                    <Border WidthRequest="64" HeightRequest="64" HorizontalOptions="Center"
+                            StrokeThickness="0" StrokeShape="RoundRectangle 32"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}">
+                        <Label Text="&#xE72E;" FontFamily="Segoe Fluent Icons" FontSize="28"
+                               TextColor="{AppThemeBinding Light={StaticResource AccentContrast}, Dark={StaticResource DarkBackground}}"
+                               HorizontalOptions="Center" VerticalOptions="Center" />
+                    </Border>
+                    <Label Text="AYARLAR KİLİTLİ" Style="{StaticResource MicroLabel}" HorizontalOptions="Center"
+                           TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
+                    <Label Text="Bu bölüm Windows Hello koruması altında."
+                           FontFamily="SoraSemiBold" FontSize="16" HorizontalOptions="Center"
+                           TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource DarkTextPrimary}}" />
+                    <Label Text="API anahtarlarını görmek ve bağlantı testlerini çalıştırmak için kimliğini doğrula."
+                           Style="{StaticResource CaptionText}" HorizontalOptions="Center"
+                           HorizontalTextAlignment="Center" LineBreakMode="WordWrap"
+                           TextColor="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}" />
+                    <Button Text="&#xE8F7; Windows Hello ile Aç" Command="{Binding UnlockSettingsCommand}"
+                            HeightRequest="44" CornerRadius="22" />
+                    <Label Text="Parmak izi / yüz / PIN kullanılabilir."
+                           Style="{StaticResource CaptionText}" HorizontalOptions="Center"
+                           TextColor="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}" />
+                </VerticalStackLayout>
+            </Border>
         </Grid>
 
     </Grid>

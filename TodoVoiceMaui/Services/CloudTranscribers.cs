@@ -98,6 +98,10 @@ public static class CloudTranscribers
     public static string GetStoredRegion(string providerId) =>
         Preferences.Default.Get(RegionPreferencePrefix + providerId, string.Empty);
 
+    /// <summary>Konsol çıktısı için metni kısaltır (çok uzunsa).</summary>
+    internal static string TrimText(string? text) =>
+        text is null ? "(metin yok)" : text.Length > 90 ? text.Substring(0, 90) + "…" : text;
+
     public static void SaveRegion(string providerId, string region)
     {
         var trimmed = (region ?? string.Empty).Trim().ToLowerInvariant();
@@ -132,6 +136,7 @@ public sealed class OpenAiCompatibleTranscriber : ISpeechTranscriber
         if (string.IsNullOrWhiteSpace(key))
             return null;
 
+        SttTestLog.Write($"→ {_providerId} transkripsiyon: {_model} ({_baseUrl})");
         using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(2) };
         client.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", $"Bearer {key}");
 
@@ -145,10 +150,13 @@ public sealed class OpenAiCompatibleTranscriber : ISpeechTranscriber
         form.Add(new StringContent(TurkishVocabulary.InitialPrompt), "prompt");
 
         using var response = await client.PostAsync($"{_baseUrl}/audio/transcriptions", form);
+        SttTestLog.Write($"← HTTP {(int)response.StatusCode}");
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync();
         using var doc = JsonDocument.Parse(json);
-        return doc.RootElement.TryGetProperty("text", out var t) ? t.GetString() : null;
+        var text = doc.RootElement.TryGetProperty("text", out var t) ? t.GetString() : null;
+        SttTestLog.Write($"✓ Metin: {CloudTranscribers.TrimText(text)}");
+        return text;
     }
 
     /// <summary>
@@ -160,11 +168,13 @@ public sealed class OpenAiCompatibleTranscriber : ISpeechTranscriber
     {
         try
         {
+            SttTestLog.Write($"Test başlatıldı ({_providerId}) — test WAV: 0,2 sn sessizlik");
             var text = await TranscribeAsync(TestWavPath());
             return text != null; // "" (2xx + boş metin) da geçerli anahtar demektir
         }
-        catch
+        catch (Exception ex)
         {
+            SttTestLog.Write($"✗ Test hatası: {ex.Message}");
             return false;
         }
     }
@@ -207,12 +217,14 @@ public sealed class DeepgramTranscriber : ISpeechTranscriber
         using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(2) };
         client.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", $"Token {key}");
 
+        SttTestLog.Write("→ Deepgram listen (nova-3, tr, smart_format)");
         var url = "https://api.deepgram.com/v1/listen?model=nova-3&language=tr&smart_format=true&punctuate=true";
         var bytes = await File.ReadAllBytesAsync(wavPath);
         using var content = new ByteArrayContent(bytes);
         content.Headers.ContentType = new MediaTypeHeaderValue("audio/wav");
 
         using var response = await client.PostAsync(url, content);
+        SttTestLog.Write($"← HTTP {(int)response.StatusCode}");
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync();
         using var doc = JsonDocument.Parse(json);
@@ -223,8 +235,13 @@ public sealed class DeepgramTranscriber : ISpeechTranscriber
         {
             var alt = channels[0].GetProperty("alternatives");
             if (alt.GetArrayLength() > 0)
-                return alt[0].TryGetProperty("transcript", out var tr) ? tr.GetString() : null;
+            {
+                var tr = alt[0].TryGetProperty("transcript", out var t) ? t.GetString() : null;
+                SttTestLog.Write($"✓ Metin: {CloudTranscribers.TrimText(tr)}");
+                return tr;
+            }
         }
+        SttTestLog.Write("⚠ Sonuç yok");
         return null;
     }
 
@@ -264,11 +281,13 @@ public sealed class AssemblyAiTranscriber : ISpeechTranscriber
         client.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", key);
 
         // 1) Yükle
+        SttTestLog.Write($"→ AssemblyAI /v2/upload ({new FileInfo(wavPath).Length / 1024} KB)");
         var bytes = await File.ReadAllBytesAsync(wavPath);
         using (var uploadContent = new ByteArrayContent(bytes))
         {
             uploadContent.Headers.ContentType = new MediaTypeHeaderValue("audio/wav");
             using var uploadResp = await client.PostAsync($"{BaseUrl}/upload", uploadContent);
+            SttTestLog.Write($"← HTTP {(int)uploadResp.StatusCode}");
             uploadResp.EnsureSuccessStatusCode();
             var uploadJson = await uploadResp.Content.ReadAsStringAsync();
             var audioUrl = JsonDocument.Parse(uploadJson).RootElement.GetProperty("upload_url").GetString();
@@ -283,9 +302,11 @@ public sealed class AssemblyAiTranscriber : ISpeechTranscriber
             });
             using var reqContent = new StringContent(payload, Encoding.UTF8, "application/json");
             using var reqResp = await client.PostAsync($"{BaseUrl}/transcript", reqContent);
+            SttTestLog.Write($"← HTTP {(int)reqResp.StatusCode}");
             reqResp.EnsureSuccessStatusCode();
             var reqJson = await reqResp.Content.ReadAsStringAsync();
             var id = JsonDocument.Parse(reqJson).RootElement.GetProperty("id").GetString()!;
+            SttTestLog.Write($"→ Transkript isteği gönderildi (id={id}) — sonuç bekleniyor…");
 
             // 3) Sonucu bekle (poll)
             var deadline = DateTime.UtcNow.AddMinutes(2);
@@ -297,11 +318,20 @@ public sealed class AssemblyAiTranscriber : ISpeechTranscriber
                 var pollJson = await pollResp.Content.ReadAsStringAsync();
                 using var doc = JsonDocument.Parse(pollJson);
                 var status = doc.RootElement.GetProperty("status").GetString();
+                SttTestLog.Write($"← durum: {status}");
                 if (status == "completed")
-                    return doc.RootElement.TryGetProperty("text", out var t) ? t.GetString() : null;
+                {
+                    var text = doc.RootElement.TryGetProperty("text", out var t) ? t.GetString() : null;
+                    SttTestLog.Write($"✓ Metin: {CloudTranscribers.TrimText(text)}");
+                    return text;
+                }
                 if (status == "error")
+                {
+                    SttTestLog.Write("✗ Transkript hatası");
                     return null;
+                }
             }
+            SttTestLog.Write("✗ Zaman aşımı (2 dk)");
             return null;
         }
     }
@@ -333,6 +363,7 @@ public sealed class ElevenLabsTranscriber : ISpeechTranscriber
         if (string.IsNullOrWhiteSpace(key))
             return null;
 
+        SttTestLog.Write("→ ElevenLabs Scribe v2 (tr, keyterm yönlendirmeli)");
         using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(2) };
         client.DefaultRequestHeaders.TryAddWithoutValidation("xi-api-key", key);
 
@@ -349,10 +380,13 @@ public sealed class ElevenLabsTranscriber : ISpeechTranscriber
         form.Add(new StringContent(keyTerms), "custom_words");
 
         using var response = await client.PostAsync("https://api.elevenlabs.io/v1/speech-to-text", form);
+        SttTestLog.Write($"← HTTP {(int)response.StatusCode}");
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync();
         using var doc = JsonDocument.Parse(json);
-        return doc.RootElement.TryGetProperty("text", out var t) ? t.GetString() : null;
+        var text = doc.RootElement.TryGetProperty("text", out var t) ? t.GetString() : null;
+        SttTestLog.Write($"✓ Metin: {CloudTranscribers.TrimText(text)}");
+        return text;
     }
 
     public Task<bool> TestConnectionAsync() => Task.Run(async () =>
@@ -396,10 +430,12 @@ public sealed class GoogleTranscriber : ISpeechTranscriber
         // chirp_2 önce; İSTEK HATASI alınırsa (eski proje/bölge, 400/401) latest_short
         // ile bir kez dene. 2xx döndüyse boş metin bile başarıdır — ikinci çağrı yapılmaz
         // (sessiz ses için gereksiz ikinci fatura olmaz).
+        SttTestLog.Write("→ Google speech:recognize (chirp_2, tr-TR)");
         var (ok1, text1) = await TryRecognizeAsync(key, pcm, "chirp_2");
         if (ok1)
             return text1;
 
+        SttTestLog.Write("→ chirp_2 isteği hatalı — latest_short deneniyor");
         var (_, text2) = await TryRecognizeAsync(key, pcm, "latest_short");
         return text2;
     }
@@ -422,6 +458,7 @@ public sealed class GoogleTranscriber : ISpeechTranscriber
             });
             using var content = new StringContent(payload, Encoding.UTF8, "application/json");
             using var response = await client.PostAsync($"{Endpoint}?key={Uri.EscapeDataString(key)}", content);
+            SttTestLog.Write($"← HTTP {(int)response.StatusCode}");
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync();
             using var doc = JsonDocument.Parse(json);
@@ -430,13 +467,24 @@ public sealed class GoogleTranscriber : ISpeechTranscriber
             {
                 var alt = results[0].GetProperty("alternatives");
                 if (alt.GetArrayLength() > 0)
-                    return (true, alt[0].TryGetProperty("transcript", out var t) ? t.GetString() : null);
+                {
+                    var text = alt[0].TryGetProperty("transcript", out var t) ? t.GetString() : null;
+                    SttTestLog.Write($"✓ Metin: {CloudTranscribers.TrimText(text)}");
+                    return (true, text);
+                }
             }
             return (true, null); // 2xx + sonuç yok → yine de geçerli istek
         }
-        catch
+        catch (HttpRequestException ex)
         {
+            // DİKKAT: URL'de `?key=` olduğundan ex.Message'ı loglamayız — yalnızca HTTP kodu
+            SttTestLog.Write($"✗ {model} isteği hatalı (HTTP {(int?)ex.StatusCode ?? 0})");
             return (false, null); // 400/401/403/ağ → fallback model veya çevrimdışı
+        }
+        catch (Exception ex)
+        {
+            SttTestLog.Write($"✗ {model} isteği hatalı: {ex.Message}");
+            return (false, null);
         }
     }
 
@@ -474,6 +522,7 @@ public sealed class AzureTranscriber : ISpeechTranscriber
         if (string.IsNullOrWhiteSpace(key) || string.IsNullOrWhiteSpace(region))
             return null;
 
+        SttTestLog.Write($"→ Azure {region} (conversation, tr-TR, detailed)");
         var pcm = WavAudioReader.ReadMono16kHzPcm(wavPath);
         if (pcm == null || pcm.Length == 0)
             return null;
@@ -489,8 +538,11 @@ public sealed class AzureTranscriber : ISpeechTranscriber
             status.GetString() == "Success" &&
             doc.RootElement.TryGetProperty("DisplayText", out var text))
         {
-            return text.GetString();
+            var result = text.GetString();
+            SttTestLog.Write($"✓ Metin: {CloudTranscribers.TrimText(result)}");
+            return result;
         }
+        SttTestLog.Write("⚠ RecognitionStatus ≠ Success (NoMatch — sessiz ses olabilir)");
         return null; // NoMatch (sessiz) → null → çevrimdışı fallback
     }
 
@@ -507,11 +559,18 @@ public sealed class AzureTranscriber : ISpeechTranscriber
             content.Headers.ContentType = new MediaTypeHeaderValue("audio/wav; codecs=audio/pcm; samplerate=16000");
 
             using var response = await client.PostAsync(url, content);
+            SttTestLog.Write($"← HTTP {(int)response.StatusCode}");
             response.EnsureSuccessStatusCode();
             return (true, await response.Content.ReadAsStringAsync());
         }
-        catch
+        catch (HttpRequestException ex)
         {
+            SttTestLog.Write($"✗ Azure isteği hatalı (HTTP {(int?)ex.StatusCode ?? 0}) — bölge/anahtar kontrol edin");
+            return (false, null);
+        }
+        catch (Exception ex)
+        {
+            SttTestLog.Write($"✗ Azure isteği hatalı: {ex.Message}");
             return (false, null);
         }
     }

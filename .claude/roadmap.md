@@ -133,9 +133,19 @@ Araştırma bulguları ve yapılabilir aksiyonlar:
 ### Model Yönetimi (UYGULANDI)
 - [x] **Model Yönetimi modalı:** 4 katman tek ekranda — boyut/RAM/WER (tahminî)/dil/
       kuantizasyon/hız/öneri bilgisi, kurulu durum + disk boyutu, indirme (yeşil bar +
-      iptal) ve SİLME (aktif model silinemez; kısmi `.part` temizlenir).
+      iptal) ve SİLME (aktif model silinemez; kısmi `.part` temizlenir) + canlı konsol.
 - [x] **Zengin model kartı:** Ayarlar detay kartı artık RAM, Türkçe WER, kuantizasyon
       ve öneri gösterir.
+
+### Kilit + Canlı Konsol (UYGULANDI)
+- [x] **Ayarlar girişinde kilit ekranı:** biyometrik kilit açıkken Ayarlar'a girişte
+      Windows Hello doğrulaması (overlay, ilk kareden aktif).
+- [x] **API anahtarı gizle/göster** (göz butonu; biyometrik kilitliyken gizli).
+- [x] **Canlı STT konsolu:** `SttTestLog` — bağlantı testleri/indirme/çevrimdışı
+      transkripsiyon satırları Ayarlar + Model modalında canlı akar; otomatik
+      kaydırma, Temizle, 40K karakter sınırı, MainThread marshal, app.log'a düşer.
+- [x] **Çevrimdışı test:** "Bağlantıyı Test Et" çevrimdışı kaynakta gerçek model
+      transkripsiyonu çalıştırır (büyük model indirmesi onaylı).
 
 ### Türkçe fine-tune → GGML yolu
 - **Hazır Türkçe GGML model YOK** (araştırıldı). Mevcutlar PyTorch/CT2:

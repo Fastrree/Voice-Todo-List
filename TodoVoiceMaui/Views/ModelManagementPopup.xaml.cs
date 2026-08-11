@@ -26,8 +26,26 @@ public partial class ModelManagementPopup : Popup
         _viewModel = new ModelManagementViewModel(stt, viewModel);
         BindingContext = _viewModel;
         _viewModel.CloseRequested += () => Close();
+        // Konsol otomatik kaydırma
+        _viewModel.PropertyChanged += OnViewModelPropertyChanged;
         // Popup kapanınca aboneliği çöz — singleton servise sızıntı olmaz
-        Closed += (_, _) => _viewModel.Dispose();
+        Closed += (_, _) =>
+        {
+            _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+            _viewModel.Dispose();
+        };
+    }
+
+    private async void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ModelManagementViewModel.TestConsoleText) && PopupTestConsoleScroll != null)
+        {
+            try
+            {
+                await PopupTestConsoleScroll.ScrollToAsync(0, PopupTestConsoleScroll.ContentSize.Height, false);
+            }
+            catch { }
+        }
     }
 }
 
@@ -45,6 +63,9 @@ public partial class ModelManagementViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private string currentModelText = string.Empty;
 
+    [ObservableProperty]
+    private string testConsoleText = string.Empty;
+
     public event Action? CloseRequested;
 
     public ModelManagementViewModel(SpeechToTextService stt, SettingsPageViewModel settings)
@@ -56,8 +77,24 @@ public partial class ModelManagementViewModel : ObservableObject, IDisposable
 
         _stt.PropertyChanged += OnSttPropertyChanged;
         _settings.ModelStateChanged += OnModelStateChanged;
+        SttTestLog.Line += OnTestLogLine;
         RefreshAll();
     }
+
+    private void OnTestLogLine(string line)
+    {
+        const int maxChars = 40_000;
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            var added = line.Length + 2;
+            TestConsoleText = TestConsoleText.Length + added > maxChars
+                ? TestConsoleText.Substring(TestConsoleText.Length + added - maxChars) + line + Environment.NewLine
+                : TestConsoleText + line + Environment.NewLine;
+        });
+    }
+
+    [RelayCommand]
+    private void ClearTestConsole() => TestConsoleText = string.Empty;
 
     private void OnSttPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -96,6 +133,7 @@ public partial class ModelManagementViewModel : ObservableObject, IDisposable
     {
         _stt.PropertyChanged -= OnSttPropertyChanged;
         _settings.ModelStateChanged -= OnModelStateChanged;
+        SttTestLog.Line -= OnTestLogLine;
         GC.SuppressFinalize(this);
     }
 
