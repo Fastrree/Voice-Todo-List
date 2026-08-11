@@ -45,10 +45,13 @@ git'te kalır). Geçmiş TUTMAZ — sadece bugünü anlatır.
   alanında **gizle/göster (göz) butonu** vardır (biyometrik kilitliyken gizli).
 - **Canlı konsol (STT):** `SttTestLog` statik logger'ı — bağlantı testleri, indirme
   ve çevrimdışı transkripsiyon satırları Ayarlar'daki koyu terminal kutusunda ve
-  Model Yönetimi modalında CANLI akar (`→ istek / ← HTTP / ✓ metin / ✗ hata / ⬇ indirme`),
-  otomatik kaydırma + Temizle; aynı satırlar `app.log`'a yazılır. Thread güvenli
-  (MainThread marshal), bellek sınırlı (40K karakter). Çevrimdışı "Test" butonu
-  seçili modelle GERÇEK transkripsiyon çalıştırır (büyük model onaylı).
+  Model Yönetimi modalında CANLI ve RENKLİ akar (`→ istek` mavi / `✓ başarı` yeşil /
+  `✗ hata` kırmızı / `⚠ uyarı` sarı / `⬇ indirme` camgöbeği). Satır tipleri
+  `SttLogKind` enum'ıyla SttTestLog'da ayrıştırılır (Write/Success/Error/Warning/
+  Download metotları); UI `FormattedString` + renkli Span'lerle çizer. Otomatik
+  kaydırma + Temizle; aynı satırlar `app.log`'a yazılır. Thread güvenli (MainThread
+  marshal), satır sayısı sınırlı (200). Çevrimdışı "Test" butonu seçili modelle
+  GERÇEK transkripsiyon çalıştırır (büyük model onaylı).
   Ayarlar'da "Bağlantıyı Test Et" (HTTP 2xx = geçerli) ile doğrulanır.
   **Fallback:** bulut başarısız/anahtar yoksa otomatik çevrimdışı Whisper'a düşülür.
   `TurkishVocabulary.Correct()` tüm kaynaklarda çalışır; prompt önyüklemesi bulut

@@ -133,8 +133,16 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
 
     // ---- Canlı konsol + API anahtarı gizle/göster ----
 
-    [ObservableProperty]
-    private string testConsoleText = string.Empty;
+    private readonly List<SttLogEntry> _consoleLines = new();
+
+    private FormattedString _testConsoleFormatted = new();
+
+    /// <summary>Renkli konsol içeriği (satır tiplerine göre Span renkleri).</summary>
+    public FormattedString TestConsoleFormatted
+    {
+        get => _testConsoleFormatted;
+        private set => SetProperty(ref _testConsoleFormatted, value);
+    }
 
     [ObservableProperty]
     private bool isApiKeyMasked = true;
@@ -172,7 +180,7 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
         IsBiometricLockEnabled = Preferences.Default.Get("stt_biometric_lock", false);
         // Kilit açıksa İLK KARE'den itibaren overlay görünsün (doğrulama öncesi boşluk yok)
         IsSettingsLocked = IsBiometricLockEnabled;
-        SttTestLog.Line += OnTestLogLine;
+        SttTestLog.Line += OnTestLogEntry;
         SelectedSttModel = _stt.SelectedModel;
         SelectedSpeechProvider = _stt.SelectedProvider;
         OnPropertyChanged(nameof(IsOfflineProvider));
@@ -183,18 +191,35 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Canlı konsol: test/indirme satırlarını biriktir. Transkriberlar Task.Run
     /// içinden log atabildiği için UI thread'ine marshal edilir (güvenli binding).
-    /// Bellek sınırlıdır: 40K karakteri aşınca eski satırlar düşer (sonsuz büyüme yok).
+    /// Satır sayısı sınırlıdır (200) — eski satırlar düşer, bellek sonsuz büyümez.
     /// </summary>
-    private void OnTestLogLine(string line)
+    private void OnTestLogEntry(SttLogEntry entry)
     {
-        const int maxChars = 40_000;
+        const int maxLines = 200;
         MainThread.BeginInvokeOnMainThread(() =>
         {
-            var added = line.Length + 2;
-            TestConsoleText = TestConsoleText.Length + added > maxChars
-                ? TestConsoleText.Substring(TestConsoleText.Length + added - maxChars) + line + Environment.NewLine
-                : TestConsoleText + line + Environment.NewLine;
+            _consoleLines.Add(entry);
+            if (_consoleLines.Count > maxLines)
+                _consoleLines.RemoveAt(0);
+            RebuildConsole();
         });
+    }
+
+    /// <summary>Satır tiplerine göre renklendirilmiş FormattedString kurar.</summary>
+    private void RebuildConsole()
+    {
+        var fs = new FormattedString();
+        foreach (var entry in _consoleLines)
+        {
+            fs.Spans.Add(new Span
+            {
+                Text = entry.Text + Environment.NewLine,
+                TextColor = SttConsolePalette.For(entry.Kind),
+                FontFamily = "Consolas",
+                FontSize = 11
+            });
+        }
+        TestConsoleFormatted = fs;
     }
 
     public async Task InitializeAsync()
@@ -226,7 +251,7 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
             "Ayarlara girmek için Windows Hello ile doğrulayın");
         IsSettingsLocked = !verified;
         if (!verified)
-            SttTestLog.Write("✗ Doğrulama yapılmadı — sayfa kilitli kaldı");
+            SttTestLog.WriteWarning("✗ Doğrulama yapılmadı — sayfa kilitli kaldı");
     }
 
     [RelayCommand]
@@ -537,7 +562,7 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
         if (p == null)
             return;
 
-        TestConsoleText += $"──── Bağlantı testi: {p.DisplayName} ────" + Environment.NewLine;
+        SttTestLog.Write($"──── Bağlantı testi: {p.DisplayName} ────");
 
         // Çevrimdışı Whisper testi: seçili modelle GERÇEK transkripsiyon çalıştır
         // (model yoksa önce indirilir — konsol satırlarıyla).
@@ -553,7 +578,7 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
                     "İndir", "Vazgeç");
                 if (!proceed)
                 {
-                    SttTestLog.Write("✗ Test iptal edildi (büyük model indirmesi onaylanmadı)");
+                    SttTestLog.WriteWarning("✗ Test iptal edildi (büyük model indirmesi onaylanmadı)");
                     return;
                 }
             }
@@ -569,15 +594,16 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
                 ProviderStatusText = ok
                     ? $"Çevrimdışı model çalışıyor ✓ ({_stt.SelectedModel.DisplayName})"
                     : "Çevrimdışı model sonuç üretmedi (sessiz test sesi normal).";
-                SttTestLog.Write(ok
-                    ? "✓ Çevrimdışı model testi başarılı"
-                    : "⚠ Çevrimdışı test boş sonuç (sessiz ses) — model çalışıyor olabilir");
+                if (ok)
+                    SttTestLog.WriteSuccess("✓ Çevrimdışı model testi başarılı");
+                else
+                    SttTestLog.WriteWarning("⚠ Çevrimdışı test boş sonuç (sessiz ses) — model çalışıyor olabilir");
                 if (ok)
                     SoundEffectService.Play(SoundEffectService.SoundKind.Success);
             }
             catch (Exception ex)
             {
-                SttTestLog.Write($"✗ Çevrimdışı test hatası: {ex.Message}");
+                SttTestLog.WriteError($"✗ Çevrimdışı test hatası: {ex.Message}");
                 ProviderStatusText = $"Test hatası: {ex.Message}";
             }
             finally
@@ -605,7 +631,7 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
 
         if (string.IsNullOrWhiteSpace(ProviderApiKey))
         {
-            SttTestLog.Write($"✗ API anahtarı girilmedi ({p.Id})");
+            SttTestLog.WriteWarning($"✗ API anahtarı girilmedi ({p.Id})");
             await Shell.Current.DisplayAlert("Anahtar gerekli",
                 $"{p.DisplayName} için API anahtarını önce girip kaydedin.", "Tamam");
             return;
@@ -619,13 +645,16 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
             ProviderStatusText = ok
                 ? $"{p.DisplayName} bağlantısı başarılı ✓ — artık bu kaynak kullanılacak"
                 : $"{p.DisplayName} bağlantısı başarısız. Anahtarı kontrol edin.";
-            SttTestLog.Write(ok ? "✓ Bağlantı testi başarılı" : "✗ Bağlantı testi başarısız");
+            if (ok)
+                SttTestLog.WriteSuccess("✓ Bağlantı testi başarılı");
+            else
+                SttTestLog.WriteError("✗ Bağlantı testi başarısız");
             if (ok)
                 SoundEffectService.Play(SoundEffectService.SoundKind.Success);
         }
         catch (Exception ex)
         {
-            SttTestLog.Write($"✗ Test hatası: {ex.Message}");
+            SttTestLog.WriteError($"✗ Test hatası: {ex.Message}");
             ProviderStatusText = $"Test hatası: {ex.Message}";
         }
         finally
@@ -831,14 +860,18 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
         if (verified)
         {
             IsSettingsLocked = false;
-            SttTestLog.Write("✓ Doğrulama başarılı — sayfa açıldı");
+            SttTestLog.WriteSuccess("✓ Doğrulama başarılı — sayfa açıldı");
             SoundEffectService.Play(SoundEffectService.SoundKind.Success);
         }
     }
 
     /// <summary>Canlı konsolu temizler.</summary>
     [RelayCommand]
-    private void ClearTestConsole() => TestConsoleText = string.Empty;
+    private void ClearTestConsole()
+    {
+        _consoleLines.Clear();
+        TestConsoleFormatted = new FormattedString();
+    }
 
     /// <summary>API anahtarı gizle/göster (göz butonu).</summary>
     [RelayCommand]
@@ -910,7 +943,7 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
     {
         _syncService.PropertyChanged -= OnSyncServicePropertyChanged;
         _stt.PropertyChanged -= OnSttPropertyChanged;
-        SttTestLog.Line -= OnTestLogLine;
+        SttTestLog.Line -= OnTestLogEntry;
         GC.SuppressFinalize(this);
     }
 

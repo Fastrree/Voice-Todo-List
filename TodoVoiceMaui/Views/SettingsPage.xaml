@@ -354,9 +354,8 @@
                                     </Grid>
                                     <ScrollView x:Name="TestConsoleScroll" Grid.Row="1" HeightRequest="120"
                                                 VerticalScrollBarVisibility="Never">
-                                        <Label Text="{Binding TestConsoleText}"
-                                               FontFamily="Consolas" FontSize="11"
-                                               TextColor="#4ADE80" LineBreakMode="WordWrap"
+                                        <Label FormattedText="{Binding TestConsoleFormatted}"
+                                               LineBreakMode="WordWrap"
                                                VerticalOptions="Start" />
                                     </ScrollView>
                                 </Grid>

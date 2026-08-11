@@ -155,7 +155,7 @@ public sealed class OpenAiCompatibleTranscriber : ISpeechTranscriber
         var json = await response.Content.ReadAsStringAsync();
         using var doc = JsonDocument.Parse(json);
         var text = doc.RootElement.TryGetProperty("text", out var t) ? t.GetString() : null;
-        SttTestLog.Write($"✓ Metin: {CloudTranscribers.TrimText(text)}");
+        SttTestLog.WriteSuccess($"✓ Metin: {CloudTranscribers.TrimText(text)}");
         return text;
     }
 
@@ -174,7 +174,7 @@ public sealed class OpenAiCompatibleTranscriber : ISpeechTranscriber
         }
         catch (Exception ex)
         {
-            SttTestLog.Write($"✗ Test hatası: {ex.Message}");
+            SttTestLog.WriteError($"✗ Test hatası: {ex.Message}");
             return false;
         }
     }
@@ -241,7 +241,7 @@ public sealed class DeepgramTranscriber : ISpeechTranscriber
                 return tr;
             }
         }
-        SttTestLog.Write("⚠ Sonuç yok");
+        SttTestLog.WriteWarning("⚠ Sonuç yok");
         return null;
     }
 
@@ -322,16 +322,16 @@ public sealed class AssemblyAiTranscriber : ISpeechTranscriber
                 if (status == "completed")
                 {
                     var text = doc.RootElement.TryGetProperty("text", out var t) ? t.GetString() : null;
-                    SttTestLog.Write($"✓ Metin: {CloudTranscribers.TrimText(text)}");
+                    SttTestLog.WriteSuccess($"✓ Metin: {CloudTranscribers.TrimText(text)}");
                     return text;
                 }
                 if (status == "error")
                 {
-                    SttTestLog.Write("✗ Transkript hatası");
+                    SttTestLog.WriteError("✗ Transkript hatası");
                     return null;
                 }
             }
-            SttTestLog.Write("✗ Zaman aşımı (2 dk)");
+            SttTestLog.WriteError("✗ Zaman aşımı (2 dk)");
             return null;
         }
     }
@@ -385,7 +385,7 @@ public sealed class ElevenLabsTranscriber : ISpeechTranscriber
         var json = await response.Content.ReadAsStringAsync();
         using var doc = JsonDocument.Parse(json);
         var text = doc.RootElement.TryGetProperty("text", out var t) ? t.GetString() : null;
-        SttTestLog.Write($"✓ Metin: {CloudTranscribers.TrimText(text)}");
+        SttTestLog.WriteSuccess($"✓ Metin: {CloudTranscribers.TrimText(text)}");
         return text;
     }
 
@@ -435,7 +435,7 @@ public sealed class GoogleTranscriber : ISpeechTranscriber
         if (ok1)
             return text1;
 
-        SttTestLog.Write("→ chirp_2 isteği hatalı — latest_short deneniyor");
+        SttTestLog.WriteWarning("→ chirp_2 isteği hatalı — latest_short deneniyor");
         var (_, text2) = await TryRecognizeAsync(key, pcm, "latest_short");
         return text2;
     }
@@ -469,7 +469,7 @@ public sealed class GoogleTranscriber : ISpeechTranscriber
                 if (alt.GetArrayLength() > 0)
                 {
                     var text = alt[0].TryGetProperty("transcript", out var t) ? t.GetString() : null;
-                    SttTestLog.Write($"✓ Metin: {CloudTranscribers.TrimText(text)}");
+                    SttTestLog.WriteSuccess($"✓ Metin: {CloudTranscribers.TrimText(text)}");
                     return (true, text);
                 }
             }
@@ -478,12 +478,12 @@ public sealed class GoogleTranscriber : ISpeechTranscriber
         catch (HttpRequestException ex)
         {
             // DİKKAT: URL'de `?key=` olduğundan ex.Message'ı loglamayız — yalnızca HTTP kodu
-            SttTestLog.Write($"✗ {model} isteği hatalı (HTTP {(int?)ex.StatusCode ?? 0})");
+            SttTestLog.WriteError($"✗ {model} isteği hatalı (HTTP {(int?)ex.StatusCode ?? 0})");
             return (false, null); // 400/401/403/ağ → fallback model veya çevrimdışı
         }
         catch (Exception ex)
         {
-            SttTestLog.Write($"✗ {model} isteği hatalı: {ex.Message}");
+            SttTestLog.WriteError($"✗ {model} isteği hatalı: {ex.Message}");
             return (false, null);
         }
     }
@@ -542,7 +542,7 @@ public sealed class AzureTranscriber : ISpeechTranscriber
             SttTestLog.Write($"✓ Metin: {CloudTranscribers.TrimText(result)}");
             return result;
         }
-        SttTestLog.Write("⚠ RecognitionStatus ≠ Success (NoMatch — sessiz ses olabilir)");
+        SttTestLog.WriteWarning("⚠ RecognitionStatus ≠ Success (NoMatch — sessiz ses olabilir)");
         return null; // NoMatch (sessiz) → null → çevrimdışı fallback
     }
 
@@ -565,12 +565,12 @@ public sealed class AzureTranscriber : ISpeechTranscriber
         }
         catch (HttpRequestException ex)
         {
-            SttTestLog.Write($"✗ Azure isteği hatalı (HTTP {(int?)ex.StatusCode ?? 0}) — bölge/anahtar kontrol edin");
+            SttTestLog.WriteError($"✗ Azure isteği hatalı (HTTP {(int?)ex.StatusCode ?? 0}) — bölge/anahtar kontrol edin");
             return (false, null);
         }
         catch (Exception ex)
         {
-            SttTestLog.Write($"✗ Azure isteği hatalı: {ex.Message}");
+            SttTestLog.WriteError($"✗ Azure isteği hatalı: {ex.Message}");
             return (false, null);
         }
     }

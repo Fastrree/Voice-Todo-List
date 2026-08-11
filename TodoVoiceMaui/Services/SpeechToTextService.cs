@@ -379,7 +379,7 @@ public class SpeechToTextService : INotifyPropertyChanged
             ModelDownloadedBytes = 0;
             ModelDownloadTotalBytes = 0;
             ModelDownloadSpeedBytesPerSecond = 0;
-            SttTestLog.Write($"⬇ İndirme başladı: {model.DisplayName} ({model.SizeLabel}) — {model.DownloadUrl}");
+            SttTestLog.WriteDownload($"⬇ İndirme başladı: {model.DisplayName} ({model.SizeLabel})");
             StatusMessage = "Model indiriliyor…";
             _downloadCts = new CancellationTokenSource();
 
@@ -433,20 +433,20 @@ public class SpeechToTextService : INotifyPropertyChanged
             {
                 File.Delete(modelPath);
                 Log($"STT model download failed: dosya çok küçük");
-                SttTestLog.Write("✗ İndirme başarısız: dosya çok küçük (muhtemelen bozuk/engellendi)");
+                SttTestLog.WriteError("✗ İndirme başarısız: dosya çok küçük (muhtemelen bozuk/engellendi)");
                 StatusMessage = "İndirme başarısız";
                 return false;
             }
 
             IsModelReady = true;
             StatusMessage = "Hazır";
-            SttTestLog.Write($"✓ İndirme tamamlandı: {model.DisplayName} ({FormatBytes(new FileInfo(modelPath).Length)})");
+            SttTestLog.WriteSuccess($"✓ İndirme tamamlandı: {model.DisplayName} ({FormatBytes(new FileInfo(modelPath).Length)})");
             return true;
         }
         catch (OperationCanceledException)
         {
             Log($"STT model download cancelled: {model.Id}");
-            SttTestLog.Write($"✗ İndirme iptal edildi: {model.DisplayName} (kısmi dosya temizlendi)");
+            SttTestLog.WriteWarning($"✗ İndirme iptal edildi: {model.DisplayName} (kısmi dosya temizlendi)");
             StatusMessage = "İndirme iptal edildi";
             try
             {
@@ -504,20 +504,20 @@ public class SpeechToTextService : INotifyPropertyChanged
                 if (!string.IsNullOrWhiteSpace(cloudText))
                 {
                     Log($"STT cloud OK: provider={SelectedProvider.Id}");
-                    SttTestLog.Write($"✓ Bulut transkripsiyon tamam ({SelectedProvider.Id})");
+                    SttTestLog.WriteSuccess($"✓ Bulut transkripsiyon tamam ({SelectedProvider.Id})");
                     return TurkishVocabulary.Correct(cloudText);
                 }
-                SttTestLog.Write("⚠ Bulut boş metin döndü — çevrimdışı deneniyor");
+                SttTestLog.WriteWarning("⚠ Bulut boş metin döndü — çevrimdışı deneniyor");
             }
             catch (Exception ex)
             {
                 Log($"STT cloud failed ({SelectedProvider.Id}), offline fallback: {ex.Message}");
-                SttTestLog.Write($"✗ Bulut hatası: {ex.Message} — çevrimdışı fallback");
+                SttTestLog.WriteError($"✗ Bulut hatası: {ex.Message} — çevrimdışı fallback");
             }
         }
         else if (SelectedProvider.Id != "offline")
         {
-            SttTestLog.Write($"Kaynak {SelectedProvider.DisplayName} için anahtar yok — çevrimdışı kullanılıyor");
+            SttTestLog.WriteWarning($"Kaynak {SelectedProvider.DisplayName} için anahtar yok — çevrimdışı kullanılıyor");
         }
         else
         {
@@ -541,7 +541,7 @@ public class SpeechToTextService : INotifyPropertyChanged
         var samples = WavAudioReader.ReadMono16kHz(wavPath);
         if (samples == null || samples.Length == 0)
         {
-            SttTestLog.Write("✗ WAV okunamadı veya boş");
+            SttTestLog.WriteError("✗ WAV okunamadı veya boş");
             return null;
         }
         SttTestLog.Write($"WAV → 16kHz mono ({samples.Length / 16000.0:0.0} sn)");
@@ -579,13 +579,13 @@ public class SpeechToTextService : INotifyPropertyChanged
 
             if (string.IsNullOrWhiteSpace(text))
             {
-                SttTestLog.Write("⚠ Whisper boş sonuç (konuşma algılanamadı)");
+                SttTestLog.WriteWarning("⚠ Whisper boş sonuç (konuşma algılanamadı)");
                 return null;
             }
 
             // Özel isimleri kanonik yazımla düzelt (Google, Türk Hava Yolları, Elon Musk...)
             var corrected = TurkishVocabulary.Correct(text);
-            SttTestLog.Write($"✓ Metin: {CloudTranscribers.TrimText(corrected)}");
+            SttTestLog.WriteSuccess($"✓ Metin: {CloudTranscribers.TrimText(corrected)}");
             return corrected;
         });
 #else

@@ -38,7 +38,7 @@ public partial class ModelManagementPopup : Popup
 
     private async void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(ModelManagementViewModel.TestConsoleText) && PopupTestConsoleScroll != null)
+        if (e.PropertyName == nameof(ModelManagementViewModel.TestConsoleFormatted) && PopupTestConsoleScroll != null)
         {
             try
             {
@@ -63,8 +63,16 @@ public partial class ModelManagementViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private string currentModelText = string.Empty;
 
-    [ObservableProperty]
-    private string testConsoleText = string.Empty;
+    private readonly List<SttLogEntry> _consoleLines = new();
+
+    private FormattedString _testConsoleFormatted = new();
+
+    /// <summary>Renkli konsol içeriği (satır tiplerine göre Span renkleri).</summary>
+    public FormattedString TestConsoleFormatted
+    {
+        get => _testConsoleFormatted;
+        private set => SetProperty(ref _testConsoleFormatted, value);
+    }
 
     public event Action? CloseRequested;
 
@@ -77,24 +85,44 @@ public partial class ModelManagementViewModel : ObservableObject, IDisposable
 
         _stt.PropertyChanged += OnSttPropertyChanged;
         _settings.ModelStateChanged += OnModelStateChanged;
-        SttTestLog.Line += OnTestLogLine;
+        SttTestLog.Line += OnTestLogEntry;
         RefreshAll();
     }
 
-    private void OnTestLogLine(string line)
+    private void OnTestLogEntry(SttLogEntry entry)
     {
-        const int maxChars = 40_000;
+        const int maxLines = 200;
         MainThread.BeginInvokeOnMainThread(() =>
         {
-            var added = line.Length + 2;
-            TestConsoleText = TestConsoleText.Length + added > maxChars
-                ? TestConsoleText.Substring(TestConsoleText.Length + added - maxChars) + line + Environment.NewLine
-                : TestConsoleText + line + Environment.NewLine;
+            _consoleLines.Add(entry);
+            if (_consoleLines.Count > maxLines)
+                _consoleLines.RemoveAt(0);
+            RebuildConsole();
         });
     }
 
+    private void RebuildConsole()
+    {
+        var fs = new FormattedString();
+        foreach (var entry in _consoleLines)
+        {
+            fs.Spans.Add(new Span
+            {
+                Text = entry.Text + Environment.NewLine,
+                TextColor = SttConsolePalette.For(entry.Kind),
+                FontFamily = "Consolas",
+                FontSize = 10
+            });
+        }
+        TestConsoleFormatted = fs;
+    }
+
     [RelayCommand]
-    private void ClearTestConsole() => TestConsoleText = string.Empty;
+    private void ClearTestConsole()
+    {
+        _consoleLines.Clear();
+        TestConsoleFormatted = new FormattedString();
+    }
 
     private void OnSttPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -133,7 +161,7 @@ public partial class ModelManagementViewModel : ObservableObject, IDisposable
     {
         _stt.PropertyChanged -= OnSttPropertyChanged;
         _settings.ModelStateChanged -= OnModelStateChanged;
-        SttTestLog.Line -= OnTestLogLine;
+        SttTestLog.Line -= OnTestLogEntry;
         GC.SuppressFinalize(this);
     }
 
