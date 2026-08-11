@@ -179,9 +179,38 @@
                                 <Label Text="API Anahtarı" Style="{StaticResource CaptionText}" />
                                 <Frame BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource DarkSurface}}"
                                        CornerRadius="12" Padding="0" HasShadow="False">
-                                    <Entry Text="{Binding ProviderApiKey}" Placeholder="sk-..." IsPassword="True"
+                                    <Entry Text="{Binding ProviderApiKey}" Placeholder="sk-... / API key" IsPassword="True"
                                            Style="{StaticResource SearchEntry}" Margin="12,0" />
                                 </Frame>
+
+                                <!-- Bölge (yalnız Azure) -->
+                                <VerticalStackLayout Spacing="4" IsVisible="{Binding IsRegionRequired}">
+                                    <Label Text="Bölge (Azure Speech resource)" Style="{StaticResource CaptionText}" />
+                                    <Frame BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource DarkSurface}}"
+                                           CornerRadius="12" Padding="0" HasShadow="False">
+                                        <Entry Text="{Binding ProviderRegion}" Placeholder="westeurope / northeurope / turkiyecentral"
+                                               Style="{StaticResource SearchEntry}" Margin="12,0" />
+                                    </Frame>
+                                </VerticalStackLayout>
+
+                                <!-- Biyometrik kilit (Windows Hello) -->
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Padding="0,2">
+                                    <VerticalStackLayout Spacing="2">
+                                        <Label Text="Windows Hello ile kilitle" Style="{StaticResource BodyText}" />
+                                        <Label Text="{Binding BiometricStatusText}" Style="{StaticResource CaptionText}"
+                                               LineBreakMode="WordWrap"
+                                               TextColor="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}" />
+                                    </VerticalStackLayout>
+                                    <Switch Grid.Column="1" VerticalOptions="Center"
+                                            IsToggled="{Binding IsBiometricLockEnabled, Mode=OneWay}"
+                                            IsEnabled="{Binding IsBiometricAvailable}"
+                                            Toggled="OnBiometricLockToggled"
+                                            OnColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
+                                </Grid>
+                                <Button Text="&#xE8F7; Kilidi Aç (Windows Hello)" Command="{Binding UnlockApiKeyCommand}"
+                                        IsVisible="{Binding IsKeyLocked}"
+                                        Style="{StaticResource GhostButton}" HeightRequest="36" CornerRadius="18" />
+
                                 <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                                     <Button Text="Anahtarı Kaydet" Command="{Binding SaveProviderApiKeyCommand}"
                                             HeightRequest="38" CornerRadius="19" />
@@ -202,6 +231,9 @@
                                             SelectedIndexChanged="OnSttModelPickerChanged"
                                             Style="{StaticResource InlinePicker}" />
                                 </Frame>
+                                <Button Text="&#xE718; Model Yönetimi — İndir / Sil / Detay"
+                                        Command="{Binding ShowModelManagementCommand}"
+                                        Style="{StaticResource GhostButton}" HeightRequest="36" CornerRadius="18" />
 
                                 <!-- Seçili modelin detay kartı -->
                                 <Border Stroke="{AppThemeBinding Light={StaticResource BorderDefault}, Dark={StaticResource DarkBorderDefault}}"
@@ -237,6 +269,19 @@
                                         <Label Text="{Binding SelectedSttModel.Description}"
                                                Style="{StaticResource CaptionText}"
                                                LineBreakMode="WordWrap" />
+
+                                        <Label Text="{Binding SelectedSttModel.RamLabel}" Style="{StaticResource CaptionText}"
+                                               LineBreakMode="WordWrap"
+                                               TextColor="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}" />
+                                        <Label Text="{Binding SelectedSttModel.WerLabel}" Style="{StaticResource CaptionText}"
+                                               LineBreakMode="WordWrap"
+                                               TextColor="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}" />
+                                        <Label Text="{Binding SelectedSttModel.QuantizationLabel}" Style="{StaticResource CaptionText}"
+                                               LineBreakMode="WordWrap"
+                                               TextColor="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}" />
+                                        <Label Text="{Binding SelectedSttModel.RecommendationText}" Style="{StaticResource CaptionText}"
+                                               FontAttributes="Bold" LineBreakMode="WordWrap"
+                                               TextColor="{AppThemeBinding Light={StaticResource AccentDark}, Dark={StaticResource DarkAccent}}" />
 
                                         <Label Text="{Binding SttInstalledInfo}" Style="{StaticResource CaptionText}"
                                                FontAttributes="Bold"
@@ -274,7 +319,7 @@
                                 </Border>
                             </VerticalStackLayout>
 
-                            <Label Text="Katalog geniş: Çevrimdışı 4 katman (190MB→3,1GB) + OpenAI, Groq, Deepgram, ElevenLabs, Fireworks, AssemblyAI (anahtar ile) + Google, Azure, Cloudflare, Soniox (yakında). Bulut kaynak başarısız olursa otomatik çevrimdışı Whisper'a düşülür. İndirme çubuğuna tıklayınca ayrıntılı modal açılır."
+                            <Label Text="Katalog: Çevrimdışı 4 katman (190MB→3,1GB) + OpenAI, Groq, Fireworks, Deepgram, ElevenLabs, AssemblyAI, Google (Chirp 2), Azure AI Speech (anahtar + bölge). Cloudflare, Soniox, Sestek yakında. Anahtarlar Windows Vault'ta şifreli; bulut başarısız olursa otomatik çevrimdışı Whisper'a düşülür. İndirme çubuğuna tıklayınca ayrıntılı modal açılır."
                                    Style="{StaticResource CaptionText}" LineBreakMode="WordWrap"
                                    TextColor="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}" />
                         </VerticalStackLayout>

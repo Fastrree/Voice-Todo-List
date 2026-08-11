@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<toolkit:Popup xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+               xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+               xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+               xmlns:views="clr-namespace:TodoVoiceMaui.Views"
+               xmlns:converters="clr-namespace:TodoVoiceMaui.Converters"
+               x:Class="TodoVoiceMaui.Views.ModelManagementPopup"
+               x:DataType="views:ModelManagementViewModel"
+               Color="#99000000"
+               CanBeDismissedByTappingOutsideOfPopup="True">
+
+    <toolkit:Popup.Resources>
+        <ResourceDictionary>
+            <converters:InverseBoolConverter x:Key="InverseBoolConverter" />
+        </ResourceDictionary>
+    </toolkit:Popup.Resources>
+
+    <Border WidthRequest="480" MaximumWidthRequest="520"
+            StrokeThickness="1"
+            StrokeShape="RoundRectangle 24"
+            Padding="20,18"
+            Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}">
+        <Border.Background>
+            <AppThemeBinding Light="{StaticResource GlassSurfaceLight}" Dark="{StaticResource GlassSurfaceDark}" />
+        </Border.Background>
+        <Border.Shadow>
+            <Shadow Brush="{AppThemeBinding Light={StaticResource ShadowLg}, Dark={StaticResource DarkShadowLg}}"
+                    Radius="28" Opacity="0.55" Offset="0,10" />
+        </Border.Shadow>
+
+        <VerticalStackLayout Spacing="12">
+
+            <!-- BAŞLIK -->
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                <Border WidthRequest="42" HeightRequest="42"
+                        StrokeThickness="0" StrokeShape="RoundRectangle 21"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}"
+                        VerticalOptions="Center">
+                    <Label Text="&#xE718;" FontFamily="Segoe Fluent Icons" FontSize="20"
+                           TextColor="{AppThemeBinding Light={StaticResource AccentContrast}, Dark={StaticResource DarkBackground}}"
+                           HorizontalOptions="Center" VerticalOptions="Center" />
+                </Border>
+                <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
+                    <Label Text="MODEL YÖNETİMİ" Style="{StaticResource MicroLabel}"
+                           TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
+                    <Label Text="{Binding CurrentModelText}" FontFamily="SoraSemiBold" FontSize="16"
+                           TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource DarkTextPrimary}}" />
+                    <Label Text="{Binding TotalDiskText}" Style="{StaticResource CaptionText}"
+                           TextColor="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}" />
+                </VerticalStackLayout>
+                <Button Grid.Column="2" Text="&#xE711;" FontFamily="Segoe Fluent Icons" FontSize="14"
+                        Command="{Binding CloseCommand}"
+                        BackgroundColor="Transparent" BorderWidth="0"
+                        TextColor="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}"
+                        WidthRequest="36" HeightRequest="36" Padding="0" CornerRadius="18"
+                        VerticalOptions="Center" />
+            </Grid>
+
+            <!-- MODEL LİSTESİ -->
+            <CollectionView ItemsSource="{Binding Rows}" HeightRequest="420" VerticalScrollBarVisibility="Never">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="views:ModelManagementRow">
+                        <Border Margin="0,4"
+                                StrokeThickness="1"
+                                StrokeShape="RoundRectangle 16"
+                                Padding="14,12"
+                                Stroke="{AppThemeBinding Light={StaticResource BorderDefault}, Dark={StaticResource DarkBorderDefault}}"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource DarkSurface}}">
+                            <VerticalStackLayout Spacing="8">
+
+                                <!-- ÜST: Tier + isim + çipler -->
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                    <Border StrokeThickness="0" StrokeShape="RoundRectangle 8" Padding="10,3"
+                                            VerticalOptions="Center"
+                                            BackgroundColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}">
+                                        <Label Text="{Binding TierLabel}" FontFamily="SoraSemiBold" FontSize="11"
+                                               TextColor="{AppThemeBinding Light={StaticResource AccentContrast}, Dark={StaticResource DarkBackground}}" />
+                                    </Border>
+                                    <Label Grid.Column="1" Text="{Binding DisplayName}" FontFamily="SoraSemiBold" FontSize="15"
+                                           VerticalOptions="Center"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource DarkTextPrimary}}" />
+                                    <Label Grid.Column="2" FontSize="11"
+                                           VerticalOptions="Center" IsVisible="{Binding IsCurrent}"
+                                           Text="&#xE73E; AKTİF"
+                                           FontFamily="SoraSemiBold"
+                                           TextColor="{AppThemeBinding Light={StaticResource SecondaryDark}, Dark={StaticResource DarkSecondary}}" />
+                                </Grid>
+
+                                <!-- ÇİPLER: boyut · hız · doğruluk -->
+                                <HorizontalStackLayout Spacing="6">
+                                    <Border StrokeThickness="0" StrokeShape="RoundRectangle 8" Padding="8,3"
+                                            BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource DarkAccentSoft}}">
+                                        <Label Text="{Binding SizeLabel}" Style="{StaticResource CaptionText}" FontAttributes="Bold"
+                                               TextColor="{AppThemeBinding Light={StaticResource AccentDark}, Dark={StaticResource DarkAccent}}" />
+                                    </Border>
+                                    <Border StrokeThickness="0" StrokeShape="RoundRectangle 8" Padding="8,3"
+                                            BackgroundColor="{AppThemeBinding Light={StaticResource SecondarySoft}, Dark={StaticResource DarkSecondarySoft}}">
+                                        <Label Text="{Binding SpeedLabel}" Style="{StaticResource CaptionText}" FontAttributes="Bold"
+                                               TextColor="{AppThemeBinding Light={StaticResource SecondaryDark}, Dark={StaticResource DarkSecondary}}" />
+                                    </Border>
+                                    <Border StrokeThickness="0" StrokeShape="RoundRectangle 8" Padding="8,3"
+                                            BackgroundColor="{AppThemeBinding Light={StaticResource VoiceReadySoft}, Dark={StaticResource DarkVoiceReadySoft}}">
+                                        <Label Text="{Binding AccuracyLabel}" Style="{StaticResource CaptionText}" FontAttributes="Bold"
+                                               TextColor="{AppThemeBinding Light={StaticResource VoiceReady}, Dark={StaticResource DarkSuccess}}" />
+                                    </Border>
+                                </HorizontalStackLayout>
+
+                                <!-- DETAY SATIRLARI -->
+                                <Label Style="{StaticResource CaptionText}"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}"
+                                       LineBreakMode="WordWrap"
+                                       Text="{Binding RamLabel, StringFormat='{0} · RAM'}" />
+                                <Label Style="{StaticResource CaptionText}"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}"
+                                       LineBreakMode="WordWrap"
+                                       Text="{Binding WerLabel, StringFormat='{0} · doğruluk'}" />
+                                <Label Style="{StaticResource CaptionText}"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}"
+                                       LineBreakMode="WordWrap"
+                                       Text="{Binding LanguagesLabel, StringFormat='{0} · dil kapsamı'}" />
+                                <Label Style="{StaticResource CaptionText}"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}"
+                                       LineBreakMode="WordWrap"
+                                       Text="{Binding QuantizationLabel, StringFormat='{0} · kuantizasyon'}" />
+                                <Label Style="{StaticResource CaptionText}"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}"
+                                       LineBreakMode="WordWrap"
+                                       Text="{Binding SpeedFactorLabel, StringFormat='{0} · hız'}" />
+
+                                <!-- ÖNERİ -->
+                                <Label Style="{StaticResource CaptionText}" FontAttributes="Bold"
+                                       TextColor="{AppThemeBinding Light={StaticResource AccentDark}, Dark={StaticResource DarkAccent}}"
+                                       LineBreakMode="WordWrap"
+                                       Text="{Binding RecommendationText}" />
+
+                                <!-- DURUM -->
+                                <Label Style="{StaticResource CaptionText}" FontAttributes="Bold"
+                                       TextColor="{AppThemeBinding Light={StaticResource SecondaryDark}, Dark={StaticResource DarkSecondary}}"
+                                       Text="{Binding InstalledText}" />
+
+                                <!-- İNDİRME: yeşil bar + yüzde -->
+                                <VerticalStackLayout Spacing="3" IsVisible="{Binding IsDownloading}">
+                                    <ProgressBar Progress="{Binding DownloadProgress}" HeightRequest="6"
+                                                 ProgressColor="{AppThemeBinding Light={StaticResource Success}, Dark={StaticResource DarkSuccess}}" />
+                                    <Label Text="{Binding DownloadText}" Style="{StaticResource CaptionText}"
+                                           FontAttributes="Bold"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource DarkTextPrimary}}" />
+                                </VerticalStackLayout>
+
+                                <!-- AKSİYONLAR -->
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="8" IsVisible="{Binding IsDownloading, Converter={StaticResource InverseBoolConverter}}">
+                                    <Button Text="İndir" Command="{Binding DownloadCommand}"
+                                            IsVisible="{Binding CanDownload}"
+                                            HeightRequest="36" CornerRadius="18" FontSize="13" />
+                                    <Button Grid.Column="1" Text="Sil" Command="{Binding DeleteCommand}"
+                                            IsVisible="{Binding CanDelete}"
+                                            HeightRequest="36" CornerRadius="18" FontSize="13"
+                                            BackgroundColor="{AppThemeBinding Light={StaticResource RecordingSoft}, Dark={StaticResource DarkRecordingSoft}}"
+                                            TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource Danger}}" />
+                                </Grid>
+                                <Button Text="İptal" Command="{Binding CancelDownloadCommand}"
+                                        IsVisible="{Binding IsDownloading}"
+                                        HeightRequest="36" CornerRadius="18" FontSize="13"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource RecordingSoft}, Dark={StaticResource DarkRecordingSoft}}"
+                                        TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource Danger}}" />
+                            </VerticalStackLayout>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <!-- DİP NOT -->
+            <Label Style="{StaticResource CaptionText}"
+                   TextColor="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}"
+                   LineBreakMode="WordWrap"
+                   Text="Aktif model silinemez (önce başka modele geç). İndirme sırasında iptal edilebilir; kısmi dosya otomatik temizlenir. RAM/WER değerleri tahminîdir." />
+        </VerticalStackLayout>
+    </Border>
+</toolkit:Popup>

@@ -19,11 +19,12 @@ namespace TodoVoiceMaui.Services;
 /// TurkishVocabulary.Correct (özel isim otomatik düzeltme).
 ///
 /// MODEL SEÇİMİ: Kullanıcı Ayarlar → Ses Tanıma bölümünden model seçebilir
-/// (tiny 75MB → large-v3 2,9GB). Seçim Preferences'da ("stt_model") saklanır,
-/// varsayılan "small-q5_1" (hız/doğruluk dengesi). İlk kullanımda HuggingFace'ten
-/// indirilir, uygulama veri klasöründe önbelleğe alınır. Model geçişinde eski
-/// model yalnızca yeni model HAZIR olduktan sonra silinir — çevrimdışı kullanıcı
-/// çalışan modelini kaybetmesin.
+/// (Minimum 190MB → Maximum 3,1GB, 4 katman). Seçim Preferences'da ("stt_model")
+/// saklanır, varsayılan "small-q5_1" (hız/doğruluk dengesi). İlk kullanımda
+/// HuggingFace'ten indirilir, uygulama veri klasöründe önbelleğe alınır. Model
+/// geçişinde eski model yalnızca yeni model HAZIR olduktan sonra silinir —
+/// çevrimdışı kullanıcı çalışan modelini kaybetmesin. Model Yönetimi modalından
+/// kurulu modeller silinebilir (aktif model hariç).
 /// </summary>
 public class SpeechToTextService : INotifyPropertyChanged
 {
@@ -65,7 +66,9 @@ public class SpeechToTextService : INotifyPropertyChanged
             ["fireworks"] = new OpenAiCompatibleTranscriber("fireworks", "https://api.fireworks.ai/inference/v1", "accounts/fireworks/models/whisper-v3"),
             ["deepgram"] = new DeepgramTranscriber(),
             ["elevenlabs"] = new ElevenLabsTranscriber(),
-            ["assemblyai"] = new AssemblyAiTranscriber()
+            ["assemblyai"] = new AssemblyAiTranscriber(),
+            ["google"] = new GoogleTranscriber(),
+            ["azure"] = new AzureTranscriber()
         };
 
 #if WINDOWS
@@ -202,6 +205,107 @@ public class SpeechToTextService : INotifyPropertyChanged
             {
                 return 0;
             }
+        }
+    }
+
+    // ---- Model yönetimi (Model Yönetimi modalı) ----
+
+    /// <summary>Herhangi bir katalog modelinin diskte kurulu olup olmadığı.</summary>
+    public bool IsModelInstalled(WhisperModelInfo model)
+    {
+        try
+        {
+            var path = Path.Combine(FileSystem.AppDataDirectory, "models", model.FileName);
+            return File.Exists(path) && new FileInfo(path).Length > MinModelSizeBytes;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>Herhangi bir katalog modelinin diskteki boyutu (byte) — 0 ise kurulu değil.</summary>
+    public long GetModelSizeOnDisk(WhisperModelInfo model)
+    {
+        try
+        {
+            var path = Path.Combine(FileSystem.AppDataDirectory, "models", model.FileName);
+            return File.Exists(path) ? new FileInfo(path).Length : 0;
+        }
+        catch
+        {
+            return 0;
+        }
+    }
+
+    /// <summary>Models klasörünün toplam disk kullanımı (byte) — tüm kurulu modeller.</summary>
+    public long ModelDirectoryTotalBytes
+    {
+        get
+        {
+            try
+            {
+                var dir = Path.Combine(FileSystem.AppDataDirectory, "models");
+                if (!Directory.Exists(dir))
+                    return 0;
+                long total = 0;
+                foreach (var f in Directory.EnumerateFiles(dir))
+                {
+                    try { total += new FileInfo(f).Length; } catch { }
+                }
+                return total;
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Kurulu bir modeli diskten siler. GÜVENLİK: indirme sürüyorsa veya model ŞU AN
+    /// SEÇİLİ ise silinmez (aktif model silinirse ses tanıma bozulur) — önce başka
+    /// bir modele geçilmelidir. Başarılıysa true.
+    /// </summary>
+    public bool DeleteModel(WhisperModelInfo model)
+    {
+        if (model == null)
+            return false;
+
+        if (IsDownloading)
+            return false;
+
+        // Aktif model silinemez — kullanıcı önce başka modele geçmeli
+        if (model.Id == SelectedModel.Id)
+            return false;
+
+        try
+        {
+            var path = Path.Combine(FileSystem.AppDataDirectory, "models", model.FileName);
+            if (!File.Exists(path))
+                return true; // zaten yok — başarılı say
+
+            // whisper.cpp model dosyası transkripsiyon sırasında belleğe alınır;
+            // kilitli kalırsa (nadir) kısa bir bekleyişle tekrar dene.
+            for (var i = 0; i < 3; i++)
+            {
+                try
+                {
+                    File.Delete(path);
+                    break;
+                }
+                catch (IOException) when (i < 2)
+                {
+                    Thread.Sleep(300);
+                }
+            }
+
+            OnPropertyChanged(nameof(ModelDirectoryTotalBytes));
+            return !File.Exists(path);
+        }
+        catch
+        {
+            return false;
         }
     }
 

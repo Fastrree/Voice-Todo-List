@@ -26,21 +26,33 @@ git'te kalır). Geçmiş TUTMAZ — sadece bugünü anlatır.
   onay sorulur. Model geçişinde ESKİ model yalnızca YENİ model hazır olduktan sonra
   silinir; geçiş başarısız olursa seçim geri alınır.
 - **Transkripsiyon KAYNAĞI seçici (bulut destek):** Ayarlar'da kaynak seçilir —
-  Çevrimdışı Whisper (anahtar yok, varsayılan) veya bulut: OpenAI
+  Çevrimdışı Whisper (anahtar yok, varsayılan) veya bulut (8 kaynak): OpenAI
   (gpt-4o-mini-transcribe), Groq (whisper-large-v3-turbo), Fireworks (whisper-v3),
-  Deepgram (Nova-3), ElevenLabs (Scribe v2), AssemblyAI (Universal-2). Katalogda
-  ayrıca Google/Azure/Cloudflare/Soniox "yakında" olarak listelenir.
-  **API anahtarları DPAPI ile şifrelenir** (`SecureKeyStore` — crypt32 P/Invoke,
-  Preferences'ta `enc:`+Base64; eski düz metin anahtarlar göç uyumluluğuyla okunur,
-  yeniden kayıtta şifrelenir). Ayarlar'da "Bağlantıyı Test Et" (HTTP 2xx = geçerli)
-  ile doğrulanır. **Fallback:** bulut başarısız/anahtar yoksa otomatik çevrimdışı
-  Whisper'a düşülür. `TurkishVocabulary.Correct()` tüm kaynaklarda çalışır; prompt
-  önyüklemesi bulut API'lerinin prompt/keyterm alanlarına da yazılır.
+  Deepgram (Nova-3), ElevenLabs (Scribe v2), AssemblyAI (Universal-2),
+  **Google (Chirp 2 — v1 `speech:recognize`, `?key=` + LINEAR16 base64; hata halinde
+  `latest_short` fallback)**, **Azure AI Speech (bölge + Ocp-Apim-Subscription-Key,
+  16kHz WAV gövde — bölge Ayarlar'da ayrı alan)**. Katalogda ayrıca
+  Cloudflare/Soniox/Sestek "yakında" olarak listelenir.
+  **API anahtarları Windows Credential Manager (Vault) ile saklanır**
+  (`WindowsCredentialStore` — advapi32 CredWrite/CredRead/CredDelete P/Invoke,
+  blob OS tarafından şifreli, unpackaged'ta çalışır). DPAPI-in-Preferences fallback;
+  eski `enc:`/düz metin kayıtları okumada Vault'a GÖÇ eder (tek yönlü).
+  **Biyometrik kilit (Windows Hello):** "Windows Hello ile kilitle" açıkken API
+  anahtarı gizli kalır — görüntüleme ve bağlantı testi UserConsentVerifier
+  (parmak izi/yüz/PIN) doğrulaması ister; kullanılamıyorsa dürüst durum gösterilir.
+  Ayarlar'da "Bağlantıyı Test Et" (HTTP 2xx = geçerli) ile doğrulanır.
+  **Fallback:** bulut başarısız/anahtar yoksa otomatik çevrimdışı Whisper'a düşülür.
+  `TurkishVocabulary.Correct()` tüm kaynaklarda çalışır; prompt önyüklemesi bulut
+  API'lerinin prompt/keyterm alanlarına da yazılır.
 - **İndirme deneyimi:** "İndir ve Kullan" butonu indirme sırasında **yeşil ilerleme
   çubuğuna** dönüşür (% + indirilen/toplam MB içinde); tıklanınca **detaylı modal**
   açılır (büyük yüzde, yeşil bar, miktar, anlık hız, güvenlik notu, iptal). İndirme
   iptal edilebilir (`CancellationTokenSource`), kısmi `.part` temizlenir; modal
   dışına tıklanınca arka planda devam eder, bitince kendini kapatır.
+- **Model Yönetimi modalı:** 4 katman tek ekranda — her model için boyut/RAM/WER
+  (tahminî)/dil/kuantizasyon/hız/öneri, kurulu durum + disk boyutu, toplam disk,
+  indir (yeşil bar + iptal) ve **sil** (aktif model silinemez). Ayarlar detay kartı
+  da RAM/WER/kuantizasyon/öneri gösterir.
 - **Decode önyükleme:** `WithPrompt(TurkishVocabulary.InitialPrompt)` — ünlü
   şirket/kişi isimleri whisper token seçimine yönlendirilir.
 - **Özel isim otomatik düzeltme:** `TurkishVocabulary.Correct()` transkripsiyon

@@ -92,7 +92,7 @@ farklı bir hikâyeyle kullanabilir.
 | MVVM | CommunityToolkit.Mvvm 8.3.2 (`[ObservableProperty]`, `[RelayCommand]`) | Az boilerplate, source generator |
 | UI toolkit | CommunityToolkit.Maui 9.1.0 | Hazır konvertör / behavior desteği |
 | Ses | Plugin.Maui.Audio 3.0.1 | Kayıt + oynatma, `IAudioPlayer.Duration/CurrentPosition` `double?` (saniye) |
-| Transkripsiyon | **Whisper.net** (çevrimdışı, MIT) + **bulut STT seçenekleri** | 4 katmanlı yerel model (190MB→3,1GB) + OpenAI/Groq/Fireworks/Deepgram/ElevenLabs/AssemblyAI (API anahtarı ile, `ISpeechTranscriber`, anahtarlar DPAPI şifreli); kayıt → çevir akışı. Windows `SpeechRecognizer` unpackaged'ta çalışmaz (ADR-016) |
+| Transkripsiyon | **Whisper.net** (çevrimdışı, MIT) + **bulut STT seçenekleri** | 4 katmanlı yerel model (190MB→3,1GB) + 8 bulut kaynak: OpenAI/Groq/Fireworks/Deepgram/ElevenLabs/AssemblyAI/**Google (Chirp 2)**/**Azure (bölge+anahtar)** (API anahtarı ile, `ISpeechTranscriber`; anahtarlar Windows Credential Manager'da — DPAPI fallback); kayıt → çevir akışı. Windows `SpeechRecognizer` unpackaged'ta çalışmaz (ADR-016) |
 | Local DB | sqlite-net-pcl 1.9.172 | Basit, thread-safe, offline |
 | Backend | Supabase (Auth, Postgres, Storage, Edge Functions) | Hosted + RLS + storage |
 | HTTP | `System.Net.Http.HttpClient` | **Supabase SDK iki kere URL prefix'liyor (bug); doğrudan HttpClient kullanıyoruz** |
@@ -302,14 +302,27 @@ Migration: `MigrateAsync` PRAGMA + `ALTER TABLE` ile `reminder_at`, `is_deleted`
 - Bulut sağlayıcılar `ISpeechTranscriber` sözleşmesiyle (`CloudTranscribers`):
   OpenAI + Groq + Fireworks aynı OpenAI-compatible sınıf (farklı base URL), Deepgram
   raw WAV, ElevenLabs Scribe v2 multipart (JSON `custom_words` dizisi), AssemblyAI
-  upload→transcript→poll akışı. **Anahtarlar DPAPI şifreli** (`SecureKeyStore` —
-  `CryptProtectData` P/Invoke, Preferences'ta `enc:`+Base64; okumada eski düz metin
-  göçü, yazmada her zaman şifreleme). `CloudTranscribers.GetStoredApiKey/StoreApiKey`
+  upload→transcript→poll akışı, **Google** v1 `speech:recognize` (`?key=`, LINEAR16
+  base64, `chirp_2` → hata halinde `latest_short`), **Azure** bölge uç noktası
+  (`Ocp-Apim-Subscription-Key`, 16kHz WAV gövde).
+  **Anahtarlar Windows Credential Manager'da** (`WindowsCredentialStore` —
+  advapi32 CredWrite/CredRead/CredDelete P/Invoke, blob OS şifreli; `enc:`/düz metin
+  Preferences kayıtları okumada Vault'a GÖÇ eder, yazmada her zaman Vault + DPAPI
+  fallback). `CloudTranscribers.GetStoredApiKey/StoreApiKey/DeleteApiKey` +
+  bölge `stt_region_{id}` (gizli değil).
 - `TestProviderConnectionAsync` — Ayarlar'daki "Bağlantıyı Test Et" (HTTP 2xx = geçerli)
 - **İndirme takibi + iptal:** `EnsureModelAsync` içinde `CancellationTokenSource`;
   byte/hız sayaçları (`ModelDownloadedBytes`, `ModelDownloadTotalBytes`,
   `ModelDownloadSpeedBytesPerSecond`) UI'a PropertyChanged ile akar. İptal edilirse
   kısmi `.part` dosyası temizlenir, `IsModelReady` önceki modele geri döner.
+- **Model yönetimi:** `IsModelInstalled/GetModelSizeOnDisk/ModelDirectoryTotalBytes`
+  + `DeleteModel` (indirme sürerken veya AKTİF modelde silmeyi reddeder; kilitli
+  dosyada 3 denemeli retry). `ModelManagementPopup`: katalog satırları (RAM/WER/dil/
+  kuantizasyon/öneri), kurulu durum, indir/iptal/sil; indirme sırasında DISK STAT
+  yapılmaz (80KB chunk başına binlerce FileInfo = UI donması — bilinen perf tuzağı).
+- **Biyometrik kilit:** `BiometricService` (UserConsentVerifier — parmak izi/yüz/PIN,
+  unpackaged'ta savunmacı; kullanılamıyorsa anahtar yine de Vault'ta güvende).
+  Kilit açıkken ProviderApiKey boş tutulur; görüntüleme/test Windows Hello ister.
 - **DownloadProgressPopup** (CommunityToolkit Popup): indirme sırasında Settings'teki
   buton yeşil ilerleme çubuğuna dönüşür; tıklanınca büyük yüzde + MB + hız + güvenlik
   notu + iptal butonlu modal açılır. Modal kapansa da indirme arka planda sürer;
@@ -362,9 +375,11 @@ Seam abstraction'ları (uygulandı): `ITodoStore` (local), `IVoiceCommandParser`
 - Test token'ları repo DIŞINDA tutulur (`C:\temp\opencode\test-creds.txt`).
 - Mikrofon izni Windows tarafından istenir; unpackaged (`WindowsPackageType=None`)
   uygulamada OS privacy ayarı üzerinden çalışır.
-- **Bulut STT API anahtarları DPAPI ile şifrelenir** (`SecureKeyStore`:
-  `CryptProtectData/CryptUnprotectData` P/Invoke, `CRYPTPROTECT_UI_FORBIDDEN`,
-  çıktı `LocalFree` ile temizlenir). Preferences'ta yalnız `enc:`+Base64 tutulur;
-  `Protect` başarısızsa anahtar **düz metin kaydedilir ve okumada göçle geri alınır**
-  (şifreli önekli düz metin yazma hatası düzeltildi). Model indirmeleri yalnızca
+- **Bulut STT API anahtarları Windows Credential Manager'da** (`WindowsCredentialStore`:
+  CredWriteW/CredReadW/CredDeleteW P/Invoke, CRED_TYPE_GENERIC + CRED_PERSIST_LOCAL_MACHINE,
+  blob diskte OS tarafından şifrelenir — unpackaged'ta çalışır, paket kimliği gerekmez).
+  **DPAPI fallback** (`SecureKeyStore` crypt32 P/Invoke): Vault yazılamazsa Preferences'ta
+  `enc:`+Base64; `Protect` başarısızsa düz metin (okumada göçle geri alınır). Eski
+  kayıtlar okumada Vault'a GÖÇ eder. **Biyometrik kilit** (Windows Hello) anahtarı
+  ekran görünürlüğünde kilitler — depolama yine Vault'ta. Model indirmeleri yalnızca
   HF'den ölçülen GGML dosyalarıdır (kod çalıştırılmaz — güvenli içerik).

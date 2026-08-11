@@ -1,3 +1,5 @@
+using System.Text;
+
 namespace TodoVoiceMaui.Services;
 
 /// <summary>
@@ -161,5 +163,42 @@ public static class WavAudioReader
             result[i] = source[i0] * (1f - frac) + source[i1] * frac;
         }
         return result;
+    }
+
+    /// <summary>float32 mono diziyi 16-bit signed little-endian PCM byte dizisine çevirir.</summary>
+    public static byte[] ToPcm16(float[] samples)
+    {
+        var bytes = new byte[samples.Length * 2];
+        for (var i = 0; i < samples.Length; i++)
+        {
+            var s = Math.Clamp(samples[i], -1f, 1f);
+            var v = (short)(s * 32767f);
+            bytes[i * 2] = (byte)(v & 0xFF);
+            bytes[i * 2 + 1] = (byte)((v >> 8) & 0xFF);
+        }
+        return bytes;
+    }
+
+    /// <summary>16kHz mono PCM'yi tam bir WAV dosyasına (RIFF başlıklı) sarar — Azure vb. için.</summary>
+    public static byte[] BuildWav16kHz(byte[] pcm)
+    {
+        using var ms = new MemoryStream();
+        using var w = new BinaryWriter(ms);
+        w.Write(Encoding.ASCII.GetBytes("RIFF")); w.Write(36 + pcm.Length);
+        w.Write(Encoding.ASCII.GetBytes("WAVE"));
+        w.Write(Encoding.ASCII.GetBytes("fmt ")); w.Write(16);
+        w.Write((short)1); w.Write((short)1); w.Write(TargetSampleRate); w.Write(TargetSampleRate * 2);
+        w.Write((short)2); w.Write((short)16);
+        w.Write(Encoding.ASCII.GetBytes("data")); w.Write(pcm.Length);
+        w.Write(pcm);
+        w.Flush();
+        return ms.ToArray();
+    }
+
+    /// <summary>WAV dosyasını 16kHz mono PCM16 byte dizisine çevirir (bulut API'leri için).</summary>
+    public static byte[]? ReadMono16kHzPcm(string wavPath)
+    {
+        var samples = ReadMono16kHz(wavPath);
+        return samples == null ? null : ToPcm16(samples);
     }
 }

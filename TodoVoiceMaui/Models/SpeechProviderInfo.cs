@@ -17,6 +17,12 @@ public class SpeechProviderInfo
     public bool RequiresApiKey { get; init; }
     public bool IsImplemented { get; init; } = true;
 
+    /// <summary>Ek bölge bilgisi gerekir mi (örn. Azure AI Speech).</summary>
+    public bool RequiresRegion { get; init; }
+
+    /// <summary>Bölge alanının varsayılan değeri / placeholder'ı.</summary>
+    public string? DefaultRegion { get; init; }
+
     public override string ToString() => DisplayName;
 }
 
@@ -74,20 +80,22 @@ public static class SpeechProviderCatalog
         {
             Id = "google",
             DisplayName = "Google",
-            ModelLabel = "Chirp 3 (V2)",
+            ModelLabel = "Chirp 2 (V1 API)",
             CostLabel = "~$0.96/saat",
-            IsImplemented = false,
-            Description = "Yakında: Gürbüz, `tr-TR` resmî destekli, 1000 kelimelik kelime yönlendirme. " +
-                          "Servis hesabı (OAuth2) gerektirir."
+            Description = "Google'ın en yeni ses modeli Chirp 2 — `tr-TR` resmî destekli, gürbüz. " +
+                          "Google Cloud API anahtarı (Service Account gerekmez). İlk 60 dk/ay ücretsiz, " +
+                          "yeni hesaba $300 kredi."
         },
         new SpeechProviderInfo
         {
             Id = "azure",
             DisplayName = "Azure AI Speech",
-            ModelLabel = "Standard",
+            ModelLabel = "Standard (kısa ses)",
             CostLabel = "~$1.00/saat",
-            IsImplemented = false,
-            Description = "Yakında: Kurumsal, özel model eğitimi imkânı, 5 saat/ay ücretsiz tier."
+            RequiresRegion = true,
+            DefaultRegion = "westeurope",
+            Description = "Kurumsal, güvenilir. Bölge bilgisi gerekir (örn. westeurope, northeurope, " +
+                          "turkiyecentral). Ücretsiz tier: 5 saat/ay. Anahtar: Azure portal → Speech resource."
         },
         new SpeechProviderInfo
         {
@@ -124,6 +132,15 @@ public static class SpeechProviderCatalog
             CostLabel = "~$0.11/saat",
             IsImplemented = false,
             Description = "Yakında: Türkçe'ye özel uzmanlaşmış düşük maliyetli STT."
+        },
+        new SpeechProviderInfo
+        {
+            Id = "sestek",
+            DisplayName = "Sestek",
+            ModelLabel = "Yerli Türkçe ASR",
+            CostLabel = "Kurumsal",
+            IsImplemented = false,
+            Description = "Yakında: Türkiye merkezli yerli ASR sağlayıcısı — Türkçe'ye tam uzmanlaşma."
         }
     };
 

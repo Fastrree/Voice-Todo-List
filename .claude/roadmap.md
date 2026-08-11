@@ -121,12 +121,21 @@ Kullanıcı isteği: çevrimdışı tarafı Türkçe'de daha iyi eğitmek + bulu
 Araştırma bulguları ve yapılabilir aksiyonlar:
 
 ### Bulut sağlayıcı kataloğu (geniş)
-- **Uygulandı (6 kaynak):** Çevrimdışı (4 katman) + OpenAI (gpt-4o-mini-transcribe)
+- **Uygulandı (8 kaynak):** Çevrimdışı (4 katman) + OpenAI (gpt-4o-mini-transcribe)
   + Groq (whisper-large-v3-turbo) + Fireworks (whisper-v3) + Deepgram (Nova-3)
-  + ElevenLabs (Scribe v2) + AssemblyAI (Universal-2, upload→transcript→poll).
-- **Katalogda, yakında:** Google Chirp 3, Azure AI Speech, Cloudflare, Soniox
-  (Türkçe uzmanı). Her biri tek `ISpeechTranscriber` sınıfıyla aktifleşir
-  (desen: `CloudTranscribers`).
+  + ElevenLabs (Scribe v2) + AssemblyAI (Universal-2, upload→transcript→poll)
+  + **Google (Chirp 2, v1 `speech:recognize`, `?key=` + LINEAR16 base64; hata halinde
+  `latest_short` fallback)** + **Azure AI Speech (bölge + Ocp-Apim-Subscription-Key,
+  16kHz WAV gövde; bölge Ayarlar'da girilir)**.
+- **Katalogda, yakında:** Cloudflare, Soniox (Türkçe uzmanı), Sestek (yerli ASR).
+  Her biri tek `ISpeechTranscriber` sınıfıyla aktifleşir (desen: `CloudTranscribers`).
+
+### Model Yönetimi (UYGULANDI)
+- [x] **Model Yönetimi modalı:** 4 katman tek ekranda — boyut/RAM/WER (tahminî)/dil/
+      kuantizasyon/hız/öneri bilgisi, kurulu durum + disk boyutu, indirme (yeşil bar +
+      iptal) ve SİLME (aktif model silinemez; kısmi `.part` temizlenir).
+- [x] **Zengin model kartı:** Ayarlar detay kartı artık RAM, Türkçe WER, kuantizasyon
+      ve öneri gösterir.
 
 ### Türkçe fine-tune → GGML yolu
 - **Hazır Türkçe GGML model YOK** (araştırıldı). Mevcutlar PyTorch/CT2:
@@ -141,10 +150,13 @@ Araştırma bulguları ve yapılabilir aksiyonlar:
   veriyle eğitildi — Türkçe dahil) + `TurkishVocabulary` sözlüğü.
 
 ### Güvenlik (UYGULANDI)
-- [x] API anahtarları **DPAPI** ile şifrelenir (`SecureKeyStore` — saf crypt32.dll
-  P/Invoke, NuGet'sız; anahtar kullanıcının Windows hesabına bağlanır). Preferences'ta
-  `enc:`+Base64; eski düz metin anahtarlar göç uyumluluğuyla okunur, yeniden kayıtta
-  şifrelenir.
+- [x] API anahtarları **Windows Credential Manager (Vault)** ile saklanır
+  (`WindowsCredentialStore` — advapi32 CredWrite/CredRead/CredDelete P/Invoke,
+  blob OS tarafından şifrelenir, unpackaged'ta çalışır). **DPAPI-in-Preferences
+  fallback** + eski `enc:`/düz metin kayıtları Vault'a GÖÇ eder (okumada, tek yönlü).
+- [x] **Biyometrik kilit (Windows Hello):** Ayarlar'da "Windows Hello ile kilitle" —
+  anahtarı görüntüleme/test, UserConsentVerifier (parmak izi/yüz/PIN) doğrulaması
+  ister. Kullanılamıyorsa dürüst "desteklenmiyor" durumu; anahtarlar yine de Vault'ta.
 - [x] İndirme modalı güvenlik notu: indirilen içerik yalnızca Whisper ağırlıklarıdır
   (kişisel veri/kod içermez), kaynak resmî HF deposu.
 - [ ] Windows App SDK upgrade (WinAppSDK 1.7+, WASDK tooling)

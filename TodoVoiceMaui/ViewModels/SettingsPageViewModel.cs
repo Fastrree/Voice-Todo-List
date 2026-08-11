@@ -106,6 +106,27 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private bool isProviderTesting;
 
+    // ---- Bölge (Azure vb.) ----
+
+    [ObservableProperty]
+    private string providerRegion = string.Empty;
+
+    // ---- Biyometrik kilit (Windows Hello) ----
+
+    [ObservableProperty]
+    private bool isBiometricLockEnabled;
+
+    [ObservableProperty]
+    private bool isBiometricAvailable;
+
+    [ObservableProperty]
+    private bool isKeyLocked;
+
+    [ObservableProperty]
+    private string biometricStatusText = string.Empty;
+
+    private bool _keyRevealed = true;
+
     public IReadOnlyList<SpeechProviderInfo> SpeechProviders { get; } =
         SpeechProviderCatalog.All.Where(p => p.Id == "offline" || p.IsImplemented).ToList();
 
@@ -116,6 +137,9 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
 
     /// <summary>API anahtarı alanı yalnızca bulut sağlayıcıda gösterilir.</summary>
     public bool IsApiKeyVisible => SelectedSpeechProvider is { RequiresApiKey: true };
+
+    /// <summary>Bölge alanı yalnızca bölge gerektiren sağlayıcıda gösterilir (Azure).</summary>
+    public bool IsRegionRequired => SelectedSpeechProvider is { RequiresRegion: true };
 
     /// <summary>Seçili sağlayıcının katalog açıklaması (detay kartı).</summary>
     public string ProviderDetailText =>
@@ -133,10 +157,12 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
 
         // STT model durumunu canlı tut (indirme ilerlemesi arayüze yansır)
         _stt.PropertyChanged += OnSttPropertyChanged;
+        IsBiometricLockEnabled = Preferences.Default.Get("stt_biometric_lock", false);
         SelectedSttModel = _stt.SelectedModel;
         SelectedSpeechProvider = _stt.SelectedProvider;
         OnPropertyChanged(nameof(IsOfflineProvider));
         OnPropertyChanged(nameof(IsApiKeyVisible));
+        OnPropertyChanged(nameof(IsRegionRequired));
     }
 
     public async Task InitializeAsync()
@@ -145,6 +171,7 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
         await LoadUserStatsAsync();
         LoadSyncInfo();
         RefreshSttStatus();
+        await RefreshBiometricStateAsync();
     }
 
     [RelayCommand]
@@ -383,18 +410,27 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
         RefreshSttStatus();
     }
 
-    /// <summary>Sağlayıcı değiştiğinde: kaynağı uygula + anahtarı yükle + görünürlükleri tazele.</summary>
+    /// <summary>
+    /// Sağlayıcı değiştiğinde: kaynağı uygula + anahtarı yükle (biyometrik kilit
+    /// açıksa GİZLE — Windows Hello ile açılır) + bölgeyi yükle + görünürlükler.
+    /// </summary>
     partial void OnSelectedSpeechProviderChanged(SpeechProviderInfo? value)
     {
         if (value != null)
         {
             _stt.SwitchProvider(value);
-            ProviderApiKey = CloudTranscribers.GetStoredApiKey(value.Id);
+            _keyRevealed = !IsBiometricLockEnabled;
+            ProviderApiKey = _keyRevealed ? CloudTranscribers.GetStoredApiKey(value.Id) : string.Empty;
+            ProviderRegion = CloudTranscribers.GetStoredRegion(value.Id);
+            if (string.IsNullOrEmpty(ProviderRegion) && !string.IsNullOrEmpty(value.DefaultRegion))
+                ProviderRegion = value.DefaultRegion;
         }
         RefreshProviderStatus();
         OnPropertyChanged(nameof(IsOfflineProvider));
         OnPropertyChanged(nameof(IsApiKeyVisible));
+        OnPropertyChanged(nameof(IsRegionRequired));
         OnPropertyChanged(nameof(ProviderDetailText));
+        RefreshKeyLockState();
     }
 
     private void RefreshProviderStatus()
@@ -403,21 +439,39 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
         if (p == null)
             return;
 
-        ProviderStatusText = p.Id == "offline"
-            ? "Çevrimdışı — anahtar gerekmez, her zaman çalışır"
-            : p.RequiresApiKey && string.IsNullOrWhiteSpace(ProviderApiKey)
-                ? "API anahtarı girilmedi — bu kaynağı seçsen bile çevrimdışı Whisper kullanılır"
-                : "Anahtar kayıtlı. 'Bağlantıyı Test Et' ile doğrulayabilirsin";
+        if (p.Id == "offline")
+        {
+            ProviderStatusText = "Çevrimdışı — anahtar gerekmez, her zaman çalışır";
+            return;
+        }
+
+        var hasKey = !string.IsNullOrWhiteSpace(CloudTranscribers.GetStoredApiKey(p.Id));
+        if (p.RequiresRegion && string.IsNullOrWhiteSpace(CloudTranscribers.GetStoredRegion(p.Id)))
+        {
+            ProviderStatusText = hasKey
+                ? "Bölge eksik — aşağıdan Azure bölgeni girip 'Anahtarı Kaydet'e bas."
+                : "API anahtarı + bölge gerekli — ikisini de girip kaydet.";
+        }
+        else if (!hasKey)
+        {
+            ProviderStatusText = "API anahtarı girilmedi — bu kaynağı seçsen bile çevrimdışı Whisper kullanılır";
+        }
+        else
+        {
+            ProviderStatusText = "Anahtar kayıtlı. 'Bağlantıyı Test Et' ile doğrulayabilirsin";
+        }
     }
 
     [RelayCommand]
     private void SaveProviderApiKey()
     {
-        if (SelectedSpeechProvider is { Id: not "offline" })
+        if (SelectedSpeechProvider is { Id: not "offline" } p)
         {
-            _stt.SetProviderApiKey(SelectedSpeechProvider.Id, ProviderApiKey);
+            _stt.SetProviderApiKey(p.Id, ProviderApiKey);
+            CloudTranscribers.SaveRegion(p.Id, ProviderRegion);
             SoundEffectService.Play(SoundEffectService.SoundKind.Success);
             RefreshProviderStatus();
+            RefreshKeyLockState();
         }
     }
 
@@ -427,6 +481,22 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
         var p = SelectedSpeechProvider;
         if (p == null || p.Id == "offline")
             return;
+
+        // Biyometrik kilit açıksa önce Windows Hello doğrulaması iste — onaylanınca
+        // anahtarı da GÖSTER (kilit açılınca ProviderApiKey boş kalmasın — bug)
+        if (IsKeyLocked)
+        {
+            var verified = await BiometricService.VerifyAsync(
+                $"{p.DisplayName} bağlantısını test etmek için Windows Hello ile doğrulayın");
+            if (!verified)
+            {
+                ProviderStatusText = "Doğrulama yapılmadığı için test iptal edildi.";
+                return;
+            }
+            _keyRevealed = true;
+            ProviderApiKey = CloudTranscribers.GetStoredApiKey(p.Id);
+            RefreshKeyLockState();
+        }
 
         if (string.IsNullOrWhiteSpace(ProviderApiKey))
         {
@@ -516,6 +586,12 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
         }
     }
 
+    /// <summary>Model Yönetimi popup'ının canlı kalması için dışarıya bildirir.</summary>
+    public event EventHandler? ModelStateChanged;
+
+    /// <summary>Model indirme/silme sonrası popup'ı tazele (header + satır durumları).</summary>
+    public void NotifyModelStateChanged() => ModelStateChanged?.Invoke(this, EventArgs.Empty);
+
     /// <summary>Yeşil ilerleme çubuğuna tıklayınca detaylı indirme modalını açar.</summary>
     [RelayCommand]
     private async Task ShowDownloadDetailsAsync()
@@ -537,6 +613,162 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
     {
         _stt.CancelModelDownload();
         SoundEffectService.Play(SoundEffectService.SoundKind.Delete);
+    }
+
+    // ---- Model yönetimi (Model Management popup) ----
+
+    public WhisperModelInfo CurrentSttModel => _stt.SelectedModel;
+
+    public bool IsSttModelInstalled(WhisperModelInfo model) => _stt.IsModelInstalled(model);
+
+    public string GetSttModelDiskText(WhisperModelInfo model) => FormatBytes(_stt.GetModelSizeOnDisk(model));
+
+    /// <summary>
+    /// Model Yönetimi popup'ının kullandığı paylaşılan indirme akışı (büyük model
+    /// onayı dahil). Başarı → true. Ayarlar'daki "İndir ve Kullan" butonu da bunu kullanır.
+    /// </summary>
+    public async Task<bool> EnsureSttModelAsync(WhisperModelInfo model, bool confirmLarge = true)
+    {
+        if (model == null || _stt.IsDownloading)
+            return false;
+
+        if (model.Id == _stt.SelectedModel.Id && _stt.IsModelReady)
+            return true;
+
+        if (confirmLarge && model.IsLargeModel)
+        {
+            var ok = await Shell.Current.DisplayAlert(
+                "Büyük indirme",
+                $"{model.DisplayName} modeli {model.SizeLabel}. Bu indirme birkaç dakika sürebilir " +
+                $"ve {model.SizeLabel} disk alanı kaplar. Devam edilsin mi?",
+                "İndir", "Vazgeç");
+            if (!ok)
+                return false;
+        }
+
+        SelectedSttModel = model;
+        var success = await _stt.SwitchModelAsync(model);
+        RefreshSttStatus();
+        NotifyModelStateChanged();
+        return success;
+    }
+
+    /// <summary>Kurulu bir modeli siler (aktif model silinemez — önce başka modele geç).</summary>
+    public bool DeleteSttModel(WhisperModelInfo model)
+    {
+        var ok = _stt.DeleteModel(model);
+        if (ok)
+        {
+            RefreshSttStatus();
+            NotifyModelStateChanged();
+        }
+        return ok;
+    }
+
+    /// <summary>"Model Yönetimi" popup'ını açar — indir / sil / detaylı bilgi.</summary>
+    [RelayCommand]
+    private async Task ShowModelManagementAsync()
+    {
+        var page = Shell.Current?.CurrentPage;
+        if (page == null)
+            return;
+
+        var popup = new ModelManagementPopup(_stt, this);
+        await page.ShowPopupAsync(popup);
+    }
+
+    // ---- Biyometrik kilit (Windows Hello) ----
+
+    private async Task RefreshBiometricStateAsync()
+    {
+        IsBiometricAvailable = await BiometricService.IsAvailableAsync();
+        // Teşhis: unpackaged ortamda Windows Hello davranışını app.log'a yaz
+        try
+        {
+            System.IO.File.AppendAllText(
+                System.IO.Path.Combine(AppContext.BaseDirectory, "app.log"),
+                $"{DateTime.Now:HH:mm:ss} Biometric available={IsBiometricAvailable}{Environment.NewLine}");
+        }
+        catch { }
+        BiometricStatusText = IsBiometricAvailable
+            ? "Parmak izi / yüz / PIN ile API anahtarını koru."
+            : "Windows Hello kullanılamıyor (kurulu değil veya bu sürümde desteklenmiyor). Anahtarlar yine de Windows Vault'ta şifreli.";
+
+        // Kullanılabilirlik yoksa kilit zorla kapatılır (anahtar görünür kalır)
+        if (!IsBiometricAvailable && IsBiometricLockEnabled)
+        {
+            IsBiometricLockEnabled = false;
+            Preferences.Default.Set("stt_biometric_lock", false);
+            _keyRevealed = true;
+            if (SelectedSpeechProvider is { Id: not "offline" })
+                ProviderApiKey = CloudTranscribers.GetStoredApiKey(SelectedSpeechProvider.Id);
+        }
+        RefreshKeyLockState();
+    }
+
+    private void RefreshKeyLockState()
+    {
+        var p = SelectedSpeechProvider;
+        var hasKey = p != null && p.Id != "offline" &&
+                     !string.IsNullOrWhiteSpace(CloudTranscribers.GetStoredApiKey(p.Id));
+        IsKeyLocked = IsBiometricLockEnabled && hasKey && !_keyRevealed;
+    }
+
+    /// <summary>Ayarlar sayfasındaki Windows Hello anahtarını açar (Switch Toggled).</summary>
+    public async Task SetBiometricLockAsync(bool enable)
+    {
+        if (enable == IsBiometricLockEnabled)
+            return;
+
+        if (enable)
+        {
+            if (!IsBiometricAvailable)
+            {
+                IsBiometricLockEnabled = false;
+                return;
+            }
+            var ok = await BiometricService.VerifyAsync(
+                "Windows Hello kilidini etkinleştirmek için kimliğinizi doğrulayın");
+            if (!ok)
+            {
+                IsBiometricLockEnabled = false;
+                return;
+            }
+            IsBiometricLockEnabled = true;
+            _keyRevealed = false;
+            ProviderApiKey = string.Empty; // ekrandaki anahtarı gizle
+        }
+        else
+        {
+            IsBiometricLockEnabled = false;
+            _keyRevealed = true;
+            if (SelectedSpeechProvider is { Id: not "offline" })
+                ProviderApiKey = CloudTranscribers.GetStoredApiKey(SelectedSpeechProvider.Id);
+        }
+
+        Preferences.Default.Set("stt_biometric_lock", IsBiometricLockEnabled);
+        RefreshKeyLockState();
+        SoundEffectService.Play(IsBiometricLockEnabled
+            ? SoundEffectService.SoundKind.Success
+            : SoundEffectService.SoundKind.Click);
+    }
+
+    /// <summary>Kilitli anahtarı Windows Hello doğrulamasıyla açıp gösterir.</summary>
+    [RelayCommand]
+    private async Task UnlockApiKeyAsync()
+    {
+        if (!IsBiometricLockEnabled)
+            return;
+
+        var ok = await BiometricService.VerifyAsync(
+            "API anahtarını görüntülemek için Windows Hello ile doğrulayın");
+        if (!ok)
+            return;
+
+        _keyRevealed = true;
+        if (SelectedSpeechProvider is { Id: not "offline" })
+            ProviderApiKey = CloudTranscribers.GetStoredApiKey(SelectedSpeechProvider.Id);
+        RefreshKeyLockState();
     }
 
     /// <summary>
@@ -565,52 +797,26 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
             return;
         }
 
-        var alreadyInstalled = model.Id == _stt.SelectedModel.Id && _stt.IsModelReady;
-        if (alreadyInstalled)
+        if (model.Id == _stt.SelectedModel.Id && _stt.IsModelReady)
         {
             SoundEffectService.Play(SoundEffectService.SoundKind.Success);
             await Shell.Current.DisplayAlert("Zaten kurulu", $"{model.DisplayName} modeli zaten hazır.", "Tamam");
             return;
         }
 
-        // Büyük model (1GB+) için kullanıcı onayı
-        if (model.IsLargeModel)
-        {
-            var ok = await Shell.Current.DisplayAlert(
-                "Büyük indirme",
-                $"{model.DisplayName} modeli {model.SizeLabel}. Bu indirme birkaç dakika sürebilir " +
-                $"ve {model.SizeLabel} disk alanı kaplar. Devam edilsin mi?",
-                "İndir", "Vazgeç");
-            if (!ok)
-                return;
-        }
+        SoundEffectService.Play(SoundEffectService.SoundKind.MicStart);
+        var success = await EnsureSttModelAsync(model, confirmLarge: true);
+        SoundEffectService.Play(success ? SoundEffectService.SoundKind.Success : SoundEffectService.SoundKind.Delete);
 
-        try
+        if (success)
         {
-            IsSttDownloading = true;
-            SoundEffectService.Play(SoundEffectService.SoundKind.MicStart);
-
-            var success = await _stt.SwitchModelAsync(model);
-            if (success)
-            {
-                SoundEffectService.Play(SoundEffectService.SoundKind.Success);
-                await Shell.Current.DisplayAlert("Tamam",
-                    $"{model.DisplayName} modeli hazır. Artık daha iyi ses tanıma kullanılacak.", "Tamam");
-            }
-            else
-            {
-                await Shell.Current.DisplayAlert("Hata",
-                    "Model indirilemedi. İnternet bağlantınızı kontrol edip tekrar deneyin.", "Tamam");
-            }
+            await Shell.Current.DisplayAlert("Tamam",
+                $"{model.DisplayName} modeli hazır. Artık daha iyi ses tanıma kullanılacak.", "Tamam");
         }
-        catch (Exception ex)
+        else
         {
-            await Shell.Current.DisplayAlert("Hata", $"Model değiştirilemedi: {ex.Message}", "Tamam");
-        }
-        finally
-        {
-            IsSttDownloading = false;
-            RefreshSttStatus();
+            await Shell.Current.DisplayAlert("Hata",
+                "Model indirilemedi. İnternet bağlantınızı kontrol edip tekrar deneyin.", "Tamam");
         }
     }
 

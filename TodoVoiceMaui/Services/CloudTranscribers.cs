@@ -12,39 +12,99 @@ namespace TodoVoiceMaui.Services;
 public static class CloudTranscribers
 {
     public const string ApiKeyPreferencePrefix = "stt_apikey_";
+    public const string RegionPreferencePrefix = "stt_region_";
     private const string EncryptedPrefix = "enc:";
 
+    private static string CredentialTarget(string providerId) => $"TodoVoiceMaui/{providerId}";
+
     /// <summary>
-    /// Anahtarı çözer. Eski sürümlerde düz metin saklanmış olabilir ("enc:" öneki
-    /// yok) — göç uyumluluğu için o da okunur; bir sonraki kayıtta şifrelenir.
+    /// Anahtarı çözer. Depo önceliği:
+    ///   1) Windows Credential Manager (Vault) — birincil, OS tarafından şifreli
+    ///   2) Preferences (eski sürümler): DPAPI "enc:" veya düz metin → bulunursa
+    ///      Vault'a GÖÇ edilir ve Preferences'tan silinir (tek yönlü, güvenli).
     /// </summary>
     public static string GetStoredApiKey(string providerId)
     {
+        if (string.IsNullOrEmpty(providerId))
+            return string.Empty;
+
+        // 1) Birincil: Windows Credential Manager
+        var vault = WindowsCredentialStore.Read(CredentialTarget(providerId));
+        if (!string.IsNullOrEmpty(vault))
+            return vault;
+
+        // 2) Eski Preferences kayıtları → Vault'a göç et
         var raw = Preferences.Default.Get(ApiKeyPreferencePrefix + providerId, string.Empty);
         if (string.IsNullOrEmpty(raw))
             return string.Empty;
-        if (raw.StartsWith(EncryptedPrefix, StringComparison.Ordinal))
-            return SecureKeyStore.Unprotect(raw.Substring(EncryptedPrefix.Length)) ?? string.Empty;
-        return raw; // legacy düz metin
+
+        var legacy = raw.StartsWith(EncryptedPrefix, StringComparison.Ordinal)
+            ? SecureKeyStore.Unprotect(raw.Substring(EncryptedPrefix.Length))
+            : raw; // legacy düz metin
+
+        if (string.IsNullOrEmpty(legacy))
+        {
+            Preferences.Default.Remove(ApiKeyPreferencePrefix + providerId);
+            return string.Empty;
+        }
+
+        // Göç başarılıysa Preferences'tan temizle (anahtar yalnız Vault'ta kalır)
+        if (WindowsCredentialStore.Save(CredentialTarget(providerId), legacy))
+            Preferences.Default.Remove(ApiKeyPreferencePrefix + providerId);
+
+        return legacy;
     }
 
-    /// <summary>Anahtarı DPAPI ile şifreleyip saklar (Windows). Şifreleme çökerse düz metin fallback.</summary>
+    /// <summary>
+    /// Anahtarı Windows Vault'a yazar (OS şifreli). Vault yazılamazsa DPAPI-in-
+    /// Preferences fallback'i kullanılır (nadir) — anahtar asla kaybolmaz.
+    /// Boş anahtar = kaydı siler.
+    /// </summary>
     public static void SaveApiKey(string providerId, string key)
     {
         var trimmed = (key ?? string.Empty).Trim();
-        string stored;
+
         if (string.IsNullOrEmpty(trimmed))
         {
-            stored = string.Empty;
+            DeleteApiKey(providerId);
+            return;
         }
-        else
+
+        if (WindowsCredentialStore.Save(CredentialTarget(providerId), trimmed))
         {
-            var encrypted = SecureKeyStore.Protect(trimmed);
-            // DİKKAT: Protect null dönerse ÖNEKSİZ düz metin sakla — "enc:" önekli düz metin
-            // okumada Unprotect'e gider, base64 parse hatasıyla anahtar boşalır (bug).
-            stored = encrypted != null ? EncryptedPrefix + encrypted : trimmed;
+            // Başarılı → eski Preferences kaydını temizle (göç tamamlandı)
+            Preferences.Default.Remove(ApiKeyPreferencePrefix + providerId);
+            return;
         }
+
+        // Fallback: DPAPI şifreli Preferences (Vault yoksa/erişilemezse)
+        var encrypted = SecureKeyStore.Protect(trimmed);
+        // DİKKAT: Protect null dönerse ÖNEKSİZ düz metin sakla — "enc:" önekli düz metin
+        // okumada Unprotect'e gider, base64 parse hatasıyla anahtar boşalır (bug).
+        var stored = encrypted != null ? EncryptedPrefix + encrypted : trimmed;
         Preferences.Default.Set(ApiKeyPreferencePrefix + providerId, stored);
+    }
+
+    /// <summary>Anahtar kaydını her iki depodan da siler.</summary>
+    public static void DeleteApiKey(string providerId)
+    {
+        if (string.IsNullOrEmpty(providerId))
+            return;
+        WindowsCredentialStore.Delete(CredentialTarget(providerId));
+        Preferences.Default.Remove(ApiKeyPreferencePrefix + providerId);
+    }
+
+    /// <summary>Bölge bilgisi (Azure vb. — gizli değil, Preferences'ta tutulur).</summary>
+    public static string GetStoredRegion(string providerId) =>
+        Preferences.Default.Get(RegionPreferencePrefix + providerId, string.Empty);
+
+    public static void SaveRegion(string providerId, string region)
+    {
+        var trimmed = (region ?? string.Empty).Trim().ToLowerInvariant();
+        if (string.IsNullOrEmpty(trimmed))
+            Preferences.Default.Remove(RegionPreferencePrefix + providerId);
+        else
+            Preferences.Default.Set(RegionPreferencePrefix + providerId, trimmed);
     }
 }
 
@@ -306,5 +366,167 @@ public sealed class ElevenLabsTranscriber : ISpeechTranscriber
         {
             return false;
         }
+    });
+}
+
+/// <summary>
+/// Google Cloud Speech-to-Text v1 — senkron `speech:recognize` (kısa ses ≤1 dk).
+/// API anahtarı sorgu parametresi (`?key=`), gövde JSON içinde base64 LINEAR16 PCM
+/// (16kHz mono). Model: `chirp_2` (GA); bölge/eski hesaplarda desteklenmezse
+/// `latest_short` ile bir kez geri dener — ikisi de tr-TR destekler.
+/// </summary>
+public sealed class GoogleTranscriber : ISpeechTranscriber
+{
+    private const string Endpoint = "https://speech.googleapis.com/v1/speech:recognize";
+
+    public string ProviderId => "google";
+    public bool RequiresApiKey => true;
+    public bool IsConfigured => !string.IsNullOrWhiteSpace(CloudTranscribers.GetStoredApiKey(ProviderId));
+
+    public async Task<string?> TranscribeAsync(string wavPath)
+    {
+        var key = CloudTranscribers.GetStoredApiKey(ProviderId);
+        if (string.IsNullOrWhiteSpace(key))
+            return null;
+
+        var pcm = WavAudioReader.ReadMono16kHzPcm(wavPath);
+        if (pcm == null || pcm.Length == 0)
+            return null;
+
+        // chirp_2 önce; İSTEK HATASI alınırsa (eski proje/bölge, 400/401) latest_short
+        // ile bir kez dene. 2xx döndüyse boş metin bile başarıdır — ikinci çağrı yapılmaz
+        // (sessiz ses için gereksiz ikinci fatura olmaz).
+        var (ok1, text1) = await TryRecognizeAsync(key, pcm, "chirp_2");
+        if (ok1)
+            return text1;
+
+        var (_, text2) = await TryRecognizeAsync(key, pcm, "latest_short");
+        return text2;
+    }
+
+    private static async Task<(bool Ok, string? Text)> TryRecognizeAsync(string key, byte[] pcm, string model)
+    {
+        try
+        {
+            using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(2) };
+            var payload = JsonSerializer.Serialize(new
+            {
+                config = new
+                {
+                    encoding = "LINEAR16",
+                    sampleRateHertz = 16000,
+                    languageCode = "tr-TR",
+                    model
+                },
+                audio = new { content = Convert.ToBase64String(pcm) }
+            });
+            using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+            using var response = await client.PostAsync($"{Endpoint}?key={Uri.EscapeDataString(key)}", content);
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(json);
+            // results[0].alternatives[0].transcript
+            if (doc.RootElement.TryGetProperty("results", out var results) && results.GetArrayLength() > 0)
+            {
+                var alt = results[0].GetProperty("alternatives");
+                if (alt.GetArrayLength() > 0)
+                    return (true, alt[0].TryGetProperty("transcript", out var t) ? t.GetString() : null);
+            }
+            return (true, null); // 2xx + sonuç yok → yine de geçerli istek
+        }
+        catch
+        {
+            return (false, null); // 400/401/403/ağ → fallback model veya çevrimdışı
+        }
+    }
+
+    public Task<bool> TestConnectionAsync() => Task.Run(async () =>
+    {
+        try
+        {
+            var text = await TranscribeAsync(OpenAiCompatibleTranscriber.TestWavPath());
+            return text != null; // 2xx = geçerli anahtar (boş metin de geçerli)
+        }
+        catch
+        {
+            return false;
+        }
+    });
+}
+
+/// <summary>
+/// Azure AI Speech — senkron kısa ses uç noktası (tek cümle ≤15 sn ideal).
+/// Bölge + `Ocp-Apim-Subscription-Key` gerekir. Gövde: 16kHz mono WAV.
+/// Yanıt: `DisplayText` (format=detailed).
+/// </summary>
+public sealed class AzureTranscriber : ISpeechTranscriber
+{
+    public string ProviderId => "azure";
+    public bool RequiresApiKey => true;
+    public bool IsConfigured =>
+        !string.IsNullOrWhiteSpace(CloudTranscribers.GetStoredApiKey(ProviderId)) &&
+        !string.IsNullOrWhiteSpace(CloudTranscribers.GetStoredRegion(ProviderId));
+
+    public async Task<string?> TranscribeAsync(string wavPath)
+    {
+        var key = CloudTranscribers.GetStoredApiKey(ProviderId);
+        var region = CloudTranscribers.GetStoredRegion(ProviderId);
+        if (string.IsNullOrWhiteSpace(key) || string.IsNullOrWhiteSpace(region))
+            return null;
+
+        var pcm = WavAudioReader.ReadMono16kHzPcm(wavPath);
+        if (pcm == null || pcm.Length == 0)
+            return null;
+        var wav = WavAudioReader.BuildWav16kHz(pcm);
+
+        var (ok, json) = await TryRequestAsync(key, region, wav);
+        if (!ok || json == null)
+            return null;
+
+        using var doc = JsonDocument.Parse(json);
+        // RecognitionStatus + DisplayText
+        if (doc.RootElement.TryGetProperty("RecognitionStatus", out var status) &&
+            status.GetString() == "Success" &&
+            doc.RootElement.TryGetProperty("DisplayText", out var text))
+        {
+            return text.GetString();
+        }
+        return null; // NoMatch (sessiz) → null → çevrimdışı fallback
+    }
+
+    private static async Task<(bool Ok, string? Json)> TryRequestAsync(string key, string region, byte[] wav)
+    {
+        try
+        {
+            using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(2) };
+            client.DefaultRequestHeaders.TryAddWithoutValidation("Ocp-Apim-Subscription-Key", key);
+
+            var url = $"https://{region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1" +
+                      $"?language=tr-TR&format=detailed&profanity=raw";
+            using var content = new ByteArrayContent(wav);
+            content.Headers.ContentType = new MediaTypeHeaderValue("audio/wav; codecs=audio/pcm; samplerate=16000");
+
+            using var response = await client.PostAsync(url, content);
+            response.EnsureSuccessStatusCode();
+            return (true, await response.Content.ReadAsStringAsync());
+        }
+        catch
+        {
+            return (false, null);
+        }
+    }
+
+    public Task<bool> TestConnectionAsync() => Task.Run(async () =>
+    {
+        var key = CloudTranscribers.GetStoredApiKey(ProviderId);
+        var region = CloudTranscribers.GetStoredRegion(ProviderId);
+        if (string.IsNullOrWhiteSpace(key) || string.IsNullOrWhiteSpace(region))
+            return false;
+        var pcm = WavAudioReader.ReadMono16kHzPcm(OpenAiCompatibleTranscriber.TestWavPath());
+        if (pcm == null || pcm.Length == 0)
+            return false;
+        // 2xx = geçerli anahtar + bölge (RecognitionStatus fark etmez — sessiz ses NoMatch dönebilir)
+        var (ok, _) = await TryRequestAsync(key, region, WavAudioReader.BuildWav16kHz(pcm));
+        return ok;
     });
 }
