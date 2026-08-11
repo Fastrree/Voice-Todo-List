@@ -37,13 +37,11 @@ public class SpeechToTextService : INotifyPropertyChanged
 
     private bool _isAvailable;
     private bool _isModelReady;
-    private bool _isDownloading;
-    private double _modelDownloadProgress;
-    private long _modelDownloadedBytes;
-    private long _modelDownloadTotalBytes;
-    private double _modelDownloadSpeedBytesPerSecond;
     private string _statusMessage = string.Empty;
-    private CancellationTokenSource? _downloadCts;
+
+    // Çoklu eşzamanlı indirme: her model kendi işiyle (ModelDownloadJob) iner.
+    private readonly List<ModelDownloadJob> _downloads = new();
+    private readonly object _downloadsLock = new();
     // Uygulama ömrü boyunca singleton olarak tutulur (model bellekte ~200MB+);
     // bilinçli olarak dispose edilmez — process çıkışıyla temizlenir. Servis transient
     // yapılırsa bu alanın IDisposable ile temizlenmesi gerekir.
@@ -99,47 +97,70 @@ public class SpeechToTextService : INotifyPropertyChanged
         private set => SetProperty(ref _isModelReady, value);
     }
 
-    /// <summary>Model indiriliyor mu?</summary>
+    /// <summary>Şu an herhangi bir model indiriliyor mu? (Seçili olması gerekmez — çoklu.)</summary>
     public bool IsDownloading
     {
-        get => _isDownloading;
-        private set => SetProperty(ref _isDownloading, value);
+        get
+        {
+            lock (_downloadsLock)
+                return _downloads.Any(j => j.IsActive);
+        }
     }
 
-    /// <summary>Model indirme ilerlemesi (0..1).</summary>
-    public double ModelDownloadProgress
+    /// <summary>SEÇİLİ modelin indirme ilerlemesi (0..1) — Ayarlar kartı için geriye dönük uyumlu.</summary>
+    public double ModelDownloadProgress => SelectedModelJob?.Progress ?? 0;
+
+    /// <summary>SEÇİLİ modelin şu ana kadar inen byte'ı.</summary>
+    public long ModelDownloadedBytes => SelectedModelJob?.DownloadedBytes ?? 0;
+
+    /// <summary>SEÇİLİ modelin toplam indirme boyutu (byte; bilinmiyorsa 0).</summary>
+    public long ModelDownloadTotalBytes => SelectedModelJob?.TotalBytes ?? 0;
+
+    /// <summary>SEÇİLİ modelin anlık indirme hızı (byte/sn).</summary>
+    public double ModelDownloadSpeedBytesPerSecond => SelectedModelJob?.SpeedBytesPerSecond ?? 0;
+
+    /// <summary>Seçili modelin aktif indirme işi (yoksa null).</summary>
+    public ModelDownloadJob? SelectedModelJob => GetDownloadJob(SelectedModel);
+
+    /// <summary>Bir modele ait indirme işi (aktif ya da bitmiş; yoksa null).</summary>
+    public ModelDownloadJob? GetDownloadJob(WhisperModelInfo model)
     {
-        get => _modelDownloadProgress;
-        private set => SetProperty(ref _modelDownloadProgress, value);
+        if (model == null)
+            return null;
+        lock (_downloadsLock)
+            return _downloads.FirstOrDefault(j => j.Model.Id == model.Id);
     }
 
-    /// <summary>Şu ana kadar indirilen byte (modal detayı).</summary>
-    public long ModelDownloadedBytes
+    /// <summary>Şu anki tüm indirme işlerinin kopyası (UI için).</summary>
+    public IReadOnlyList<ModelDownloadJob> Downloads
     {
-        get => _modelDownloadedBytes;
-        private set => SetProperty(ref _modelDownloadedBytes, value);
+        get
+        {
+            lock (_downloadsLock)
+                return _downloads.ToList();
+        }
     }
 
-    /// <summary>Toplam indirme boyutu (byte; bilinmiyorsa 0).</summary>
-    public long ModelDownloadTotalBytes
-    {
-        get => _modelDownloadTotalBytes;
-        private set => SetProperty(ref _modelDownloadTotalBytes, value);
-    }
+    /// <summary>Bir modelin indirmesi sürüyor mu? (Silme/geçiş korumaları için.)</summary>
+    public bool IsModelDownloading(WhisperModelInfo model) => GetDownloadJob(model)?.IsActive == true;
 
-    /// <summary>Anlık indirme hızı (byte/sn).</summary>
-    public double ModelDownloadSpeedBytesPerSecond
-    {
-        get => _modelDownloadSpeedBytesPerSecond;
-        private set => SetProperty(ref _modelDownloadSpeedBytesPerSecond, value);
-    }
-
-    /// <summary>İndirmeyi iptal eder (kısmi dosya temizlenir).</summary>
-    public void CancelModelDownload()
+    /// <summary>
+    /// İndirmeyi iptal eder. `model` verilirse yalnız o modelin işi iptal edilir;
+    /// verilmezse (null) TÜM aktif işler iptal edilir. Kısmi dosyalar işin
+    /// finally bloğunda temizlenir.
+    /// </summary>
+    public void CancelModelDownload(WhisperModelInfo? model = null)
     {
         try
         {
-            _downloadCts?.Cancel();
+            lock (_downloadsLock)
+            {
+                var jobs = model == null
+                    ? _downloads.Where(j => j.IsActive).ToList()
+                    : _downloads.Where(j => j.Model.Id == model.Id && j.IsActive).ToList();
+                foreach (var job in jobs)
+                    job.Cancel();
+            }
         }
         catch { }
     }
@@ -151,7 +172,11 @@ public class SpeechToTextService : INotifyPropertyChanged
         private set => SetProperty(ref _statusMessage, value);
     }
 
+    /// <summary>Geriye dönük uyumluluk: seçili modelin ilerlemesi (0..1) her chunk'ta yayınlanır.</summary>
     public event EventHandler<double>? ModelDownloadProgressChanged;
+
+    /// <summary>Herhangi bir indirme işi başlayınca / ilerleyince / bitince tetiklenir.</summary>
+    public event EventHandler? DownloadStateChanged;
 
     /// <summary>Şu an seçili model (Ayarlar'da gösterilir).</summary>
     public WhisperModelInfo SelectedModel => _selectedModel;
@@ -273,7 +298,8 @@ public class SpeechToTextService : INotifyPropertyChanged
         if (model == null)
             return false;
 
-        if (IsDownloading)
+        // Bu modelin indirmesi sürüyorsa silinemez (çoklu indirmede yalnız kendi işi engeller)
+        if (IsModelDownloading(model))
             return false;
 
         // Aktif model silinemez — kullanıcı önce başka modele geçmeli
@@ -319,9 +345,6 @@ public class SpeechToTextService : INotifyPropertyChanged
         if (model.Id == SelectedModel.Id && IsModelReady)
             return true;
 
-        if (IsDownloading)
-            return false;
-
         var previous = SelectedModel;
         _selectedModel = model;
         Preferences.Default.Set(ModelPreferenceKey, model.Id);
@@ -334,7 +357,7 @@ public class SpeechToTextService : INotifyPropertyChanged
         IsModelReady = IsModelFileReady(model);
         StatusMessage = IsModelReady ? "Hazır" : "Model indiriliyor…";
 
-        var success = await EnsureModelAsync();
+        var success = await DownloadModelAsync(model);
 
         if (success)
         {
@@ -356,39 +379,91 @@ public class SpeechToTextService : INotifyPropertyChanged
         return false;
     }
 
+    /// <summary>Seçili modeli indirir (arka plan işi). Eşzamanlı diğer indirmeleri engellemez.</summary>
+    public Task<bool> EnsureModelAsync() => DownloadModelAsync(SelectedModel);
+
     /// <summary>
-    /// Seçili model dosyasını (yoksa) indirir ve önbelleğe alır. Zaten varsa anında döner.
+    /// İstenen katalog modelini arka planda indirir — SEÇİMİ DEĞİŞTİRMEZ.
+    /// Çoklu eşzamanlı indirme: her model kendi işiyle iner (her birinin kendi
+    /// ilerleme çubuğu vardır — Model Yönetimi modalı her satırı kendi işine bağlar).
+    /// Model zaten kuruluysa anında true; aynı modelin indirmesi sürüyorsa o işin
+    /// tamamlanmasına bağlanır (çift indirme olmaz).
     /// </summary>
-    public async Task<bool> EnsureModelAsync()
+    public Task<bool> DownloadModelAsync(WhisperModelInfo model)
     {
 #if WINDOWS
         EnsureNativeLibrary();
 
-        if (IsModelReady)
-            return true;
+        if (model == null)
+            return Task.FromResult(false);
 
-        if (IsDownloading)
-            return false;
+        // Zaten kurulu → anında başarı (seçiliyse hazırlığı da güncelle)
+        if (IsModelFileReady(model))
+        {
+            if (model.Id == SelectedModel.Id)
+            {
+                IsModelReady = true;
+                StatusMessage = "Hazır";
+            }
+            return Task.FromResult(true);
+        }
 
-        var modelPath = ModelPath;
-        var model = SelectedModel;
+        lock (_downloadsLock)
+        {
+            var existing = _downloads.FirstOrDefault(j => j.Model.Id == model.Id);
+            if (existing != null)
+            {
+                // Bitmiş bir iş ise listeden çıkar ve temiz başlat
+                if (existing.Completion.Task.IsCompleted)
+                    _downloads.Remove(existing);
+                else
+                    return existing.Completion.Task; // süren işe bağlan — ikinci indirme yok
+            }
+
+            var job = new ModelDownloadJob(model);
+            _downloads.Add(job);
+            // Fire-and-forget: tüm hatalar RunJobAsync içinde ele alınır,
+            // sonuç job.Completion üzerinden yayınlanır.
+            _ = RunJobAsync(job);
+            return job.Completion.Task;
+        }
+#else
+        return Task.FromResult(false);
+#endif
+    }
+
+    /// <summary>
+    /// Bir indirme işini yürütür: indir → doğrula → taşı → tamamla.
+    /// `model` SEÇİLİYSE IsModelReady/StatusMessage güncellenir; değilse yalnız
+    /// dosya kurulur (kullanıcı dilediği zaman seçer). Kısmi `.part` dosyası
+    /// her durumda temizlenir; akışlar kapsam sonunda kapanır (File.Move kilitsiz).
+    /// </summary>
+    private async Task RunJobAsync(ModelDownloadJob job)
+    {
+        var model = job.Model;
+        var modelPath = Path.Combine(FileSystem.AppDataDirectory, "models", model.FileName);
+        var tempPath = modelPath + ".part";
+        var downloadSeconds = 0.0;
+
+        // NOT: `isSelected` değişkeni YAKALANMAZ — indirme sürerken kullanıcı seçimi
+        // değiştirebilir (popup'ta indirilen model Ayarlar'dan seçilebilir). Tamamlama
+        // noktalarında SEÇİM CANLI okunur, böylece IsModelReady her durumda doğru set edilir.
+
         try
         {
-            IsDownloading = true;
-            ModelDownloadProgress = 0;
-            ModelDownloadedBytes = 0;
-            ModelDownloadTotalBytes = 0;
-            ModelDownloadSpeedBytesPerSecond = 0;
+            job.Cts = new CancellationTokenSource();
+            job.IsActive = true;
+            job.Progress = 0;
+            job.DownloadedBytes = 0;
+            job.TotalBytes = 0;
+            job.SpeedBytesPerSecond = 0;
+            if (model.Id == SelectedModel.Id)
+                StatusMessage = "Model indiriliyor…";
             SttTestLog.WriteDownload($"⬇ İndirme başladı: {model.DisplayName} ({model.SizeLabel})");
-            StatusMessage = "Model indiriliyor…";
-            _downloadCts = new CancellationTokenSource();
+            RaiseDownloadStateChanged();
 
             Directory.CreateDirectory(Path.GetDirectoryName(modelPath)!);
-            var tempPath = modelPath + ".part";
-            var downloadSeconds = 0.0;
 
-            // İndirme kapsam bloğu içinde yapılır; akışlar kapsam sonunda kapanır,
-            // böylece File.Move kilitli dosya hatası almaz.
             using (var client = new HttpClient { Timeout = TimeSpan.FromMinutes(30) })
             {
                 client.DefaultRequestHeaders.UserAgent.ParseAdd("TodoVoice/1.0");
@@ -397,7 +472,7 @@ public class SpeechToTextService : INotifyPropertyChanged
                 response.EnsureSuccessStatusCode();
 
                 var total = response.Content.Headers.ContentLength ?? 0L;
-                ModelDownloadTotalBytes = total;
+                job.TotalBytes = total;
                 using var source = await response.Content.ReadAsStreamAsync();
                 using var destination = File.Create(tempPath);
 
@@ -406,20 +481,20 @@ public class SpeechToTextService : INotifyPropertyChanged
                 int bytesRead;
                 var lastPercentLogged = 0;
                 var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-                while ((bytesRead = await source.ReadAsync(buffer, _downloadCts.Token)) > 0)
+                while ((bytesRead = await source.ReadAsync(buffer, job.Cts.Token)) > 0)
                 {
                     await destination.WriteAsync(buffer.AsMemory(0, bytesRead));
                     read += bytesRead;
-                    ModelDownloadedBytes = read;
+                    job.DownloadedBytes = read;
                     if (total > 0)
                     {
-                        ModelDownloadProgress = (double)read / total;
-                        StatusMessage = $"Model indiriliyor %{(int)(ModelDownloadProgress * 100)}…";
-                        ModelDownloadProgressChanged?.Invoke(this, ModelDownloadProgress);
+                        job.Progress = (double)read / total;
+                        if (model.Id == SelectedModel.Id)
+                            StatusMessage = $"Model indiriliyor %{(int)(job.Progress * 100)}…";
 
-                        // Canlı konsola her %10'da bir renkli satır akıt (büyük modelde
-                        // ilerleme terminalde izlenebilir olsun; 3,1GB'ta ~10 satır).
-                        var percent = (int)(ModelDownloadProgress * 100);
+                        // Canlı konsola her %10'da bir renkli satır (büyük modelde
+                        // ilerleme terminalde izlenebilir; 3,1GB'ta ~10 satır).
+                        var percent = (int)(job.Progress * 100);
                         if (percent >= lastPercentLogged + 10)
                         {
                             SttTestLog.WriteDownload(
@@ -430,14 +505,17 @@ public class SpeechToTextService : INotifyPropertyChanged
 
                     var elapsed = stopwatch.Elapsed.TotalSeconds;
                     if (elapsed > 0.4)
-                        ModelDownloadSpeedBytesPerSecond = read / elapsed;
+                        job.SpeedBytesPerSecond = read / elapsed;
+
+                    ModelDownloadProgressChanged?.Invoke(this, SelectedModelJob?.Progress ?? 0);
+                    RaiseDownloadStateChanged();
                 }
 
                 await destination.FlushAsync();
                 downloadSeconds = stopwatch.Elapsed.TotalSeconds;
             }
 
-            // Akışlar kapandı → modeli kalıcı adına taşı ve boyutunu doğrula
+            // Akışlar kapandı → kalıcı adına taşı ve boyutunu doğrula
             if (File.Exists(modelPath))
                 File.Delete(modelPath);
             File.Move(tempPath, modelPath);
@@ -447,56 +525,73 @@ public class SpeechToTextService : INotifyPropertyChanged
                 File.Delete(modelPath);
                 Log($"STT model download failed: dosya çok küçük");
                 SttTestLog.WriteError("✗ İndirme başarısız: dosya çok küçük (muhtemelen bozuk/engellendi)");
-                StatusMessage = "İndirme başarısız";
-                return false;
+                if (model.Id == SelectedModel.Id)
+                    StatusMessage = "İndirme başarısız";
+                job.Completion.TrySetResult(false);
+                return;
             }
 
-            IsModelReady = true;
-            StatusMessage = "Hazır";
+            if (model.Id == SelectedModel.Id)
+            {
+                IsModelReady = true;
+                StatusMessage = "Hazır";
+            }
             var finalSize = new FileInfo(modelPath).Length;
             var avgSpeed = downloadSeconds > 0 ? finalSize / downloadSeconds : 0;
             SttTestLog.WriteSuccess($"✓ İndirme tamamlandı: {model.DisplayName} ({FormatBytes(finalSize)}) · " +
                                     $"{FormatSeconds(downloadSeconds)} · ort. {FormatBytes((long)avgSpeed)}/sn");
-            return true;
+            job.Completion.TrySetResult(true);
         }
         catch (OperationCanceledException)
         {
             Log($"STT model download cancelled: {model.Id}");
             SttTestLog.WriteWarning($"✗ İndirme iptal edildi: {model.DisplayName} (kısmi dosya temizlendi)");
-            StatusMessage = "İndirme iptal edildi";
-            try
-            {
-                var tempPath = modelPath + ".part";
-                if (File.Exists(tempPath))
-                    File.Delete(tempPath);
-            }
-            catch { }
-            return false;
+            if (model.Id == SelectedModel.Id)
+                StatusMessage = "İndirme iptal edildi";
+            TryDelete(tempPath);
+            job.Completion.TrySetResult(false);
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Whisper model download failed: {ex.Message}");
             Log($"STT model download failed: {ex}");
-            StatusMessage = "İndirme başarısız";
-            try
-            {
-                var tempPath = modelPath + ".part";
-                if (File.Exists(tempPath))
-                    File.Delete(tempPath);
-            }
-            catch { }
-            return false;
+            if (model.Id == SelectedModel.Id)
+                StatusMessage = "İndirme başarısız";
+            TryDelete(tempPath);
+            job.Completion.TrySetResult(false);
         }
         finally
         {
-            IsDownloading = false;
-            _downloadCts?.Dispose();
-            _downloadCts = null;
-            ModelDownloadSpeedBytesPerSecond = 0;
+            job.IsActive = false;
+            job.SpeedBytesPerSecond = 0;
+            job.Cts?.Dispose();
+            job.Cts = null;
+            lock (_downloadsLock)
+                _downloads.Remove(job);
+            RaiseDownloadStateChanged();
         }
-#else
-        return false;
-#endif
+    }
+
+    /// <summary>Dosya varsa siler (kısmi `.part` temizliği) — hata yutulur.</summary>
+    private static void TryDelete(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+        catch { }
+    }
+
+    /// <summary>İndirme durumu değişince: türetilmiş özellikleri bildir + event'i yay (UI tazelemesi).</summary>
+    private void RaiseDownloadStateChanged()
+    {
+        OnPropertyChanged(nameof(IsDownloading));
+        OnPropertyChanged(nameof(ModelDownloadProgress));
+        OnPropertyChanged(nameof(ModelDownloadedBytes));
+        OnPropertyChanged(nameof(ModelDownloadTotalBytes));
+        OnPropertyChanged(nameof(ModelDownloadSpeedBytesPerSecond));
+        DownloadStateChanged?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>
@@ -513,20 +608,25 @@ public class SpeechToTextService : INotifyPropertyChanged
             _cloudTranscribers.TryGetValue(SelectedProvider.Id, out var transcriber) &&
             transcriber.IsConfigured)
         {
+            var audioSeconds = WavAudioReader.GetDurationSeconds(wavPath);
             SttTestLog.Write($"Kaynak: {SelectedProvider.DisplayName} — bulut deneniyor");
             try
             {
+                SttUsageStats.RecordAttempt(SelectedProvider.Id, audioSeconds);
                 var cloudText = await transcriber.TranscribeAsync(wavPath);
                 if (!string.IsNullOrWhiteSpace(cloudText))
                 {
+                    SttUsageStats.RecordSuccess(SelectedProvider.Id, cloudText.Length);
                     Log($"STT cloud OK: provider={SelectedProvider.Id}");
                     SttTestLog.WriteSuccess($"✓ Bulut transkripsiyon tamam ({SelectedProvider.Id})");
                     return TurkishVocabulary.Correct(cloudText);
                 }
+                SttUsageStats.RecordFailure(SelectedProvider.Id);
                 SttTestLog.WriteWarning("⚠ Bulut boş metin döndü — çevrimdışı deneniyor");
             }
             catch (Exception ex)
             {
+                SttUsageStats.RecordFailure(SelectedProvider.Id);
                 Log($"STT cloud failed ({SelectedProvider.Id}), offline fallback: {ex.Message}");
                 SttTestLog.WriteError($"✗ Bulut hatası: {ex.Message} — çevrimdışı fallback");
             }
@@ -547,8 +647,12 @@ public class SpeechToTextService : INotifyPropertyChanged
 #endif
     }
 
-    /// <summary>Çevrimdışı Whisper transkripsiyonu — mevcut kanıtlanmış yol.</summary>
-    public async Task<string?> TranscribeOfflineAsync(string wavPath)
+    /// <summary>
+    /// Çevrimdışı Whisper transkripsiyonu — mevcut kanıtlanmış yol.
+    /// `trackStats=false` ise kullanım istatistiklerine yazılmaz (Ayarlar'daki
+    /// sessiz test transkripsiyonu gibi teşhis amaçlı çağrılar istatistiği kirletmesin).
+    /// </summary>
+    public async Task<string?> TranscribeOfflineAsync(string wavPath, bool trackStats = true)
     {
 #if WINDOWS
         if (!await EnsureModelAsync())
@@ -560,7 +664,10 @@ public class SpeechToTextService : INotifyPropertyChanged
             SttTestLog.WriteError("✗ WAV okunamadı veya boş");
             return null;
         }
-        SttTestLog.Write($"WAV → 16kHz mono ({samples.Length / 16000.0:0.0} sn)");
+        var audioSeconds = samples.Length / 16000.0;
+        if (trackStats)
+            SttUsageStats.RecordAttempt("offline", audioSeconds);
+        SttTestLog.Write($"WAV → 16kHz mono ({audioSeconds:0.0} sn)");
 
         return await Task.Run(() =>
         {
@@ -595,12 +702,16 @@ public class SpeechToTextService : INotifyPropertyChanged
 
             if (string.IsNullOrWhiteSpace(text))
             {
+                if (trackStats)
+                    SttUsageStats.RecordFailure("offline");
                 SttTestLog.WriteWarning("⚠ Whisper boş sonuç (konuşma algılanamadı)");
                 return null;
             }
 
             // Özel isimleri kanonik yazımla düzelt (Google, Türk Hava Yolları, Elon Musk...)
             var corrected = TurkishVocabulary.Correct(text);
+            if (trackStats)
+                SttUsageStats.RecordSuccess("offline", corrected.Length);
             SttTestLog.WriteSuccess($"✓ Metin: {CloudTranscribers.TrimText(corrected)}");
             return corrected;
         });

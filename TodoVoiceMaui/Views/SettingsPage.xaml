@@ -303,20 +303,21 @@
                                     </VerticalStackLayout>
                                 </Border>
 
-                                <!-- İndirme durumu -->
-                                <Grid IsVisible="{Binding IsSttDownloading}">
+                                <!-- İndirme durumu (yalnız SEÇİLİ model indirilirken — çoklu indirmede
+                                     diğer modellerin çubuğu Model Yönetimi modalında izlenir) -->
+                                <Grid IsVisible="{Binding IsSelectedModelDownloading}">
                                     <ProgressBar Progress="{Binding SttDownloadProgress}" HeightRequest="4"
                                                  ProgressColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
                                 </Grid>
                                 <Label Text="{Binding SttStatusText}" Style="{StaticResource CaptionText}"
-                                       IsVisible="{Binding IsSttDownloading}" />
+                                       IsVisible="{Binding IsSelectedModelDownloading}" />
 
                                 <Button Text="Bu Modeli İndir ve Kullan" Command="{Binding SwitchSttModelCommand}"
                                         HeightRequest="40" CornerRadius="20"
-                                        IsVisible="{Binding IsSttDownloading, Converter={StaticResource InverseBoolConverter}}" />
+                                        IsVisible="{Binding IsSelectedModelDownloading, Converter={StaticResource InverseBoolConverter}}" />
 
                                 <!-- İndirme sürerken: buton yeşil ilerleme çubuğuna dönüşür; tıkla → detay modalı -->
-                                <Border IsVisible="{Binding IsSttDownloading}"
+                                <Border IsVisible="{Binding IsSelectedModelDownloading}"
                                         StrokeThickness="0" StrokeShape="RoundRectangle 20" HeightRequest="40"
                                         BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceMuted}, Dark={StaticResource DarkSurfaceMuted}}">
                                     <Border.GestureRecognizers>
@@ -336,6 +337,60 @@
                             <Label Text="Katalog: Çevrimdışı 4 katman (190MB→3,1GB) + OpenAI, Groq, Fireworks, Deepgram, ElevenLabs, AssemblyAI, Google (Chirp 2), Azure AI Speech (anahtar + bölge). Cloudflare, Soniox, Sestek yakında. Anahtarlar Windows Vault'ta şifreli; bulut başarısız olursa otomatik çevrimdışı Whisper'a düşülür. İndirme çubuğuna tıklayınca ayrıntılı modal açılır."
                                    Style="{StaticResource CaptionText}" LineBreakMode="WordWrap"
                                    TextColor="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}" />
+
+                            <!-- KULLANIM İSTATİSTİKLERİ: sağlayıcı başına deneme/başarı/hata/ses/karakter -->
+                            <Border Stroke="{AppThemeBinding Light={StaticResource BorderDefault}, Dark={StaticResource DarkBorderDefault}}"
+                                    StrokeThickness="1"
+                                    StrokeShape="RoundRectangle 16"
+                                    Padding="12,10"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceMuted}, Dark={StaticResource DarkSurfaceMuted}}">
+                                <VerticalStackLayout Spacing="8">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                        <VerticalStackLayout Spacing="1">
+                                            <Label Text="KULLANIM İSTATİSTİKLERİ" Style="{StaticResource MicroLabel}" />
+                                            <Label Text="{Binding SttUsageSummaryText}" Style="{StaticResource CaptionText}"
+                                                   LineBreakMode="WordWrap"
+                                                   TextColor="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}" />
+                                        </VerticalStackLayout>
+                                        <Button Grid.Column="1" Text="Sıfırla" Command="{Binding ResetUsageStatsCommand}"
+                                                Style="{StaticResource GhostButton}" HeightRequest="30" CornerRadius="15"
+                                                FontSize="11" VerticalOptions="Center" />
+                                    </Grid>
+
+                                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding SttUsageRows}" Spacing="4">
+                                        <BindableLayout.ItemTemplate>
+                                            <DataTemplate x:DataType="viewmodels:SttUsageRow">
+                                                <Border Stroke="{AppThemeBinding Light={StaticResource BorderDefault}, Dark={StaticResource DarkBorderDefault}}"
+                                                        StrokeThickness="1"
+                                                        StrokeShape="RoundRectangle 10"
+                                                        Padding="10,8"
+                                                        BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource DarkSurface}}">
+                                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                                        <VerticalStackLayout Spacing="1">
+                                                            <Label Text="{Binding ProviderName}" FontFamily="SoraSemiBold" FontSize="12"
+                                                                   TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource DarkTextPrimary}}" />
+                                                            <Label Text="{Binding DetailText}" Style="{StaticResource CaptionText}"
+                                                                   TextColor="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}" />
+                                                        </VerticalStackLayout>
+                                                        <VerticalStackLayout Grid.Column="1" Spacing="1" HorizontalOptions="End">
+                                                            <Label Text="{Binding SuccessRateText}" FontAttributes="Bold" FontSize="12"
+                                                                   HorizontalTextAlignment="End"
+                                                                   TextColor="{AppThemeBinding Light={StaticResource SecondaryDark}, Dark={StaticResource DarkSecondary}}" />
+                                                            <Label Text="{Binding TotalsText}" Style="{StaticResource CaptionText}"
+                                                                   HorizontalTextAlignment="End" LineBreakMode="WordWrap"
+                                                                   TextColor="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}" />
+                                                        </VerticalStackLayout>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </BindableLayout.ItemTemplate>
+                                    </VerticalStackLayout>
+
+                                    <Label Text="İstatistikler bu cihazda saklanır; test amaçlı sessiz transkripsiyonlar sayılmaz."
+                                           Style="{StaticResource CaptionText}"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}" />
+                                </VerticalStackLayout>
+                            </Border>
 
                             <!-- CANLI KONSOL: bağlantı testleri + indirme + çevrimdışı işlemler akar -->
                             <Border StrokeThickness="1"

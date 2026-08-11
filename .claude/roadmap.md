@@ -134,8 +134,26 @@ Araştırma bulguları ve yapılabilir aksiyonlar:
 - [x] **Model Yönetimi modalı:** 4 katman tek ekranda — boyut/RAM/WER (tahminî)/dil/
       kuantizasyon/hız/öneri bilgisi, kurulu durum + disk boyutu, indirme (yeşil bar +
       iptal) ve SİLME (aktif model silinemez; kısmi `.part` temizlenir) + canlı konsol.
+- [x] **ÇOKLU EŞZAMANLI İNDİRME:** her model KENDİ indirme işiyle iner
+      (`ModelDownloadJob` — ayrı ilerleme/byte/hız/iptal). Popup'ta birden fazla model
+      aynı anda indirilebilir, her satır kendi çubuğunu gösterir; başlıkta
+      "N model aynı anda indiriliyor" göstergesi. Aynı model için ikinci tıklama yeni
+      indirme başlatmaz (aktif işin tamamlanmasına bağlanır). Seçim indirmeden
+      bağımsızdır — "İndir" seçimi DEĞİŞTİRMEZ; Ayarlar kartı yalnız SEÇİLİ modelin
+      indirmesini gösterir (`IsSelectedModelDownloading`). İndirme sırasında seçim
+      değişirse tamamlanma anında seçim CANLI okunur (IsModelReady her durumda doğru).
 - [x] **Zengin model kartı:** Ayarlar detay kartı artık RAM, Türkçe WER, kuantizasyon
       ve öneri gösterir.
+
+### Kullanım İstatistikleri (UYGULANDI)
+- [x] **Ayarlar → KULLANIM İSTATİSTİKLERİ kartı:** sağlayıcı başına deneme / başarı /
+      hata / başarı oranı / toplam ses süresi / karakter / son kullanım. Kalıcılık:
+      `AppDataDirectory/stt_usage_stats.json` (`SttUsageStats` — System.Text.Json,
+      thread-safe, `Changed` event ile UI canlı). Her gerçek transkripsiyon denemesi
+      kaydedilir (bulut + çevrimdışı); Ayarlar'daki SESSİZ test transkripsiyonları
+      sayılmaz (`trackStats:false`). "Sıfırla" butonu tüm veriyi temizler.
+      Ses süresi WAV başlığından okunur (`WavAudioReader.GetDurationSeconds` — byteRate
+      28. offset, dataSize 40. offset).
 
 ### Kilit + Canlı Konsol (UYGULANDI)
 - [x] **Ayarlar girişinde kilit ekranı:** biyometrik kilit açıkken Ayarlar'a girişte

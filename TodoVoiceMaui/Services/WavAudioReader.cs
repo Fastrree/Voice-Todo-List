@@ -165,6 +165,36 @@ public static class WavAudioReader
         return result;
     }
 
+    /// <summary>
+    /// WAV dosyasının ses süresini saniye cinsinden döndürür (yalnız başlık okunur —
+    /// hızlıdır, tüm veriyi decode etmez). Kullanım istatistikleri için.
+    /// </summary>
+    public static double GetDurationSeconds(string wavPath)
+    {
+        try
+        {
+            using var stream = File.OpenRead(wavPath);
+            if (stream.Length < 44)
+                return 0;
+            using var reader = new BinaryReader(stream);
+            if (new string(reader.ReadChars(4)) != "RIFF")
+                return 0;
+
+            // Standart 44B başlık: channels=22, sampleRate=24, byteRate=28, dataSize=40
+            reader.BaseStream.Position = 28; // byteRate
+            var byteRate = reader.ReadInt32();
+            reader.BaseStream.Position = 40; // data boyutu
+            var dataSize = reader.ReadInt32();
+            if (byteRate <= 0 || dataSize <= 0)
+                return 0;
+            return dataSize / (double)byteRate;
+        }
+        catch
+        {
+            return 0;
+        }
+    }
+
     /// <summary>float32 mono diziyi 16-bit signed little-endian PCM byte dizisine çevirir.</summary>
     public static byte[] ToPcm16(float[] samples)
     {

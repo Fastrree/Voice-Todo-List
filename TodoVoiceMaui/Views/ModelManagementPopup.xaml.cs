@@ -63,6 +63,13 @@ public partial class ModelManagementViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private string currentModelText = string.Empty;
 
+    /// <summary>Kaç model şu an indiriliyor? (Çoklu indirme göstergesi — başlıkta.)</summary>
+    [ObservableProperty]
+    private string activeDownloadsText = string.Empty;
+
+    [ObservableProperty]
+    private bool hasActiveDownloads;
+
     private readonly List<SttLogEntry> _consoleLines = new();
 
     private FormattedString _testConsoleFormatted = new();
@@ -105,6 +112,7 @@ public partial class ModelManagementViewModel : ObservableObject, IDisposable
             Rows.Add(new ModelManagementRow(stt, settings, model));
 
         _stt.PropertyChanged += OnSttPropertyChanged;
+        _stt.DownloadStateChanged += OnDownloadStateChanged;
         _settings.ModelStateChanged += OnModelStateChanged;
         SttTestLog.Line += OnTestLogEntry;
         ConsoleFilter = (SttConsoleFilter)Preferences.Default.Get(ConsoleFilterPreferenceKey, (int)SttConsoleFilter.All);
@@ -208,11 +216,27 @@ public partial class ModelManagementViewModel : ObservableObject, IDisposable
             or nameof(SpeechToTextService.ModelDownloadTotalBytes)
             or nameof(SpeechToTextService.IsModelReady))
         {
-            RefreshAll();
+            RefreshOnUiThread();
         }
     }
 
-    private void OnModelStateChanged(object? sender, EventArgs e) => RefreshAll();
+    private void OnModelStateChanged(object? sender, EventArgs e) => RefreshOnUiThread();
+
+    /// <summary>Herhangi bir indirme işi ilerleyince satırları tazele (her model kendi işine bağlı).</summary>
+    private void OnDownloadStateChanged(object? sender, EventArgs e) => RefreshOnUiThread();
+
+    /// <summary>
+    /// Satırları UI thread'inde tazele. Normalde çağrılar zaten UI bağlamından gelir
+    /// (await continuations) — o durumda doğrudan çağrı, kuyruk şişmesi olmaz.
+    /// Gelecekte arka plandan gelen bir çağrı olursa (fire-and-forget iş) marshal edilir.
+    /// </summary>
+    private void RefreshOnUiThread()
+    {
+        if (MainThread.IsMainThread)
+            RefreshAll();
+        else
+            MainThread.BeginInvokeOnMainThread(RefreshAll);
+    }
 
     /// <summary>
     /// İndirme sürerken DISK STAT ÇAĞRILMAZ (her 80KB chunk'ta binlerce FileInfo
@@ -228,6 +252,15 @@ public partial class ModelManagementViewModel : ObservableObject, IDisposable
         if (!downloading)
             TotalDiskText = $"Toplam disk: {FormatBytes(_stt.ModelDirectoryTotalBytes)} · {Rows.Count} model";
         CurrentModelText = $"Aktif model: {_stt.SelectedModel.DisplayName}";
+
+        // Çoklu indirme göstergesi: kaç model aynı anda iniyor?
+        var active = _stt.Downloads.Count(j => j.IsActive);
+        HasActiveDownloads = active > 0;
+        ActiveDownloadsText = active > 1
+            ? $"{active} model aynı anda indiriliyor — her biri kendi çubuğunda"
+            : active == 1
+                ? "1 model indiriliyor — ilerleme kendi satırında"
+                : string.Empty;
     }
 
     [RelayCommand]
@@ -236,6 +269,7 @@ public partial class ModelManagementViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         _stt.PropertyChanged -= OnSttPropertyChanged;
+        _stt.DownloadStateChanged -= OnDownloadStateChanged;
         _settings.ModelStateChanged -= OnModelStateChanged;
         SttTestLog.Line -= OnTestLogEntry;
         GC.SuppressFinalize(this);
@@ -306,38 +340,38 @@ public partial class ModelManagementRow : ObservableObject
     /// Satırı tazele. `downloading=true` iken disk stat YAPILMAZ (performans) —
     /// kurulu durum son hesaplanan değerde kalır; indirme bitince yeniden hesaplanır.
     /// </summary>
-    public void Update(bool downloading)
+    public void Update(bool anyDownloadActive)
     {
         IsCurrent = Model.Id == _stt.SelectedModel.Id;
-        if (!downloading)
+        // Satır KENDİ modelinin işine bağlanır (çoklu indirme) — diğer satırların
+        // indirmesi bu satırı etkilemez, her biri kendi çubuğunu gösterir.
+        var job = _stt.GetDownloadJob(Model);
+        var active = job?.IsActive == true;
+
+        if (!anyDownloadActive)
         {
             IsInstalled = _stt.IsModelInstalled(Model);
             InstalledText = IsInstalled
                 ? $"Kurulu · {ModelManagementViewModel.FormatBytes(_stt.GetModelSizeOnDisk(Model))}"
                 : "İndirilmemiş";
         }
-        IsDownloading = downloading && IsCurrent;
-        DownloadProgress = _stt.ModelDownloadProgress;
-        DownloadText = IsDownloading
-            ? $"İndiriliyor %{_stt.ModelDownloadProgress * 100:0} · " +
-              $"{ModelManagementViewModel.FormatBytes(_stt.ModelDownloadedBytes)}/" +
-              $"{ModelManagementViewModel.FormatBytes(_stt.ModelDownloadTotalBytes)}"
+        IsDownloading = active;
+        DownloadProgress = job?.Progress ?? 0;
+        DownloadText = active && job != null
+            ? $"İndiriliyor %{job.Progress * 100:0} · " +
+              $"{ModelManagementViewModel.FormatBytes(job.DownloadedBytes)}/" +
+              $"{ModelManagementViewModel.FormatBytes(job.TotalBytes)}"
             : string.Empty;
-        CanDelete = IsInstalled && !IsCurrent && !downloading;
-        CanDownload = !IsInstalled && !downloading;
+        CanDelete = IsInstalled && !IsCurrent && !active;
+        CanDownload = !IsInstalled && !active;
     }
 
     [RelayCommand]
     private async Task DownloadAsync()
     {
-        if (_stt.IsDownloading)
-        {
-            await Shell.Current.DisplayAlert("İndirme sürüyor",
-                "Başka bir model indiriliyor. Bittiğinde tekrar deneyin.", "Tamam");
-            return;
-        }
-
-        var ok = await _settings.EnsureSttModelAsync(Model, confirmLarge: true);
+        // Çoklu indirme: seçimi değiştirmez, bu modeli arka planda indirir.
+        // Başka model indirilirken de çalışır — her satır kendi işini başlatır.
+        var ok = await _settings.DownloadSttModelAsync(Model, confirmLarge: true);
         if (ok)
             SoundEffectService.Play(SoundEffectService.SoundKind.Success);
         Update(_stt.IsDownloading);
@@ -346,7 +380,8 @@ public partial class ModelManagementRow : ObservableObject
     [RelayCommand]
     private async Task DeleteAsync()
     {
-        if (_stt.IsDownloading)
+        // Yalnız BU modelin indirmesi sürüyorsa silme engellenir (çoklu indirme)
+        if (_stt.IsModelDownloading(Model))
             return;
 
         var ok = await Shell.Current.DisplayAlert("Modeli sil",
@@ -370,5 +405,5 @@ public partial class ModelManagementRow : ObservableObject
     }
 
     [RelayCommand]
-    private void CancelDownload() => _stt.CancelModelDownload();
+    private void CancelDownload() => _stt.CancelModelDownload(Model);
 }

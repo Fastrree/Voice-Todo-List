@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using CommunityToolkit.Maui.Views;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -66,6 +67,11 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private bool isSttDownloading;
 
+    /// <summary>SEÇİLİ model mi indiriliyor? (Ayarlar kartı yalnız bunu gösterir — çoklu indirmede
+    /// başka bir model inerken kart boş ilerleme göstermesin.)</summary>
+    [ObservableProperty]
+    private bool isSelectedModelDownloading;
+
     [ObservableProperty]
     private double sttDownloadProgress;
 
@@ -74,6 +80,16 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
 
     [ObservableProperty]
     private string sttInstalledInfo = string.Empty;
+
+    // ---- Kullanım istatistikleri (sağlayıcı başına) ----
+
+    public ObservableCollection<SttUsageRow> SttUsageRows { get; } = new();
+
+    [ObservableProperty]
+    private bool hasSttUsage;
+
+    [ObservableProperty]
+    private string sttUsageSummaryText = string.Empty;
 
     // ---- İndirme detayları (yeşil çubuk + modal) ----
 
@@ -193,6 +209,7 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
 
         // STT model durumunu canlı tut (indirme ilerlemesi arayüze yansır)
         _stt.PropertyChanged += OnSttPropertyChanged;
+        SttUsageStats.Changed += OnUsageStatsChanged;
         IsBiometricLockEnabled = Preferences.Default.Get("stt_biometric_lock", false);
         // Kilit açıksa İLK KARE'den itibaren overlay görünsün (doğrulama öncesi boşluk yok)
         IsSettingsLocked = IsBiometricLockEnabled;
@@ -255,6 +272,7 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
         await LoadUserStatsAsync();
         LoadSyncInfo();
         RefreshSttStatus();
+        RefreshUsageStats();
         await RefreshBiometricStateAsync();
         await HandleEntryLockAsync();
     }
@@ -616,7 +634,8 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
             {
                 var testWav = OpenAiCompatibleTranscriber.TestWavPath();
                 SttTestLog.Write("Test WAV hazırlandı (0,2 sn sessizlik)");
-                var text = await _stt.TranscribeOfflineAsync(testWav);
+                // trackStats=false: sessiz test transkripsiyonu kullanım istatistiklerini kirletmesin
+                var text = await _stt.TranscribeOfflineAsync(testWav, trackStats: false);
                 var ok = text != null;
                 ProviderStatusText = ok
                     ? $"Çevrimdışı model çalışıyor ✓ ({_stt.SelectedModel.DisplayName})"
@@ -697,6 +716,9 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
             return;
 
         IsSttDownloading = _stt.IsDownloading;
+        // Kart yalnız SEÇİLİ modelin indirmesini gösterir (çoklu indirmede diğer
+        // modellerin ilerlemesi Model Yönetimi modalındaki kendi satırında izlenir).
+        IsSelectedModelDownloading = _stt.GetDownloadJob(model)?.IsActive == true;
         SttDownloadProgress = _stt.ModelDownloadProgress;
         SttDownloadPercent = (int)(SttDownloadProgress * 100);
 
@@ -746,7 +768,11 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
             or nameof(SpeechToTextService.ModelDownloadSpeedBytesPerSecond)
             or nameof(SpeechToTextService.IsModelReady))
         {
-            RefreshSttStatus();
+            // Normalde UI bağlamından gelir → doğrudan; arka plandan gelirse marshal edilir.
+            if (MainThread.IsMainThread)
+                RefreshSttStatus();
+            else
+                MainThread.BeginInvokeOnMainThread(RefreshSttStatus);
         }
     }
 
@@ -760,7 +786,7 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private async Task ShowDownloadDetailsAsync()
     {
-        if (!IsSttDownloading)
+        if (!IsSelectedModelDownloading)
             return;
 
         var page = Shell.Current?.CurrentPage;
@@ -771,11 +797,11 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
         await page.ShowPopupAsync(popup);
     }
 
-    /// <summary>Modal içinden indirmeyi iptal eder.</summary>
+    /// <summary>Modal içinden indirmeyi iptal eder (seçili modelin işi).</summary>
     [RelayCommand]
     private void CancelSttDownload()
     {
-        _stt.CancelModelDownload();
+        _stt.CancelModelDownload(SelectedSttModel);
         SoundEffectService.Play(SoundEffectService.SoundKind.Delete);
     }
 
@@ -793,7 +819,7 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
     /// </summary>
     public async Task<bool> EnsureSttModelAsync(WhisperModelInfo model, bool confirmLarge = true)
     {
-        if (model == null || _stt.IsDownloading)
+        if (model == null)
             return false;
 
         if (model.Id == _stt.SelectedModel.Id && _stt.IsModelReady)
@@ -812,6 +838,33 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
 
         SelectedSttModel = model;
         var success = await _stt.SwitchModelAsync(model);
+        RefreshSttStatus();
+        NotifyModelStateChanged();
+        return success;
+    }
+
+    /// <summary>
+    /// Model Yönetimi popup'ının indirme akışı: SEÇİMİ DEĞİŞTİRMEZ, yalnız arka planda
+    /// indirir (çoklu eşzamanlı indirme — her model kendi ilerleme çubuğuyla iner).
+    /// Büyük model onayı dahil. Başarı → true.
+    /// </summary>
+    public async Task<bool> DownloadSttModelAsync(WhisperModelInfo model, bool confirmLarge = true)
+    {
+        if (model == null)
+            return false;
+
+        if (confirmLarge && model.IsLargeModel)
+        {
+            var ok = await Shell.Current.DisplayAlert(
+                "Büyük indirme",
+                $"{model.DisplayName} modeli {model.SizeLabel}. Bu indirme birkaç dakika sürebilir " +
+                $"ve {model.SizeLabel} disk alanı kaplar. Devam edilsin mi?",
+                "İndir", "Vazgeç");
+            if (!ok)
+                return false;
+        }
+
+        var success = await _stt.DownloadModelAsync(model);
         RefreshSttStatus();
         NotifyModelStateChanged();
         return success;
@@ -1019,8 +1072,54 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
     {
         _syncService.PropertyChanged -= OnSyncServicePropertyChanged;
         _stt.PropertyChanged -= OnSttPropertyChanged;
+        SttUsageStats.Changed -= OnUsageStatsChanged;
         SttTestLog.Line -= OnTestLogEntry;
         GC.SuppressFinalize(this);
+    }
+
+    /// <summary>İstatistik değişince UI thread'inde tazele (kayıtlar Task.Run içinden gelebilir).</summary>
+    private void OnUsageStatsChanged()
+    {
+        MainThread.BeginInvokeOnMainThread(RefreshUsageStats);
+    }
+
+    /// <summary>Sağlayıcı başına kullanım satırlarını + özet metnini yeniden kurar.</summary>
+    private void RefreshUsageStats()
+    {
+        var all = SttUsageStats.GetAll();
+        SttUsageRows.Clear();
+        foreach (var kv in all)
+            SttUsageRows.Add(SttUsageRow.From(kv.Key, kv.Value));
+        HasSttUsage = SttUsageRows.Count > 0;
+
+        var totalAttempts = all.Sum(kv => kv.Value.Attempts);
+        var totalSuccesses = all.Sum(kv => kv.Value.Successes);
+        var totalSeconds = all.Sum(kv => kv.Value.TotalAudioSeconds);
+        SttUsageSummaryText = totalAttempts > 0
+            ? $"Toplam {totalAttempts} transkripsiyon · {FormatDuration(totalSeconds)} ses · " +
+              $"%{totalSuccesses * 100.0 / totalAttempts:0} başarı"
+            : "Henüz transkripsiyon yapılmadı — kullandıkça burada birikir.";
+    }
+
+    [RelayCommand]
+    private async Task ResetUsageStatsAsync()
+    {
+        var ok = await Shell.Current.DisplayAlert("İstatistikleri sıfırla",
+            "Tüm sağlayıcı kullanım istatistikleri silinsin mi? Bu işlem geri alınamaz.",
+            "Sıfırla", "Vazgeç");
+        if (!ok)
+            return;
+        SttUsageStats.Reset();
+        SoundEffectService.Play(SoundEffectService.SoundKind.Delete);
+    }
+
+    private static string FormatDuration(double totalSeconds)
+    {
+        if (totalSeconds < 60)
+            return $"{totalSeconds:0} sn";
+        if (totalSeconds < 3600)
+            return $"{totalSeconds / 60:0.0} dk";
+        return $"{totalSeconds / 3600:0.00} sa";
     }
 
     [RelayCommand]
@@ -1029,13 +1128,6 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
         var model = SelectedSttModel;
         if (model == null)
             return;
-
-        if (_stt.IsDownloading)
-        {
-            await Shell.Current.DisplayAlert("İndirme sürüyor",
-                "Başka bir model indiriliyor. Bittiğinde tekrar deneyin.", "Tamam");
-            return;
-        }
 
         if (model.Id == _stt.SelectedModel.Id && _stt.IsModelReady)
         {
@@ -1095,4 +1187,44 @@ public partial class SettingsPageViewModel : ObservableObject, IDisposable
     // Computed properties
     public string SyncStatusText => IsOnline ? "Çevrimiçi" : "Çevrimdışı";
     public string LastSyncText => LastSyncTime > DateTime.MinValue ? $"Son senkron: {LastSyncTime:dd.MM.yyyy HH:mm}" : "Hiç senkronize edilmedi";
+}
+
+/// <summary>Ayarlar → KULLANIM İSTATİSTİKLERİ kartındaki tek sağlayıcı satırı.</summary>
+public class SttUsageRow
+{
+    public required string ProviderName { get; init; }
+    public required string DetailText { get; init; }
+    public required string SuccessRateText { get; init; }
+    public required string TotalsText { get; init; }
+
+    /// <summary>Depolanan sağlayıcı kaydını görüntü satırına çevirir.</summary>
+    public static SttUsageRow From(string providerId, ProviderStat stat)
+    {
+        var name = ProviderDisplayName(providerId);
+        var lastUsed = stat.LastUsed > DateTime.MinValue
+            ? $" · Son: {stat.LastUsed:dd.MM.yyyy HH:mm}"
+            : string.Empty;
+        return new SttUsageRow
+        {
+            ProviderName = name,
+            DetailText = $"{stat.Attempts} deneme · {stat.Successes} başarı · {stat.Failures} hata",
+            SuccessRateText = $"%{stat.SuccessRatePercent:0} başarı",
+            TotalsText = $"{FormatSeconds(stat.TotalAudioSeconds)} ses · {stat.TotalChars:N0} karakter{lastUsed}"
+        };
+    }
+
+    private static string ProviderDisplayName(string id)
+    {
+        var provider = SpeechProviderCatalog.All.FirstOrDefault(p => p.Id == id);
+        return provider?.DisplayName ?? id;
+    }
+
+    private static string FormatSeconds(double seconds)
+    {
+        if (seconds < 60)
+            return $"{seconds:0} sn";
+        if (seconds < 3600)
+            return $"{seconds / 60:0.0} dk";
+        return $"{seconds / 3600:0.00} sa";
+    }
 }

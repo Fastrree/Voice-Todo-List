@@ -48,6 +48,9 @@
                            TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource DarkTextPrimary}}" />
                     <Label Text="{Binding TotalDiskText}" Style="{StaticResource CaptionText}"
                            TextColor="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}" />
+                    <Label Text="{Binding ActiveDownloadsText}" Style="{StaticResource CaptionText}" FontAttributes="Bold"
+                           IsVisible="{Binding HasActiveDownloads}"
+                           TextColor="{AppThemeBinding Light={StaticResource SecondaryDark}, Dark={StaticResource DarkSecondary}}" />
                 </VerticalStackLayout>
                 <Button Grid.Column="2" Text="&#xE711;" FontFamily="Segoe Fluent Icons" FontSize="14"
                         Command="{Binding CloseCommand}"

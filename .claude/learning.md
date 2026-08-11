@@ -68,6 +68,19 @@ git'te kalır). Geçmiş TUTMAZ — sadece bugünü anlatır.
   açılır (büyük yüzde, yeşil bar, miktar, anlık hız, güvenlik notu, iptal). İndirme
   iptal edilebilir (`CancellationTokenSource`), kısmi `.part` temizlenir; modal
   dışına tıklanınca arka planda devam eder, bitince kendini kapatır.
+- **ÇOKLU EŞZAMANLI İNDİRME:** `SpeechToTextService` artık tek indirme yerine her
+  model için ayrı iş tutar (`ModelDownloadJob` — kendi ilerleme/byte/hız/iptal/
+  tamamlanma görevi). `DownloadModelAsync(model)` seçimi değiştirmeden arka planda
+  indirir; birden fazla model aynı anda inebilir (Model Yönetimi modalında her satır
+  kendi çubuğunu gösterir, başlıkta "N model indiriliyor" bilgisi). Aynı modelin
+  ikinci indirme isteği mevcut işe bağlanır (çift indirme yok). `IsDownloading`
+  "herhangi bir iş aktif" demektir; Ayarlar kartı yalnız SEÇİLİ modelin ilerlemesini
+  gösterir. İndirme sırasında seçim değişirse tamamlanmada seçim canlı okunur.
+- **Kullanım istatistikleri:** her gerçek transkripsiyon denemesi sağlayıcı bazında
+  kaydedilir (deneme/başarı/hata/toplam ses süresi/karakter/son kullanım) —
+  `SttUsageStats` (JSON kalıcı, `Changed` event). Ayarlar'da KULLANIM İSTATİSTİKLERİ
+  kartı her sağlayıcıyı başarı oranı + süre + karakterle listeler; "Sıfırla" ile
+  temizlenir. Sessiz test transkripsiyonları sayılmaz (`trackStats:false`).
 - **Model Yönetimi modalı:** 4 katman tek ekranda — her model için boyut/RAM/WER
   (tahminî)/dil/kuantizasyon/hız/öneri, kurulu durum + disk boyutu, toplam disk,
   indir (yeşil bar + iptal) ve **sil** (aktif model silinemez) + canlı konsol.

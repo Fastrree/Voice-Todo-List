@@ -379,11 +379,12 @@ public partial class TodoListPageViewModel : ObservableObject
         RecordingDuration = "00:00";
     }
 
-    // Model hazır değilse: arka plandaki indirme sürüyorsa tamamlanmasını bekle (en fazla 5 dk),
-    // yoksa indirmeyi burada başlat.
+    // Model hazır değilse: SEÇİLİ modelin indirmesi sürüyorsa tamamlanmasını bekle (en fazla 5 dk),
+    // yoksa indirmeyi burada başlat. (Çoklu indirmede başka bir model iniyorken seçili
+    // model hazırsa boşuna beklenmez — EnsureModelAsync anında true döner.)
     private async Task<bool> WaitForModelAsync()
     {
-        if (_speechToTextService.IsDownloading)
+        if (_speechToTextService.IsModelDownloading(_speechToTextService.SelectedModel))
         {
             var deadline = DateTime.UtcNow.AddMinutes(5);
             while (DateTime.UtcNow < deadline)

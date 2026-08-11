@@ -311,10 +311,20 @@ Migration: `MigrateAsync` PRAGMA + `ALTER TABLE` ile `reminder_at`, `is_deleted`
   fallback). `CloudTranscribers.GetStoredApiKey/StoreApiKey/DeleteApiKey` +
   bölge `stt_region_{id}` (gizli değil).
 - `TestProviderConnectionAsync` — Ayarlar'daki "Bağlantıyı Test Et" (HTTP 2xx = geçerli)
-- **İndirme takibi + iptal:** `EnsureModelAsync` içinde `CancellationTokenSource`;
-  byte/hız sayaçları (`ModelDownloadedBytes`, `ModelDownloadTotalBytes`,
-  `ModelDownloadSpeedBytesPerSecond`) UI'a PropertyChanged ile akar. İptal edilirse
-  kısmi `.part` dosyası temizlenir, `IsModelReady` önceki modele geri döner.
+- **İndirme takibi + iptal (ÇOKLU):** indirmeler `ModelDownloadJob` başına ayrı
+  `CancellationTokenSource` ile yürütülür (`DownloadModelAsync(model)` — seçimi
+  değiştirmez, eşzamanlı çalışır; `EnsureModelAsync` = `DownloadModelAsync(SelectedModel)`).
+  Her iş kendi byte/hız/ilerlemesini `StateChanged` + `DownloadStateChanged` ile
+  yayar; seçili modelin değerleri geriye dönük `ModelDownloadProgress/DownloadedBytes/
+  TotalBytes/SpeedBytesPerSecond` özelliklerinden okunur. İptal edilirse kısmi
+  `.part` dosyası temizlenir. `_downloads` listesi `_downloadsLock` altında
+  yönetilir (çift indirme yarışı yok — aktif işe bağlanılır). İndirme sırasında
+  seçim değişirse tamamlanmada seçim CANLI okunur (IsModelReady doğru kalır).
+- **Kullanım istatistikleri:** `SttUsageStats` (statik, JSON kalıcı) — her gerçek
+  transkripsiyon denemesinde sağlayıcı bazında deneme/başarı/hata/toplam ses süresi
+  (`WavAudioReader.GetDurationSeconds` — byteRate 28. offset)/karakter kaydeder;
+  `Changed` event'i UI'a UI-thread marshal ile yansır. Ayarlar'daki sessiz test
+  `trackStats:false` ile istatistiği kirletmez.
 - **Model yönetimi:** `IsModelInstalled/GetModelSizeOnDisk/ModelDirectoryTotalBytes`
   + `DeleteModel` (indirme sürerken veya AKTİF modelde silmeyi reddeder; kilitli
   dosyada 3 denemeli retry). `ModelManagementPopup`: katalog satırları (RAM/WER/dil/
