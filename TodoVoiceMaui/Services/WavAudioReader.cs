@@ -49,6 +49,19 @@ public static class WavAudioReader
                     _ = reader.ReadInt32();                  // byte rate
                     _ = reader.ReadInt16();                  // block align
                     bitsPerSample = reader.ReadInt16();
+
+                    // WAVE_FORMAT_EXTENSIBLE (0xFFFE): gerçek format, fmt chunk sonundaki
+                    // SubFormat GUID'inin ilk baytlarında (1 = PCM, 3 = IEEE float).
+                    // Windows MediaCapture bu formatı üretebilir.
+                    if (audioFormat == 0xFFFE && chunkSize >= 40)
+                    {
+                        var rest = reader.ReadBytes(chunkSize - 16);
+                        if (rest.Length >= 24)
+                        {
+                            audioFormat = BitConverter.ToInt16(rest, 8); // GUID ilk 2 baytı
+                        }
+                    }
+
                     stream.Position = fmtStart + chunkSize;
                     break;
                 }

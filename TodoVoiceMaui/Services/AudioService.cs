@@ -93,6 +93,18 @@ public class AudioService : INotifyPropertyChanged
             var fileName = $"voice_recording_{DateTime.Now:yyyyMMdd_HHmmss}.wav";
             var filePath = Path.Combine(FileSystem.CacheDirectory, fileName);
 
+            // KRİTİK: Plugin.Maui.Audio Windows kaydedicisi StartAsync(string filePath) içinde
+            // StorageFile.GetFileFromPathAsync(filePath) çağırır → dosya YOKSA "Unable to find
+            // the specified file" (FileNotFoundException) fırlatır. Parametresiz overload dosyayı
+            // File.Create ile oluşturur ama string overload oluşturmaz → dosyayı önce biz
+            // oluşturmalıyız. Klasör de eksikse onu da oluştur.
+            var directory = Path.GetDirectoryName(filePath);
+            if (!string.IsNullOrEmpty(directory))
+                Directory.CreateDirectory(directory);
+
+            if (!File.Exists(filePath))
+                File.Create(filePath).Dispose();
+
             // Start recording
             await _audioRecorder.StartAsync(filePath);
             IsRecording = true;
@@ -107,6 +119,7 @@ public class AudioService : INotifyPropertyChanged
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Recording start failed: {ex.Message}");
+            Log($"Recording start failed: {ex}");
             RecordingError?.Invoke(this, ex);
             return false;
         }
@@ -135,6 +148,7 @@ public class AudioService : INotifyPropertyChanged
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Recording stop failed: {ex.Message}");
+            Log($"Recording stop failed: {ex}");
             RecordingError?.Invoke(this, ex);
             IsRecording = false;
             return null;
@@ -357,6 +371,17 @@ public class AudioService : INotifyPropertyChanged
             // best-effort
         }
 #endif
+    }
+
+    private static void Log(string message)
+    {
+        try
+        {
+            System.IO.File.AppendAllText(
+                System.IO.Path.Combine(AppContext.BaseDirectory, "app.log"),
+                DateTime.Now.ToString("HH:mm:ss") + " " + message + Environment.NewLine);
+        }
+        catch { }
     }
 
     public void Dispose()
