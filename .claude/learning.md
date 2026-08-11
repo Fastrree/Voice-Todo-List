@@ -52,8 +52,12 @@ git'te kalır). Geçmiş TUTMAZ — sadece bugünü anlatır.
   kaydırma + Temizle; aynı satırlar `app.log`'a yazılır. Thread güvenli (MainThread
   marshal), satır sayısı sınırlı (200). **Filtre çipleri:** Tümü / ✓ Başarı / ✗ Hata /
   ⚠ Uyarı — yalnız RENDER'ı filtreler, satırlar toplanmaya devam eder (seçili çip
-  DataTrigger ile vurgulanır). **İndirme satırları:** her %10'da bir renkli
-  `⬇ %X · MB/MB` satırı akar (büyük model terminalde izlenebilir). Çevrimdışı
+  DataTrigger ile vurgulanır); **filtre seçimi kalıcıdır** (`stt_console_filter`
+  Preferences — Settings ile popup aynı anahtarı paylaşır, biri değişince diğeri
+  senkronize olur). **İndirme satırları:** her %10'da bir renkli `⬇ %X · MB/MB`
+  satırı; bitince `✓ tamamlandı · süre · ort. hız/sn` satırı. **Dışa Aktar:**
+  konsol satırları `[TİP] [saat] metin` biçiminde `TodoVoice_console_*.log`
+  dosyasına yazılır (ms damgalı, çakışmaz) ve Explorer'da seçili açılır. Çevrimdışı
   "Test" butonu seçili modelle GERÇEK transkripsiyon çalıştırır (büyük model onaylı).
   Ayarlar'da "Bağlantıyı Test Et" (HTTP 2xx = geçerli) ile doğrulanır.
   **Fallback:** bulut başarısız/anahtar yoksa otomatik çevrimdışı Whisper'a düşülür.

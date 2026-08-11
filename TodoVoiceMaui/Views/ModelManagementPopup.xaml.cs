@@ -74,11 +74,23 @@ public partial class ModelManagementViewModel : ObservableObject, IDisposable
         private set => SetProperty(ref _testConsoleFormatted, value);
     }
 
+    private const string ConsoleFilterPreferenceKey = "stt_console_filter";
+
     /// <summary>Aktif konsol filtresi — yalnız render'ı etkiler, satırlar toplanmaya devam eder.</summary>
     [ObservableProperty]
-    private SttConsoleFilter consoleFilter = SttConsoleFilter.All;
+    private SttConsoleFilter consoleFilter;
 
-    partial void OnConsoleFilterChanged(SttConsoleFilter value) => RebuildConsole();
+    /// <summary>
+    /// Filtre değişince kalıcı kaydet (Settings ile aynı anahtar — tutarlı) + yeniden çiz.
+    /// Popup açıkken Settings sayfasının hafızası da eşitlenir (arka planda eski filtre kalmasın).
+    /// </summary>
+    partial void OnConsoleFilterChanged(SttConsoleFilter value)
+    {
+        Preferences.Default.Set(ConsoleFilterPreferenceKey, (int)value);
+        if (_settings.ConsoleFilter != value)
+            _settings.ConsoleFilter = value;
+        RebuildConsole();
+    }
 
     [RelayCommand]
     private void SetConsoleFilter(SttConsoleFilter filter) => ConsoleFilter = filter;
@@ -95,6 +107,7 @@ public partial class ModelManagementViewModel : ObservableObject, IDisposable
         _stt.PropertyChanged += OnSttPropertyChanged;
         _settings.ModelStateChanged += OnModelStateChanged;
         SttTestLog.Line += OnTestLogEntry;
+        ConsoleFilter = (SttConsoleFilter)Preferences.Default.Get(ConsoleFilterPreferenceKey, (int)SttConsoleFilter.All);
         RefreshAll();
     }
 
@@ -140,6 +153,51 @@ public partial class ModelManagementViewModel : ObservableObject, IDisposable
     {
         _consoleLines.Clear();
         RebuildConsole();
+    }
+
+    /// <summary>Konsol satırlarını LOG dosyasına dışa aktarır (kind etiketli, tüm satırlar).</summary>
+    [RelayCommand]
+    private async Task ExportTestConsoleAsync()
+    {
+        if (_consoleLines.Count == 0)
+        {
+            await Shell.Current.DisplayAlert("Konsol boş", "Dışa aktarılacak satır yok.", "Tamam");
+            return;
+        }
+
+        try
+        {
+            var sb = new System.Text.StringBuilder();
+            foreach (var entry in _consoleLines)
+                sb.AppendLine($"[{entry.Kind.ToString().ToUpperInvariant()}] {entry.Text}");
+
+            // Milisaniye damgası: aynı saniyedeki iki dışa aktarma çakışmasın
+            var path = Path.Combine(FileSystem.AppDataDirectory,
+                $"TodoVoice_console_{DateTime.Now:yyyyMMdd_HHmmss_fff}.log");
+            await File.WriteAllTextAsync(path, sb.ToString());
+
+            SoundEffectService.Play(SoundEffectService.SoundKind.Success);
+            await Shell.Current.DisplayAlert("Dışa aktarıldı",
+                $"{_consoleLines.Count} satır kaydedildi:\n{path}", "Tamam");
+            TryOpenInExplorer(path);
+        }
+        catch (Exception ex)
+        {
+            await Shell.Current.DisplayAlert("Hata", $"Dışa aktarılamadı: {ex.Message}", "Tamam");
+        }
+    }
+
+    private static void TryOpenInExplorer(string filePath)
+    {
+        try
+        {
+            if (OperatingSystem.IsWindows())
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
+                    "explorer.exe", $"/select,\"{filePath}\"") { UseShellExecute = true });
+            }
+        }
+        catch { }
     }
 
     private void OnSttPropertyChanged(object? sender, PropertyChangedEventArgs e)

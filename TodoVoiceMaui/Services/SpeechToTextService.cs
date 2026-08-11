@@ -385,6 +385,7 @@ public class SpeechToTextService : INotifyPropertyChanged
 
             Directory.CreateDirectory(Path.GetDirectoryName(modelPath)!);
             var tempPath = modelPath + ".part";
+            var downloadSeconds = 0.0;
 
             // İndirme kapsam bloğu içinde yapılır; akışlar kapsam sonunda kapanır,
             // böylece File.Move kilitli dosya hatası almaz.
@@ -433,6 +434,7 @@ public class SpeechToTextService : INotifyPropertyChanged
                 }
 
                 await destination.FlushAsync();
+                downloadSeconds = stopwatch.Elapsed.TotalSeconds;
             }
 
             // Akışlar kapandı → modeli kalıcı adına taşı ve boyutunu doğrula
@@ -451,7 +453,10 @@ public class SpeechToTextService : INotifyPropertyChanged
 
             IsModelReady = true;
             StatusMessage = "Hazır";
-            SttTestLog.WriteSuccess($"✓ İndirme tamamlandı: {model.DisplayName} ({FormatBytes(new FileInfo(modelPath).Length)})");
+            var finalSize = new FileInfo(modelPath).Length;
+            var avgSpeed = downloadSeconds > 0 ? finalSize / downloadSeconds : 0;
+            SttTestLog.WriteSuccess($"✓ İndirme tamamlandı: {model.DisplayName} ({FormatBytes(finalSize)}) · " +
+                                    $"{FormatSeconds(downloadSeconds)} · ort. {FormatBytes((long)avgSpeed)}/sn");
             return true;
         }
         catch (OperationCanceledException)
@@ -625,6 +630,9 @@ public class SpeechToTextService : INotifyPropertyChanged
             return $"{bytes / (1024.0 * 1024.0):0.0} MB";
         return $"{bytes / 1024.0:0} KB";
     }
+
+    private static string FormatSeconds(double seconds) =>
+        seconds >= 60 ? $"{seconds / 60.0:0.0} dk" : $"{seconds:0.0} sn";
 
 #if WINDOWS
     private static void Log(string message)

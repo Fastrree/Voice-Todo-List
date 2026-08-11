@@ -344,10 +344,15 @@
                                     Stroke="#1F2937"
                                     BackgroundColor="#0B1220">
                                 <Grid RowDefinitions="Auto,Auto,*" RowSpacing="6">
-                                    <Grid ColumnDefinitions="*,Auto">
+                                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="4">
                                         <Label Text="&#xE756; CANLI KONSOL" FontFamily="SoraSemiBold" FontSize="11"
                                                TextColor="#4ADE80" VerticalOptions="Center" />
-                                        <Button Grid.Column="1" Text="Temizle"
+                                        <Button Grid.Column="1" Text="&#xE74E; Dışa Aktar"
+                                                Command="{Binding ExportTestConsoleCommand}"
+                                                BackgroundColor="Transparent" BorderWidth="0"
+                                                TextColor="#93C5FD" FontSize="11"
+                                                HeightRequest="24" Padding="6,0" CornerRadius="12" />
+                                        <Button Grid.Column="2" Text="Temizle"
                                                 Command="{Binding ClearTestConsoleCommand}"
                                                 BackgroundColor="Transparent" BorderWidth="0"
                                                 TextColor="#9CA3AF" FontSize="11"
