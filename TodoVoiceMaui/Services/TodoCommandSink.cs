@@ -14,8 +14,8 @@ public class TodoCommandSink : ITodoCommandSink
         _syncService = syncService;
     }
 
-    public Task<bool> CreateTodoAsync(string title, CancellationToken ct = default)
-        => _syncService.CreateTodoAsync(title);
+    public Task<bool> CreateTodoAsync(string title, DateTime? reminderAt = null, CancellationToken ct = default)
+        => _syncService.CreateTodoAsync(title, reminderAt: reminderAt);
 
     public Task<bool> CompleteTodoAsync(string todoId, CancellationToken ct = default)
         => _syncService.UpdateTodoAsync(todoId, new { completed = true });

@@ -403,6 +403,10 @@ public partial class TodoListPageViewModel : ObservableObject
     {
         try
         {
+            // Geçmişe kaydet — kullanıcı yanlış anlaşılan kelimeleri buradan düzeltebilir
+            // (düzeltmeler TurkishVocabulary kullanıcı sözlüğüne öğrenilir)
+            TranscriptionHistoryService.Add(text, "whisper-offline");
+
             var transcription = new TranscriptionResult(
                 text,
                 TranscriptionConfidence.Medium,

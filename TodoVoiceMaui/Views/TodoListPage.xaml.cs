@@ -1,3 +1,4 @@
+using CommunityToolkit.Maui.Views;
 using TodoVoiceMaui.Services;
 using TodoVoiceMaui.ViewModels;
 
@@ -111,5 +112,10 @@ public partial class TodoListPage : ContentPage
             var item = _viewModel.SortOptions[picker.SelectedIndex];
             _viewModel.ChangeSortCommand.Execute(item.Key);
         }
+    }
+
+    private async void OnHistoryClicked(object? sender, EventArgs e)
+    {
+        await this.ShowPopupAsync(new TranscriptionHistoryPopup());
     }
 }

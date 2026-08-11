@@ -80,6 +80,9 @@ public class ReminderService : IDisposable
 
     private void ShowReminder(string todoTitle)
     {
+        // Sesli bildirim — yumuşak davet tonu (Ayarlar'daki ses anahtarına uyar)
+        SoundEffectService.Play(SoundEffectService.SoundKind.Reminder);
+
 #if WINDOWS
         try
         {

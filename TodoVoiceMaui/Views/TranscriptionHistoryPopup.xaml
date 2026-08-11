@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<toolkit:Popup xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+               xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+               xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+               xmlns:views="clr-namespace:TodoVoiceMaui.Views"
+               xmlns:converters="clr-namespace:TodoVoiceMaui.Converters"
+               x:Class="TodoVoiceMaui.Views.TranscriptionHistoryPopup"
+               x:DataType="views:TranscriptionHistoryPopupViewModel"
+               Color="#99000000"
+               CanBeDismissedByTappingOutsideOfPopup="True">
+
+    <toolkit:Popup.Resources>
+        <ResourceDictionary>
+            <converters:InverseBoolConverter x:Key="InverseBoolConverter" />
+        </ResourceDictionary>
+    </toolkit:Popup.Resources>
+
+    <Border WidthRequest="560"
+            StrokeThickness="1"
+            StrokeShape="RoundRectangle 24"
+            Padding="20,18"
+            Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}">
+        <Border.Background>
+            <AppThemeBinding Light="{StaticResource GlassSurfaceLight}" Dark="{StaticResource GlassSurfaceDark}" />
+        </Border.Background>
+        <Border.Shadow>
+            <Shadow Brush="{AppThemeBinding Light={StaticResource ShadowLg}, Dark={StaticResource DarkShadowLg}}"
+                    Radius="28" Opacity="0.55" Offset="0,10" />
+        </Border.Shadow>
+
+        <VerticalStackLayout Spacing="12">
+
+            <!-- BAŞLIK -->
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                <Border WidthRequest="42" HeightRequest="42"
+                        StrokeThickness="0" StrokeShape="RoundRectangle 21"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}"
+                        VerticalOptions="Center">
+                    <Label Text="&#xE81C;" FontFamily="Segoe Fluent Icons" FontSize="20"
+                           TextColor="{AppThemeBinding Light={StaticResource AccentContrast}, Dark={StaticResource DarkBackground}}"
+                           HorizontalOptions="Center" VerticalOptions="Center" />
+                </Border>
+                <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
+                    <Label Text="TRANSKRİPSİYON GEÇMİŞİ" Style="{StaticResource MicroLabel}"
+                           TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
+                    <Label Text="Son ses tanımaların" FontFamily="SoraSemiBold" FontSize="16"
+                           TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource DarkTextPrimary}}" />
+                    <Label Text="Yanlış anlaşılanları düzelt — uygulama zamanla senin telaffuzunu öğrenir."
+                           Style="{StaticResource CaptionText}"
+                           TextColor="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}" />
+                </VerticalStackLayout>
+                <Button Grid.Column="2" Text="&#xE711;" FontFamily="Segoe Fluent Icons" FontSize="14"
+                        Command="{Binding CloseCommand}"
+                        BackgroundColor="Transparent" BorderWidth="0"
+                        TextColor="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}"
+                        WidthRequest="36" HeightRequest="36" Padding="0" CornerRadius="18"
+                        VerticalOptions="Center" />
+            </Grid>
+
+            <!-- GEÇMİŞ LİSTESİ -->
+            <Border StrokeThickness="1" Padding="6"
+                    Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}"
+                    StrokeShape="RoundRectangle 16">
+                <Border.Background>
+                    <AppThemeBinding Light="{StaticResource GlassSurfaceLight}" Dark="{StaticResource GlassSurfaceDark}" />
+                </Border.Background>
+
+                <CollectionView x:Name="HistoryList"
+                                ItemsSource="{Binding Rows}"
+                                HeightRequest="300">
+                    <CollectionView.EmptyView>
+                        <VerticalStackLayout Spacing="6" Padding="20" HorizontalOptions="Center" VerticalOptions="Center">
+                            <Label Text="&#xE81C;" FontFamily="Segoe Fluent Icons" FontSize="28"
+                                   HorizontalOptions="Center"
+                                   TextColor="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}" />
+                            <Label Text="Henüz kayıt yok" Style="{StaticResource SubtitleMedium}"
+                                   HorizontalOptions="Center" />
+                            <Label Text="Mikrofonla konuştuğunda son tanımalar burada görünür."
+                                   Style="{StaticResource CaptionText}" HorizontalTextAlignment="Center" />
+                        </VerticalStackLayout>
+                    </CollectionView.EmptyView>
+
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="views:HistoryRowViewModel">
+                            <Border Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}"
+                                    StrokeThickness="1"
+                                    StrokeShape="RoundRectangle 14"
+                                    Padding="10,8"
+                                    Margin="0,3">
+                                <Border.Background>
+                                    <AppThemeBinding Light="{StaticResource GlassSurfaceLight}" Dark="{StaticResource GlassSurfaceDark}" />
+                                </Border.Background>
+                                <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="4">
+
+                                    <!-- zaman + sağlayıcı -->
+                                    <Label Grid.Row="0" Text="{Binding TimeLabel}" Style="{StaticResource MicroLabel}"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}"
+                                           VerticalOptions="Center" />
+                                    <Border Grid.Row="0" Grid.Column="1"
+                                            StrokeThickness="0" StrokeShape="RoundRectangle 999" Padding="8,2"
+                                            BackgroundColor="{AppThemeBinding Light={StaticResource AccentSoft}, Dark={StaticResource DarkAccentSoft}}">
+                                        <Label Text="{Binding ProviderLabel}" FontSize="10"
+                                               TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
+                                    </Border>
+
+                                    <!-- metin / düzenleme -->
+                                    <Label Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding DisplayText}"
+                                           Style="{StaticResource CaptionText}"
+                                           LineBreakMode="WordWrap" MaxLines="3"
+                                           IsVisible="{Binding IsEditing, Converter={StaticResource InverseBoolConverter}}"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource DarkTextPrimary}}" />
+                                    <Border Grid.Row="1" Grid.ColumnSpan="2"
+                                            BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource DarkSurface}}"
+                                            StrokeThickness="0" StrokeShape="RoundRectangle 10"
+                                            IsVisible="{Binding IsEditing}">
+                                        <Entry Text="{Binding EditText}" Style="{StaticResource SearchEntry}"
+                                               Margin="10,0" FontSize="13" />
+                                    </Border>
+
+                                    <!-- hata -->
+                                    <Label Grid.Row="2" Grid.ColumnSpan="2" Text="{Binding ErrorText}"
+                                           Style="{StaticResource MicroLabel}" IsVisible="{Binding HasError}"
+                                           TextColor="{StaticResource Danger}" />
+
+                                    <!-- aksiyonlar -->
+                                    <HorizontalStackLayout Grid.Row="2" Grid.Column="1" Spacing="4"
+                                                           HorizontalOptions="End">
+                                        <Button Text="Düzelt" FontSize="11" Padding="10,4"
+                                                Command="{Binding Source={x:Reference HistoryList}, Path=BindingContext.EditRowCommand}"
+                                                CommandParameter="{Binding .}"
+                                                IsVisible="{Binding IsEditing, Converter={StaticResource InverseBoolConverter}}"
+                                                BackgroundColor="Transparent" BorderWidth="0"
+                                                TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
+                                        <Button Text="Vazgeç" FontSize="11" Padding="10,4"
+                                                Command="{Binding Source={x:Reference HistoryList}, Path=BindingContext.CancelEditCommand}"
+                                                CommandParameter="{Binding .}"
+                                                IsVisible="{Binding IsEditing}"
+                                                BackgroundColor="Transparent" BorderWidth="0"
+                                                TextColor="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}" />
+                                        <Button Text="Kaydet" FontSize="11" Padding="12,4" CornerRadius="999"
+                                                Command="{Binding Source={x:Reference HistoryList}, Path=BindingContext.SaveCorrectionCommand}"
+                                                CommandParameter="{Binding .}"
+                                                IsVisible="{Binding IsEditing}" />
+                                        <Button Text="&#xE74D;" FontFamily="Segoe Fluent Icons" FontSize="11" Padding="8,4"
+                                                Command="{Binding Source={x:Reference HistoryList}, Path=BindingContext.DeleteRowCommand}"
+                                                CommandParameter="{Binding .}"
+                                                BackgroundColor="Transparent" BorderWidth="0"
+                                                TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DarkDanger}}" />
+                                    </HorizontalStackLayout>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </Border>
+
+            <!-- KİŞİSEL SÖZLÜK (öğrenilen kelimeler) -->
+            <Border StrokeThickness="1" Padding="12,10"
+                    Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}"
+                    StrokeShape="RoundRectangle 16">
+                <Border.Background>
+                    <AppThemeBinding Light="{StaticResource GlassSurfaceLight}" Dark="{StaticResource GlassSurfaceDark}" />
+                </Border.Background>
+                <VerticalStackLayout Spacing="8">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <Label Text="KİŞİSEL SÖZLÜK" Style="{StaticResource MicroLabel}"
+                               TextColor="{AppThemeBinding Light={StaticResource Accent}, Dark={StaticResource DarkAccent}}" />
+                        <Label Grid.Column="1" Text="{Binding WordCountText}" Style="{StaticResource MicroLabel}"
+                               TextColor="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}"
+                               VerticalOptions="Center" />
+                    </Grid>
+                    <FlexLayout BindableLayout.ItemsSource="{Binding UserWords}"
+                                Wrap="Wrap" JustifyContent="Start" AlignItems="Center">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <Border Stroke="{AppThemeBinding Light={StaticResource GlassBorder}, Dark={StaticResource DarkGlassBorder}}"
+                                        StrokeThickness="1"
+                                        StrokeShape="RoundRectangle 999"
+                                        Padding="8,3" Margin="0,2,6,2">
+                                    <Border.Background>
+                                        <AppThemeBinding Light="{StaticResource GlassSurfaceLight}" Dark="{StaticResource GlassSurfaceDark}" />
+                                    </Border.Background>
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding Source={x:Reference HistoryList}, Path=BindingContext.RemoveUserWordCommand}"
+                                                              CommandParameter="{Binding .}" />
+                                    </Border.GestureRecognizers>
+                                    <HorizontalStackLayout Spacing="6">
+                                        <Label Text="{Binding .}" FontSize="11" VerticalOptions="Center"
+                                               TextColor="{AppThemeBinding Light={StaticResource TextPrimary}, Dark={StaticResource DarkTextPrimary}}" />
+                                        <Label Text="&#xE711;" FontFamily="Segoe Fluent Icons" FontSize="9"
+                                               VerticalOptions="Center"
+                                               TextColor="{AppThemeBinding Light={StaticResource TextTertiary}, Dark={StaticResource DarkTextTertiary}}" />
+                                    </HorizontalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </FlexLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- FOOTER -->
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <Button Grid.Column="0" Text="Geçmişi temizle" Command="{Binding ClearAllCommand}"
+                        BackgroundColor="Transparent" BorderWidth="0"
+                        TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DarkDanger}}"
+                        FontSize="12" HeightRequest="40" CornerRadius="20"
+                        HorizontalOptions="Start" />
+                <Button Grid.Column="1" Text="Kapat" Command="{Binding CloseCommand}"
+                        HeightRequest="42" CornerRadius="21" Padding="28,0" />
+            </Grid>
+
+        </VerticalStackLayout>
+    </Border>
+</toolkit:Popup>

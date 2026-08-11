@@ -131,9 +131,30 @@ git'te kalır). Geçmiş TUTMAZ — sadece bugünü anlatır.
 
 ### ⏰ Hatırlatıcılar
 - Görevde `reminder_at`; detail sayfasında düzenlenir
-- `ReminderService`: 15 sn döngü, SQLite tarama, Windows toast bildirimi
+- **Sesli hatırlatıcı komutu:** "10 dakika sonra süt almayı hatırlat" → görev
+  "Süt al" + `ReminderAt` (şimdi+10dk) oluşturulur. `RuleBasedVoiceCommandParser`
+  zaman kalıplarını çözer (`N dakika/saat sonra|içinde`, `saat HH:MM`, `yarın [HH'da]`,
+  sabah/öğlen/akşam, bugün — geçen saat dilimleri yarına kayar) ve çerçeveyi
+  başlıktan sıyar ("hatırlat/beni hatırlat" + zaman ifadeleri + "-mayı/-meyi" eki).
+  Reminder kontrolü Complete'ten ÖNCE çalışır — "bitirmeyi hatırlat"/"...tamam"
+  gibi ifadeler hedefsiz Complete komutuna dönüşmez. `reminder_at` uçtan uca taşınır
+  (sink → Sync → Supabase → edge fn; create'te `dueDate/reminderAt` camelCase okuma).
+- `ReminderService`: 15 sn döngü, SQLite tarama, **ses tonu** (`SoundEffectService.Reminder`
+  — yumuşak üç tonlu davet) + Windows toast bildirimi
+- Listedeki görev satırında 🔔 rozeti + hatırlatma zamanı görünür (`HasReminder`)
 - Login yokken başlamaz (yalnız `_reminderService.Start()` login branch'inde)
 - Güven: `MEDIUM` — API E2E (create+delete `reminder_at`) doğrulandı, toast runtime test edilmedi
+
+### 🕘 Transkripsiyon geçmişi + düzeltme (kişisel sözlük)
+- Her başarılı ses tanıması kalıcı geçmişe yazılır (`transcription_history.json`,
+  en fazla 100 kayıt) — Görevler alt barındaki 🕘 butonu `TranscriptionHistoryPopup`'u açar
+- Kayıt başına Düzelt/Vazgeç/Kaydet/Sil; düzeltme metni günceller VE değişen kelime
+  çiftlerini **kullanıcı sözlüğüne öğretir** (`TurkishVocabulary.AddUserCorrection`)
+- Öğrenme yalnızca eşit token sayılı düzenlemelerde (yapısal değişiklikte atlanır),
+  engel listesi dışı (yaygın sözcükler öğrenilmez) ve ≥3 harf; `user_vocabulary.json`
+  kalıcıdır. `Correct()` kullanıcı eşleşmelerini yerleşik sözlükten ÖNCE uygular
+- Modalda "KİŞİSEL SÖZLÜK" bölümü öğrenilen kelimeleri çiplerde gösterir (dokun→kaldır)
+- Güven: `HIGH` — build 0 hata, thread güvenli (liste referans değişimi + lock)
 
 ### 🌙 Tema (açık / koyu)
 - `ThemeService.ApplyTheme/SaveTheme/GetSavedTheme/ApplySavedTheme`

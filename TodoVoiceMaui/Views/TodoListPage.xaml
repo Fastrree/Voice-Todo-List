@@ -233,6 +233,16 @@
                                                    IsVisible="{Binding HasVoiceRecording}"
                                                    VerticalOptions="Center"
                                                    TextColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource DarkSecondary}}" />
+                                            <Label Text="&#xE8D5;"
+                                                   FontFamily="Segoe Fluent Icons"
+                                                   FontSize="10"
+                                                   IsVisible="{Binding HasReminder}"
+                                                   VerticalOptions="Center"
+                                                   TextColor="{AppThemeBinding Light={StaticResource Warning}, Dark={StaticResource DarkWarning}}" />
+                                            <Label Text="{Binding ReminderLabel}"
+                                                   Style="{StaticResource MicroLabel}"
+                                                   IsVisible="{Binding HasReminder}"
+                                                   VerticalOptions="Center" />
                                         </StackLayout>
                                     </VerticalStackLayout>
                                     <Label Grid.Column="2" Text="{Binding StatusIcon}" FontSize="12" VerticalOptions="Start" />
@@ -286,7 +296,7 @@
                 <Border.Background>
                     <AppThemeBinding Light="{StaticResource GlassSurfaceLight}" Dark="{StaticResource GlassSurfaceDark}" />
                 </Border.Background>
-                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
                     <Border Grid.Column="0"
                             Background="{AppThemeBinding Light={StaticResource GlassSurfaceLight}, Dark={StaticResource GlassSurfaceDark}}"
                             StrokeThickness="0"
@@ -296,7 +306,16 @@
                                Style="{StaticResource SearchEntry}"
                                Margin="12,0" />
                     </Border>
-                    <Button x:Name="MicButton" Grid.Column="1"
+                    <Button x:Name="HistoryButton" Grid.Column="1"
+                            Text="&#xE81C;"
+                            FontFamily="Segoe Fluent Icons"
+                            Clicked="OnHistoryClicked"
+                            BackgroundColor="Transparent" BorderWidth="0"
+                            TextColor="{AppThemeBinding Light={StaticResource TextSecondary}, Dark={StaticResource DarkTextSecondary}}"
+                            WidthRequest="42" HeightRequest="42"
+                            CornerRadius="999" FontSize="16"
+                            ToolTipProperties.Text="Transkripsiyon geçmişi" />
+                    <Button x:Name="MicButton" Grid.Column="2"
                             Text="&#xE91F;"
                             FontFamily="Segoe Fluent Icons"
                             Command="{Binding StartSpeechToTextCommand}"
@@ -310,7 +329,7 @@
                             </DataTrigger>
                         </Button.Triggers>
                     </Button>
-                    <Button Grid.Column="2"
+                    <Button Grid.Column="3"
                             Text="&#xE710;"
                             FontFamily="Segoe Fluent Icons"
                             Command="{Binding AddTodoCommand}"

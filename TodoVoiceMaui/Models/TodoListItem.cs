@@ -47,6 +47,12 @@ public class TodoListItem : INotifyPropertyChanged
 
     public bool HasVoiceRecording => Model.HasVoiceRecording;
 
+    public bool HasReminder => ReminderAt.HasValue;
+
+    public string ReminderLabel => ReminderAt.HasValue
+        ? ReminderAt.Value.ToString("dd MMM · HH:mm", new System.Globalization.CultureInfo("tr-TR"))
+        : string.Empty;
+
     public string PriorityIcon => Priority switch
     {
         "high" => "🔴",

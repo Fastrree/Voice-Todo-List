@@ -150,7 +150,7 @@ public class SupabaseService
     }
 
     // Todo operations via edge functions
-    public async Task<TodoDto?> CreateTodoAsync(string title, string? description = null, string priority = "medium", DateTime? dueDate = null, string? voiceUrl = null, int? voiceDuration = null)
+    public async Task<TodoDto?> CreateTodoAsync(string title, string? description = null, string priority = "medium", DateTime? dueDate = null, string? voiceUrl = null, int? voiceDuration = null, DateTime? reminderAt = null)
     {
         var parameters = new
         {
@@ -160,7 +160,8 @@ public class SupabaseService
                 title,
                 description,
                 priority,
-                dueDate = dueDate?.ToString("yyyy-MM-ddTHH:mm:ssZ")
+                dueDate = dueDate?.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                reminderAt = reminderAt?.ToString("yyyy-MM-ddTHH:mm:ssZ")
             },
             voiceData = voiceUrl != null ? new { publicUrl = voiceUrl, duration = voiceDuration } : null
         };

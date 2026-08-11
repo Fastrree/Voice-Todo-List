@@ -34,8 +34,14 @@ public sealed class TodoVoiceCommandHandler : IVoiceCommandHandler
         if (string.IsNullOrWhiteSpace(command.Transcript))
             return VoiceCommandResult.Fail("Transkript boş");
 
-        var ok = await _todoSink.CreateTodoAsync(command.Transcript, ct);
-        return ok ? VoiceCommandResult.Ok("Görev oluşturuldu") : VoiceCommandResult.Fail("Görev oluşturulamadı");
+        // "10 dakika sonra ... hatırlat" komutu görevi hatırlatma zamanıyla oluşturur;
+        // ReminderService zamanı gelince bildirim + ses verir.
+        var ok = await _todoSink.CreateTodoAsync(command.Transcript, command.ReminderAt, ct);
+        return ok
+            ? (command.ReminderAt.HasValue
+                ? VoiceCommandResult.Ok($"Görev oluşturuldu · hatırlatıcı {command.ReminderAt:HH:mm} için kuruldu")
+                : VoiceCommandResult.Ok("Görev oluşturuldu"))
+            : VoiceCommandResult.Fail("Görev oluşturulamadı");
     }
 
     private async Task<VoiceCommandResult> CompleteTodoAsync(VoiceCommand command, CancellationToken ct)

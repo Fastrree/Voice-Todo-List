@@ -250,6 +250,164 @@ public static class TurkishVocabulary
         "agri", "tokat", "gelsin", "hadise", "beka", "ordu", "hurriyet"
     };
 
+    // =====================================================================
+    // KULLANICI SÖZLÜĞÜ — kullanıcı transkripsiyon geçmişinden öğrenilen
+    // düzeltmeler (TranscriptionHistoryService.Correct → AddUserCorrection).
+    // Kullanıcı yanlış anlaşılan bir kelimeyi elle düzelttiğinde "yanlış→doğru"
+    // çifti buraya eklenir ve Correct() bu eşleşmeleri İLK önce uygular —
+    // zamanla kişiye özel tanıma oluşur. Kalıcılık: user_vocabulary.json
+    // =====================================================================
+    private static readonly object UserLock = new();
+    private static Dictionary<string, string> _userWords = new(); // katlanmış → kanonik
+    private static List<(string Folded, string Canonical)> _userPhrases = new();
+    private static List<(string Folded, string Canonical)> _userSingles = new();
+    private static bool _userDirty = true;
+
+    /// <summary>Kullanıcı düzeltmesinden ÖĞRENİLMEMESİ gereken yaygın sözcükler.</summary>
+    private static readonly HashSet<string> CommonWordBlocklist = new(StringComparer.Ordinal)
+    {
+        "beni", "bana", "bir", "ve", "bu", "su", "icin", "sonra", "lazim", "gibi",
+        "kadar", "tamam", "yap", "yapma", "et", "gel", "git", "al", "ver", "ol",
+        "var", "yok", "ama", "cok", "daha", "ne", "kim", "hangi", "bugun", "yarin",
+        "hatirlat", "hatirlatma", "reminder", "alarm", "ben", "sen", "o", "biz",
+        "siz", "onlar", "bunu", "sunu", "kendi", "belki", "artik", "hemen",
+        "sadece", "basla", "bitir", "tamamla", "ekle", "sil", "goster", "ac", "kapat"
+    };
+
+    private static string UserWordsPath => Path.Combine(FileSystem.AppDataDirectory, "user_vocabulary.json");
+
+    static TurkishVocabulary()
+    {
+        try
+        {
+            if (File.Exists(UserWordsPath))
+            {
+                var loaded = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(
+                    File.ReadAllText(UserWordsPath));
+                if (loaded != null)
+                    _userWords = loaded;
+            }
+        }
+        catch
+        {
+            _userWords = new Dictionary<string, string>();
+        }
+        RebuildUserIndexLocked();
+    }
+
+    /// <summary>
+    /// Kullanıcı bir transkripsiyonu düzelttiğinde çağrılır: "yanlış→doğru"
+    /// çiftini sözlüğe ekler (kısa/yaygın sözcükler ve aynı yazımlar atlanır).
+    /// </summary>
+    public static void AddUserCorrection(string wrong, string correct)
+    {
+        var w = CleanToken(wrong);
+        var c = CleanToken(correct);
+        if (w.Length == 0 || c.Length == 0) return;
+
+        var fw = Fold(w);
+        var fc = Fold(c);
+        if (fw.Length < 3 || fc.Length < 3) return;
+        if (fw == fc) return;
+        if (CommonWordBlocklist.Contains(fw)) return;
+
+        lock (UserLock)
+        {
+            _userWords[fw] = c;
+            _userDirty = true;
+            SaveUserWordsLocked();
+        }
+    }
+
+    /// <summary>Tek bir doğru yazımı sözlüğe ekler (elle ekleme / güvenli yazım).</summary>
+    public static void AddUserWord(string word)
+    {
+        var w = CleanToken(word);
+        if (w.Length < 3) return;
+        lock (UserLock)
+        {
+            _userWords[Fold(w)] = w;
+            _userDirty = true;
+            SaveUserWordsLocked();
+        }
+    }
+
+    /// <summary>Kullanıcı sözlüğünden bir kelimeyi kaldırır.</summary>
+    public static void RemoveUserWord(string word)
+    {
+        var w = CleanToken(word);
+        if (w.Length == 0) return;
+        lock (UserLock)
+        {
+            if (_userWords.Remove(Fold(w)))
+            {
+                _userDirty = true;
+                SaveUserWordsLocked();
+            }
+        }
+    }
+
+    /// <summary>Kullanıcı sözlüğündeki kelimeler (alfabetik, kanonik yazımla).</summary>
+    public static IReadOnlyList<string> GetUserWords()
+    {
+        lock (UserLock)
+        {
+            return _userWords.Values.OrderBy(v => v, StringComparer.OrdinalIgnoreCase).ToList();
+        }
+    }
+
+    public static int UserWordCount
+    {
+        get { lock (UserLock) { return _userWords.Count; } }
+    }
+
+    private static void EnsureUserIndex()
+    {
+        lock (UserLock)
+        {
+            if (_userDirty)
+                RebuildUserIndexLocked();
+        }
+    }
+
+    private static void RebuildUserIndexLocked()
+    {
+        var phrases = new List<(string, string)>();
+        var singles = new List<(string, string)>();
+        foreach (var kv in _userWords)
+        {
+            if (kv.Key.Contains(' '))
+                phrases.Add((kv.Key, kv.Value));
+            else
+                singles.Add((kv.Key, kv.Value));
+        }
+        _userPhrases = phrases.OrderByDescending(p => p.Item1.Count(c => c == ' ')).ToList();
+        _userSingles = singles;
+        _userDirty = false;
+    }
+
+    private static void SaveUserWordsLocked()
+    {
+        try
+        {
+            File.WriteAllText(UserWordsPath, System.Text.Json.JsonSerializer.Serialize(_userWords));
+        }
+        catch
+        {
+            // sözlük asla uygulamayı kırmaz
+        }
+    }
+
+    /// <summary>Uçlardaki noktalama/boşlukları temizler (öğrenme öncesi).</summary>
+    private static string CleanToken(string? s)
+    {
+        if (string.IsNullOrWhiteSpace(s)) return string.Empty;
+        var t = s.Trim();
+        while (t.Length > 0 && char.IsPunctuation(t[0])) t = t[1..];
+        while (t.Length > 0 && char.IsPunctuation(t[^1])) t = t[..^1];
+        return t.Trim();
+    }
+
     /// <summary>
     /// Whisper decode'una kelime önyükleme (WithPrompt) — en bilinen isimler.
     /// <224 token sınırının altında tutulur; tam sözlük Correct() ile uygulanır.
@@ -286,6 +444,28 @@ public static class TurkishVocabulary
 
         var tokens = text.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList();
         var removed = new bool[tokens.Count];
+
+        // 0) Kullanıcı sözlüğü — çok kelimeli ifadeler (kullanıcı düzeltmeleri önce uygulanır)
+        EnsureUserIndex();
+        foreach (var (key, canonical) in _userPhrases)
+        {
+            var wordCount = key.Count(c => c == ' ') + 1;
+
+            for (var i = 0; i + wordCount <= tokens.Count; i++)
+            {
+                if (removed[i])
+                    continue;
+
+                var window = string.Join(" ", tokens.Skip(i).Take(wordCount).Select(Fold));
+                if (window == key)
+                {
+                    tokens[i] = canonical;
+                    for (var j = i + 1; j < i + wordCount; j++)
+                        removed[j] = true;
+                    i += wordCount - 1;
+                }
+            }
+        }
 
         // 1) Çok kelimeli ifadeler (önce — daha uzun eşleşmeler kazanır)
         foreach (var (phrase, key) in Phrases)
@@ -334,6 +514,20 @@ public static class TurkishVocabulary
 
             // Yaygın Türkçe sözcükler/şehirler: sözlük eşleşmesini atla (yanlış pozitif koruması)
             if (MatchBlocklist.Contains(folded))
+                continue;
+
+            // 2a) Kullanıcı sözlüğü — tek kelimeler (tam eşleşme, yerleşik sözlükten önce)
+            var userMatched = false;
+            foreach (var userEntry in _userSingles)
+            {
+                if (folded == userEntry.Folded)
+                {
+                    tokens[i] = userEntry.Canonical + suffix;
+                    userMatched = true;
+                    break;
+                }
+            }
+            if (userMatched)
                 continue;
 
             foreach (var entry in Singles)

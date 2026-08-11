@@ -301,7 +301,7 @@ public class SyncService : INotifyPropertyChanged
         }
     }
 
-    public async Task<bool> CreateTodoAsync(string title, string? description = null, string priority = "medium", DateTime? dueDate = null)
+    public async Task<bool> CreateTodoAsync(string title, string? description = null, string priority = "medium", DateTime? dueDate = null, DateTime? reminderAt = null)
     {
         try
         {
@@ -316,6 +316,7 @@ public class SyncService : INotifyPropertyChanged
                 Description = description,
                 Priority = priority,
                 DueDate = dueDate,
+                ReminderAt = reminderAt,
                 NeedsSync = true
             };
 
@@ -327,7 +328,7 @@ public class SyncService : INotifyPropertyChanged
             {
                 try
                 {
-                    var serverTodo = await _supabaseService.CreateTodoAsync(title, description, priority, dueDate);
+                    var serverTodo = await _supabaseService.CreateTodoAsync(title, description, priority, dueDate, null, null, reminderAt);
                     if (serverTodo != null)
                     {
                         localTodo.NeedsSync = false;

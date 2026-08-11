@@ -182,6 +182,25 @@ Araştırma bulguları ve yapılabilir aksiyonlar:
 - [x] **Çevrimdışı test:** "Bağlantıyı Test Et" çevrimdışı kaynakta gerçek model
       transkripsiyonu çalıştırır (büyük model indirmesi onaylı).
 
+### Transkripsiyon Geçmişi + Sesli Hatırlatıcı (UYGULANDI)
+- [x] **Transkripsiyon geçmişi + düzeltme (kişisel sözlük):** son başarılı ses
+      tanımaları kalıcı tutulur (`transcription_history.json`, en fazla 100 kayıt);
+      Görevler → geçmiş butonu (🕘) modalı (`TranscriptionHistoryPopup`) listeyi
+      gösterir — satır başına Düzelt/Vazgeç/Kaydet/Sil. Kullanıcı bir kaydı elle
+      düzeltince metin güncellenir VE değişen kelime çiftleri **kullanıcı sözlüğüne
+      öğrenilir** (`TurkishVocabulary.AddUserCorrection` — yalnızca eşit token
+      sayılı, engel listesi dışı, ≥3 harf; `user_vocabulary.json` kalıcı).
+      `Correct()` kullanıcı eşleşmelerini yerleşik sözlükten ÖNCE uygular.
+      Modal'da öğrenilen kelimeler "KİŞİSEL SÖZLÜK" bölümünde (dokun→kaldır).
+- [x] **Sesli hatırlatıcı (görev + bildirim):** "10 dakika sonra süt almayı hatırlat"
+      komutu → görev "Süt al" + `ReminderAt` (şimdi+10dk) oluşturur; parser zaman
+      kalıplarını çözer (`N dakika/saat sonra|içinde`, `saat HH:MM`, `yarın [HH'da]`,
+      sabah/öğlen/akşam, bugün) ve çerçeveyi başlıktan sıyar ("-mayı/-meyi" eki
+      kırpılır). ReminderService zamanı gelince **ses tonu + Windows toast** verir
+      (`SoundEffectService.Reminder` — yumuşak üç tonlu davet); listede 🔔 rozeti +
+      zaman görünür. `reminder_at` uçtan uca taşınır (sink → Sync → Supabase →
+      edge fn; create'te camelCase `dueDate/reminderAt` okuma da düzeltildi).
+
 ### Türkçe fine-tune → GGML yolu
 - **Hazır Türkçe GGML model YOK** (araştırıldı). Mevcutlar PyTorch/CT2:
   - `emre/whisper-medium-turkish-2` (HF, 19 beğeni — en popüler Türkçe medium fine-tune)

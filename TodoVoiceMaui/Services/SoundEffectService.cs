@@ -22,7 +22,8 @@ public static class SoundEffectService
         Error,      // hata (alçak çift ton)
         Delete,     // silme (yumuşak iniş)
         MicStart,   // mikrofon açıldı (yükselen nefes)
-        MicStop     // mikrofon kapandı (inen nefes)
+        MicStop,    // mikrofon kapandı (inen nefes)
+        Reminder    // hatırlatıcı (yumuşak davet tonu — alarm değil)
     }
 
     private const int SampleRate = 22050;
@@ -60,6 +61,11 @@ public static class SoundEffectService
 
             Sounds[SoundKind.MicStop] = Synth(
                 Sweep(660, 440, 0.090, 0.12));
+
+            Sounds[SoundKind.Reminder] = Synth(
+                Tone(659.25, 0.090, 0.13),
+                Tone(987.77, 0.070, 0.13),
+                Tone(1318.51, 0.140, 0.12));
         }
         catch
         {
